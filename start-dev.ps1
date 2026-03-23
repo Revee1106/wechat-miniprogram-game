@@ -18,19 +18,36 @@ function Test-CommandExists {
     return $null -ne (Get-Command $Name -ErrorAction SilentlyContinue)
 }
 
+function Test-PythonLauncher {
+    param([Parameter(Mandatory = $true)][string]$Launcher)
+
+    try {
+        & $Launcher --version *> $null
+        return $LASTEXITCODE -eq 0
+    }
+    catch {
+        return $false
+    }
+}
+
 function Get-PythonLauncher {
     param([Parameter(Mandatory = $true)][string]$ProjectDir)
 
     $venvPython = Join-Path $ProjectDir ".venv\Scripts\python.exe"
-    if (Test-Path $venvPython) {
+    if ((Test-Path $venvPython) -and (Test-PythonLauncher -Launcher $venvPython)) {
         return $venvPython
     }
 
-    if (Test-CommandExists -Name "py") {
+    $localPython = Join-Path $env:LOCALAPPDATA "Python\pythoncore-3.14-64\python.exe"
+    if ((Test-Path $localPython) -and (Test-PythonLauncher -Launcher $localPython)) {
+        return $localPython
+    }
+
+    if ((Test-CommandExists -Name "py") -and (Test-PythonLauncher -Launcher "py")) {
         return "py"
     }
 
-    if (Test-CommandExists -Name "python") {
+    if ((Test-CommandExists -Name "python") -and (Test-PythonLauncher -Launcher "python")) {
         return "python"
     }
 
