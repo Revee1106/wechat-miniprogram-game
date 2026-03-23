@@ -59,7 +59,7 @@ def advance_time(payload: RunIdRequest) -> dict[str, object]:
 def resolve_event(payload: ResolveEventRequest) -> dict[str, object]:
     try:
         return serialize_run_state(
-            run_service.resolve_event(payload.run_id, payload.choice_key)
+            run_service.resolve_event(payload.run_id, payload.resolved_option_id)
         )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)

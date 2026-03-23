@@ -78,19 +78,45 @@ class EventOptionConfig:
     is_default: bool = False
     requires_resources: dict[str, int] = field(default_factory=dict)
     success_rate_formula: str = ""
-    result_on_success: str = ""
-    result_on_failure: str = ""
+    result_on_success: str | dict[str, object] | EventResultPayload = ""
+    result_on_failure: str | dict[str, object] | EventResultPayload = ""
     log_text_success: str = ""
     log_text_failure: str = ""
 
 
+@dataclass(frozen=True)
+class EventResultPayload:
+    resource_deltas: dict[str, int] = field(default_factory=dict)
+    cultivation_exp_delta: int = 0
+    lifespan_delta: int = 0
+    death: bool = False
+
+
+@dataclass(frozen=True)
+class CurrentEventOption:
+    option_id: str
+    option_text: str
+    sort_order: int
+    is_default: bool
+    requires_resources: dict[str, int] = field(default_factory=dict)
+    is_available: bool = True
+    disabled_reason: str | None = None
+
+
 @dataclass
 class CurrentEvent:
-    template_key: str
-    template_name: str
-    description: str
+    event_id: str
+    event_name: str
+    event_type: str
+    outcome_type: str
+    risk_level: str
+    trigger_sources: list[str]
+    choice_pattern: str
+    title_text: str
+    body_text: str
+    region: str
     status: str
-    choices: list[EventChoice]
+    options: list[CurrentEventOption]
 
 
 @dataclass

@@ -13,6 +13,5 @@ class RebirthService:
         return profile
 
     def apply_permanent_bonus(self, profile: PlayerProfile, run: RunState) -> RunState:
-        run.character.luck += profile.permanent_luck_bonus
         run.resources.spirit_stone += profile.total_rebirth_count
         return run

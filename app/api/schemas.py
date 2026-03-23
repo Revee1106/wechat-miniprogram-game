@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.core_loop.types import BreakthroughResult, RebirthResult, RunState
 
@@ -18,7 +18,18 @@ class RunIdRequest(BaseModel):
 
 class ResolveEventRequest(BaseModel):
     run_id: str
-    choice_key: str
+    option_id: str | None = None
+    choice_key: str | None = None
+
+    @model_validator(mode="after")
+    def validate_option_id(self) -> "ResolveEventRequest":
+        if not self.option_id and not self.choice_key:
+            raise ValueError("option_id is required")
+        return self
+
+    @property
+    def resolved_option_id(self) -> str:
+        return self.option_id or self.choice_key or ""
 
 
 def _serialize(value: Any) -> Any:

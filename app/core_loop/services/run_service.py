@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
+from app.core_loop.services.event_resolution_service import EventResolutionService
 from app.core_loop.services.progression_service import ProgressionService
 from app.core_loop.services.rebirth_service import RebirthService
 from app.core_loop.services.time_advance_service import TimeAdvanceService
@@ -13,6 +14,7 @@ class RunService:
     def __init__(self) -> None:
         self._repo = InMemoryRunRepository()
         self._event_service = EventService()
+        self._event_resolution_service = EventResolutionService()
         self._dwelling_service = DwellingService()
         self._time_advance_service = TimeAdvanceService(self._event_service)
         self._progression_service = ProgressionService(self._dwelling_service)
@@ -33,12 +35,16 @@ class RunService:
 
     def advance_time(self, run_id: str) -> RunState:
         run = self._repo.get(run_id)
-        updated = self._time_advance_service.advance(run)
+        profile = self._repo.get_or_create_profile(run.player_id)
+        updated = self._time_advance_service.advance(
+            run,
+            rebirth_count=profile.total_rebirth_count,
+        )
         return self._repo.save(updated)
 
-    def resolve_event(self, run_id: str, choice_key: str) -> RunState:
+    def resolve_event(self, run_id: str, option_id: str) -> RunState:
         run = self._repo.get(run_id)
-        updated = self._event_service.resolve_choice(run, choice_key)
+        updated = self._event_resolution_service.resolve(run, option_id)
         return self._repo.save(updated)
 
     def breakthrough(self, run_id: str):
