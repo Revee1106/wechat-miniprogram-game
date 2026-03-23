@@ -53,6 +53,20 @@ class EventTemplateConfig:
     event_name: str
     event_type: str
     option_ids: list[str]
+    outcome_type: str = ""
+    risk_level: str = ""
+    trigger_sources: list[str] = field(default_factory=list)
+    choice_pattern: str = ""
+    title_text: str = ""
+    body_text: str = ""
+    realm_min: str | None = None
+    realm_max: str | None = None
+    region: str = ""
+    weight: int = 1
+    required_resources: dict[str, int] = field(default_factory=dict)
+    required_rebirth_count: int = 0
+    required_luck_min: int = 0
+    flags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -60,6 +74,14 @@ class EventOptionConfig:
     option_id: str
     event_id: str
     option_text: str
+    sort_order: int = 0
+    is_default: bool = False
+    requires_resources: dict[str, int] = field(default_factory=dict)
+    success_rate_formula: str = ""
+    result_on_success: str = ""
+    result_on_failure: str = ""
+    log_text_success: str = ""
+    log_text_failure: str = ""
 
 
 @dataclass
