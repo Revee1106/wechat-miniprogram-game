@@ -47,6 +47,21 @@ class EventTemplate:
     choices: list[EventChoice]
 
 
+@dataclass(frozen=True)
+class EventTemplateConfig:
+    event_id: str
+    event_name: str
+    event_type: str
+    option_ids: list[str]
+
+
+@dataclass(frozen=True)
+class EventOptionConfig:
+    option_id: str
+    event_id: str
+    option_text: str
+
+
 @dataclass
 class CurrentEvent:
     template_key: str
