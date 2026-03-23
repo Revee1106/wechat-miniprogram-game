@@ -47,6 +47,7 @@ class EventService:
         run.resources.spirit_stone = max(
             0, run.resources.spirit_stone + choice.spirit_stone_delta
         )
+        run.resources.herbs = max(0, run.resources.herbs + choice.herbs_delta)
         run.character.cultivation_exp = max(
             0, run.character.cultivation_exp + choice.cultivation_exp_delta
         )

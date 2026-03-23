@@ -14,6 +14,32 @@ def test_resolve_event_applies_choice_rewards() -> None:
     assert result.character.cultivation_exp > 0
 
 
+def test_forage_choice_increases_herbs() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    advanced = service.advance_time(run.run_id)
+    before_herbs = advanced.resources.herbs
+
+    result = service.resolve_event(run.run_id, choice_key="forage")
+
+    assert result.resources.herbs > before_herbs
+
+
+def test_trade_choice_consumes_herbs() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    service.advance_time(run.run_id)
+    service.resolve_event(run.run_id, choice_key="meditate")
+    advanced = service.advance_time(run.run_id)
+    before_herbs = advanced.resources.herbs
+    before_spirit_stone = advanced.resources.spirit_stone
+
+    result = service.resolve_event(run.run_id, choice_key="trade")
+
+    assert result.resources.herbs < before_herbs
+    assert result.resources.spirit_stone > before_spirit_stone
+
+
 def test_breakthrough_success_updates_realm_and_lifespan() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")

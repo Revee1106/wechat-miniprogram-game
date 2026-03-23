@@ -3,12 +3,15 @@ from __future__ import annotations
 from app.core_loop.types import EventChoice, EventTemplate, RealmConfig
 
 
+MONTHS_PER_YEAR = 12
+
+
 def get_realm_configs() -> list[RealmConfig]:
     return [
-        RealmConfig("qi_refining", "炼气", 6, 0.85, 100),
-        RealmConfig("foundation", "筑基", 12, 0.65, 240),
-        RealmConfig("golden_core", "金丹", 24, 0.45, 480),
-        RealmConfig("nascent_soul", "元婴", 40, 0.30, 960),
+        RealmConfig("qi_refining", "炼气", 6 * MONTHS_PER_YEAR, 0.85, 100),
+        RealmConfig("foundation", "筑基", 12 * MONTHS_PER_YEAR, 0.65, 240),
+        RealmConfig("golden_core", "金丹", 24 * MONTHS_PER_YEAR, 0.45, 480),
+        RealmConfig("nascent_soul", "元婴", 40 * MONTHS_PER_YEAR, 0.30, 960),
     ]
 
 
@@ -17,7 +20,7 @@ def get_event_templates() -> list[EventTemplate]:
         EventTemplate(
             key="mountain_breathing",
             display_name="山门吐纳",
-            description="晨雾未散，你可以静修吐纳，也可以顺手采些山草。",
+            description="晨雾未散，你可以静心吐纳，也可以顺手采些山间药草。",
             realm_keys=["qi_refining", "foundation", "golden_core", "nascent_soul"],
             weight=10,
             region="starter-valley",
@@ -31,25 +34,27 @@ def get_event_templates() -> list[EventTemplate]:
                 ),
                 EventChoice(
                     key="forage",
-                    display_name="采集草药",
+                    display_name="采集药草",
                     description="换取一些日常修炼资源。",
                     spirit_stone_delta=6,
+                    herbs_delta=2,
                 ),
             ],
         ),
         EventTemplate(
             key="wandering_merchant",
             display_name="游商过境",
-            description="一位游商愿意用灵石换取你手里的草药。",
+            description="一位游商愿意用灵石换取你手里的药草。",
             realm_keys=["qi_refining", "foundation"],
             weight=6,
             region="starter-valley",
             choices=[
                 EventChoice(
                     key="trade",
-                    display_name="售卖草药",
-                    description="把草药换成更通用的灵石。",
+                    display_name="出售药草",
+                    description="把药草换成更通用的灵石。",
                     spirit_stone_delta=10,
+                    herbs_delta=-2,
                 ),
                 EventChoice(
                     key="observe",
@@ -70,7 +75,7 @@ def get_event_templates() -> list[EventTemplate]:
                 EventChoice(
                     key="explore",
                     display_name="深入洞窟",
-                    description="搏一把机缘。",
+                    description="赌一把机缘。",
                     cultivation_exp_delta=30,
                     spirit_stone_delta=12,
                     death_chance=1.0,
@@ -86,15 +91,15 @@ def get_event_templates() -> list[EventTemplate]:
         EventTemplate(
             key="pill_oven",
             display_name="丹炉余火",
-            description="残留的丹火还热着，正适合小试炼药。",
+            description="残留的丹火仍有余温，适合小试炼药。",
             realm_keys=["qi_refining", "foundation", "golden_core"],
             weight=4,
             region="starter-valley",
             choices=[
                 EventChoice(
                     key="refine",
-                    display_name="顺手炼丹",
-                    description="消耗寿元，换取突破助力。",
+                    display_name="顺手炼药",
+                    description="消耗一点寿元，换取突破助力。",
                     cultivation_exp_delta=10,
                     lifespan_delta=-1,
                 ),
@@ -108,7 +113,7 @@ def get_event_templates() -> list[EventTemplate]:
         ),
         EventTemplate(
             key="dwelling_tax",
-            display_name="洞府 upkeep",
+            display_name="洞府养护",
             description="洞府需要灵石维护，但也能反哺修炼。",
             realm_keys=["qi_refining", "foundation", "golden_core", "nascent_soul"],
             weight=3,

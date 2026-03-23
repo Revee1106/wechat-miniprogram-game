@@ -18,7 +18,9 @@ def test_create_run_and_advance_round_trip() -> None:
     advance_response = client.post("/api/run/advance", json={"run_id": run_id})
 
     assert create_response.status_code == 200
+    assert create_response.json()["character"]["lifespan_current"] == 240
     assert advance_response.status_code == 200
+    assert advance_response.json()["character"]["lifespan_current"] == 239
     assert advance_response.json()["current_event"]["status"] == "pending"
 
 

@@ -30,6 +30,7 @@ class EventChoice:
     display_name: str
     description: str
     spirit_stone_delta: int = 0
+    herbs_delta: int = 0
     cultivation_exp_delta: int = 0
     lifespan_delta: int = 0
     death_chance: float = 0.0

@@ -4,6 +4,8 @@ from app.core_loop.services.run_service import RunService
 def test_advance_time_creates_pending_event() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")
+    assert run.character.lifespan_current == 240
+    assert run.character.lifespan_max == 240
     before_lifespan = run.character.lifespan_current
 
     result = service.advance_time(run.run_id)

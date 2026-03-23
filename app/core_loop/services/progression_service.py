@@ -48,7 +48,9 @@ class ProgressionService:
             run.character.lifespan_max,
             run.character.lifespan_current + next_realm.lifespan_bonus,
         )
-        run.result_summary = f"突破成功：{current_realm.display_name} -> {next_realm.display_name}"
+        run.result_summary = (
+            f"突破成功：{current_realm.display_name} -> {next_realm.display_name}"
+        )
 
         return BreakthroughResult(
             success=True,
