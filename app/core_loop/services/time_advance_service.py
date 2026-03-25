@@ -19,6 +19,11 @@ class TimeAdvanceService:
         next_run = deepcopy(run)
         next_run.round_index += 1
         next_run.character.lifespan_current -= 1
+        next_run.event_cooldowns = {
+            event_id: remaining - 1
+            for event_id, remaining in next_run.event_cooldowns.items()
+            if remaining - 1 > 0
+        }
 
         if next_run.character.lifespan_current <= 0:
             next_run.character.lifespan_current = 0

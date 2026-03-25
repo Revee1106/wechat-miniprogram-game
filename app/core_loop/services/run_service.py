@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core_loop.event_config import load_event_registry
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
@@ -11,14 +12,13 @@ from app.core_loop.types import RebirthResult, RunState
 
 
 class RunService:
-    def __init__(self) -> None:
+    def __init__(self, event_config_base_path: str | None = None) -> None:
         self._repo = InMemoryRunRepository()
-        self._event_service = EventService()
-        self._event_resolution_service = EventResolutionService()
+        self._event_config_base_path = event_config_base_path
         self._dwelling_service = DwellingService()
-        self._time_advance_service = TimeAdvanceService(self._event_service)
         self._progression_service = ProgressionService(self._dwelling_service)
         self._rebirth_service = RebirthService()
+        self.reload_event_config(event_config_base_path)
 
     def reset(self) -> None:
         self._repo.reset()
@@ -61,3 +61,10 @@ class RunService:
         self._rebirth_service.apply_permanent_bonus(claimed_profile, new_run)
         self._repo.save(new_run)
         return RebirthResult(player_profile=claimed_profile, new_run=new_run)
+
+    def reload_event_config(self, event_config_base_path: str | None = None) -> None:
+        self._event_config_base_path = event_config_base_path
+        registry = load_event_registry(base_path=event_config_base_path)
+        self._event_service = EventService(registry=registry)
+        self._event_resolution_service = EventResolutionService(registry=registry)
+        self._time_advance_service = TimeAdvanceService(self._event_service)

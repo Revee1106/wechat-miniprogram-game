@@ -44,6 +44,9 @@ class EventResolutionService:
         option_config = self._registry.options.get(option_id)
         if option_config is None or option_config.event_id != run.current_event.event_id:
             raise ConflictError(f"option '{option_id}' is not valid for this event")
+        template = self._registry.templates.get(option_config.event_id)
+        if template is None:
+            raise ConflictError(f"event '{option_config.event_id}' is not registered")
 
         success = self._determine_success(run, option_config)
         payload = self._parse_payload(
@@ -58,8 +61,16 @@ class EventResolutionService:
         )
 
         self._apply_payload(run, payload)
+        run.event_trigger_counts[template.event_id] = (
+            run.event_trigger_counts.get(template.event_id, 0) + 1
+        )
+        if template.cooldown_rounds > 0:
+            run.event_cooldowns[template.event_id] = template.cooldown_rounds
         if run.character.lifespan_current <= 0:
             run.character.lifespan_current = 0
+            run.character.is_dead = True
+        if run.character.hp_current <= 0:
+            run.character.hp_current = 0
             run.character.is_dead = True
 
         run.result_summary = log_text or self._build_fallback_summary(
@@ -74,9 +85,20 @@ class EventResolutionService:
         run: RunState,
         runtime_option: CurrentEventOption,
     ) -> bool:
-        return all(
-            getattr(run.resources, resource_name, 0) >= amount
-            for resource_name, amount in runtime_option.requires_resources.items()
+        return (
+            all(
+                self._get_resource_amount(run, resource_name) >= amount
+                for resource_name, amount in runtime_option.requires_resources.items()
+            )
+            and all(status in set(run.character.statuses) for status in runtime_option.requires_statuses)
+            and all(
+                technique in set(run.character.techniques)
+                for technique in runtime_option.requires_techniques
+            )
+            and all(
+                tag in set(run.character.equipment_tags)
+                for tag in runtime_option.requires_equipment_tags
+            )
         )
 
     def _determine_success(self, run: RunState, option_config: EventOptionConfig) -> bool:
@@ -114,19 +136,43 @@ class EventResolutionService:
             return payload_config
 
         if isinstance(payload_config, dict):
+            if "resource_deltas" in payload_config:
+                character: dict[str, int] = {}
+                if "cultivation_exp_delta" in payload_config:
+                    character["cultivation_exp"] = int(
+                        payload_config.get("cultivation_exp_delta", 0)
+                    )
+                if "lifespan_delta" in payload_config:
+                    character["lifespan_delta"] = int(payload_config.get("lifespan_delta", 0))
+                return EventResultPayload(
+                    resources={
+                        self._normalize_resource_key(key): int(value)
+                        for key, value in payload_config.get("resource_deltas", {}).items()
+                    },
+                    character=character,
+                    death=bool(payload_config.get("death", False)),
+                )
             return EventResultPayload(
-                resource_deltas={
-                    key: int(value)
-                    for key, value in payload_config.get("resource_deltas", {}).items()
+                resources={
+                    self._normalize_resource_key(key): int(value)
+                    for key, value in payload_config.get("resources", {}).items()
                 },
-                cultivation_exp_delta=int(payload_config.get("cultivation_exp_delta", 0)),
-                lifespan_delta=int(payload_config.get("lifespan_delta", 0)),
+                character={
+                    key: int(value)
+                    for key, value in payload_config.get("character", {}).items()
+                },
+                statuses_add=list(payload_config.get("statuses_add", [])),
+                statuses_remove=list(payload_config.get("statuses_remove", [])),
+                techniques_add=list(payload_config.get("techniques_add", [])),
+                equipment_add=list(payload_config.get("equipment_add", [])),
+                equipment_remove=list(payload_config.get("equipment_remove", [])),
+                battle=payload_config.get("battle"),
                 death=bool(payload_config.get("death", False)),
+                rebirth_progress_delta=int(payload_config.get("rebirth_progress_delta", 0)),
             )
 
-        resource_deltas: dict[str, int] = {}
-        cultivation_exp_delta = 0
-        lifespan_delta = 0
+        resources: dict[str, int] = {}
+        character: dict[str, int] = {}
         death = False
         for token in filter(None, (item.strip() for item in payload_config.split(","))):
             key, _, raw_value = token.partition(":")
@@ -136,52 +182,145 @@ class EventResolutionService:
             normalized_key = key.strip()
             normalized_value = raw_value.strip()
             if normalized_key == "cultivation_exp":
-                cultivation_exp_delta += int(normalized_value)
+                character["cultivation_exp"] = character.get("cultivation_exp", 0) + int(
+                    normalized_value
+                )
                 continue
             if normalized_key == "lifespan":
-                lifespan_delta += int(normalized_value)
+                character["lifespan_delta"] = character.get("lifespan_delta", 0) + int(
+                    normalized_value
+                )
                 continue
             if normalized_key == "death":
                 death = normalized_value.lower() == "true"
                 continue
-            resource_deltas[normalized_key] = resource_deltas.get(normalized_key, 0) + int(
+            resources[self._normalize_resource_key(normalized_key)] = resources.get(
+                self._normalize_resource_key(normalized_key),
+                0,
+            ) + int(
                 normalized_value
             )
 
         return EventResultPayload(
-            resource_deltas=resource_deltas,
-            cultivation_exp_delta=cultivation_exp_delta,
-            lifespan_delta=lifespan_delta,
+            resources=resources,
+            character=character,
             death=death,
         )
 
     def _apply_payload(self, run: RunState, payload: EventResultPayload) -> None:
         updated_resources: dict[str, int] = {}
-        for resource_name, delta in payload.resource_deltas.items():
-            if not hasattr(run.resources, resource_name):
+        for resource_name, delta in payload.resources.items():
+            resolved_name = self._resolve_resource_name(resource_name)
+            if resolved_name is None:
                 raise CoreLoopError(f"unknown resource '{resource_name}'")
             updated_resources[resource_name] = max(
                 0,
-                getattr(run.resources, resource_name) + delta,
+                self._get_resource_amount(run, resource_name) + delta,
             )
 
-        updated_cultivation_exp = max(
-            0,
-            run.character.cultivation_exp + payload.cultivation_exp_delta,
-        )
-        updated_lifespan = min(
-            run.character.lifespan_max,
-            max(0, run.character.lifespan_current + payload.lifespan_delta),
-        )
-
         for resource_name, updated_value in updated_resources.items():
-            setattr(run.resources, resource_name, updated_value)
-        run.character.cultivation_exp = updated_cultivation_exp
-        run.character.lifespan_current = updated_lifespan
+            self._set_resource_amount(run, resource_name, updated_value)
+
+        run.character.cultivation_exp = max(
+            0,
+            run.character.cultivation_exp + payload.character.get("cultivation_exp", 0),
+        )
+        run.character.lifespan_current = min(
+            run.character.lifespan_max,
+            max(0, run.character.lifespan_current + payload.character.get("lifespan_delta", 0)),
+        )
+        run.character.hp_current = min(
+            run.character.hp_max,
+            max(0, run.character.hp_current + payload.character.get("hp_delta", 0)),
+        )
+        run.character.breakthrough_bonus = max(
+            0,
+            run.character.breakthrough_bonus + payload.character.get("breakthrough_bonus", 0),
+        )
+        run.character.technique_exp = max(
+            0,
+            run.character.technique_exp + payload.character.get("technique_exp", 0),
+        )
+        run.character.luck = max(
+            0,
+            run.character.luck + payload.character.get("luck_delta", 0),
+        )
+        run.character.karma += payload.character.get("karma_delta", 0)
+        run.character.rebirth_progress = max(
+            0,
+            run.character.rebirth_progress + payload.rebirth_progress_delta,
+        )
+        run.character.statuses = self._merge_tags(
+            run.character.statuses,
+            payload.statuses_add,
+            payload.statuses_remove,
+        )
+        run.character.techniques = self._merge_tags(
+            run.character.techniques,
+            payload.techniques_add,
+            [],
+        )
+        run.character.equipment_tags = self._merge_tags(
+            run.character.equipment_tags,
+            payload.equipment_add,
+            payload.equipment_remove,
+        )
 
         if payload.death:
             run.character.is_dead = True
             run.character.lifespan_current = 0
+
+    def _merge_tags(
+        self,
+        current_values: list[str],
+        values_to_add: list[str],
+        values_to_remove: list[str],
+    ) -> list[str]:
+        merged = [value for value in current_values if value not in set(values_to_remove)]
+        for value in values_to_add:
+            if value not in merged:
+                merged.append(value)
+        return merged
+
+    def _normalize_resource_key(self, resource_name: str) -> str:
+        aliases = {
+            "herbs": "herb",
+            "iron_essence": "ore",
+        }
+        return aliases.get(resource_name, resource_name)
+
+    def _resolve_resource_name(self, resource_name: str) -> str | None:
+        normalized_name = self._normalize_resource_key(resource_name)
+        if normalized_name == "herb":
+            return "herbs"
+        if normalized_name == "ore":
+            return "ore"
+        allowed_names = {
+            "spirit_stone",
+            "beast_material",
+            "pill",
+            "craft_material",
+        }
+        return normalized_name if normalized_name in allowed_names else None
+
+    def _get_resource_amount(self, run: RunState, resource_name: str) -> int:
+        normalized_name = self._normalize_resource_key(resource_name)
+        if normalized_name == "herb":
+            return getattr(run.resources, "herbs", 0)
+        if normalized_name == "ore":
+            return max(getattr(run.resources, "ore", 0), getattr(run.resources, "iron_essence", 0))
+        return getattr(run.resources, normalized_name, 0)
+
+    def _set_resource_amount(self, run: RunState, resource_name: str, amount: int) -> None:
+        normalized_name = self._normalize_resource_key(resource_name)
+        if normalized_name == "herb":
+            run.resources.herbs = amount
+            return
+        if normalized_name == "ore":
+            run.resources.ore = amount
+            run.resources.iron_essence = amount
+            return
+        setattr(run.resources, normalized_name, amount)
 
     def _build_fallback_summary(self, event_name: str, option_text: str) -> str:
         return f"{event_name}: {option_text}"

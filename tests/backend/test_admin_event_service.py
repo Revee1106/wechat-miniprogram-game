@@ -1,0 +1,189 @@
+from pathlib import Path
+from shutil import rmtree
+from uuid import uuid4
+
+from app.admin.repositories.event_config_repository import EventConfigRepository
+from app.admin.services.event_admin_service import EventAdminService
+
+
+def test_service_returns_event_detail_with_options() -> None:
+    base_path = _make_test_base_path("admin-detail")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_sample",
+                    "event_name": "Sample",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Sample",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_sample"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_sample",
+                    "event_id": "evt_sample",
+                    "option_text": "Option",
+                    "sort_order": 1,
+                    "is_default": True,
+                }
+            ],
+        }
+    )
+    service = EventAdminService(base_path=base_path)
+
+    detail = service.get_event("evt_sample")
+
+    assert detail["template"]["event_id"] == "evt_sample"
+    assert detail["options"][0]["option_id"] == "opt_sample"
+    rmtree(base_path)
+
+
+def test_service_creates_event_template() -> None:
+    base_path = _make_test_base_path("admin-create")
+    service = EventAdminService(base_path=base_path)
+
+    created = service.create_event(
+        {
+            "event_id": "evt_new",
+            "event_name": "New Event",
+            "event_type": "material",
+            "outcome_type": "material",
+            "risk_level": "normal",
+            "trigger_sources": ["global"],
+            "choice_pattern": "binary_choice",
+            "title_text": "New Event",
+            "body_text": "Body",
+            "weight": 2,
+            "is_repeatable": True,
+            "option_ids": [],
+        }
+    )
+
+    assert created["event_id"] == "evt_new"
+    assert any(item["event_id"] == "evt_new" for item in service.list_events()["items"])
+    rmtree(base_path)
+
+
+def test_service_filters_events_by_type_and_keyword() -> None:
+    base_path = _make_test_base_path("admin-filter")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_cultivation",
+                    "event_name": "Mountain Tide",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Mountain Tide",
+                    "body_text": "Spirit tide gathers in the mountain.",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_cultivation"],
+                },
+                {
+                    "event_id": "evt_material",
+                    "event_name": "Herb Search",
+                    "event_type": "material",
+                    "outcome_type": "material",
+                    "risk_level": "safe",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Herb Search",
+                    "body_text": "You search the valley for herbs.",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_material"],
+                },
+            ],
+            "options": [
+                {
+                    "option_id": "opt_cultivation",
+                    "event_id": "evt_cultivation",
+                    "option_text": "Absorb",
+                    "sort_order": 1,
+                    "is_default": True,
+                },
+                {
+                    "option_id": "opt_material",
+                    "event_id": "evt_material",
+                    "option_text": "Search",
+                    "sort_order": 1,
+                    "is_default": True,
+                },
+            ],
+        }
+    )
+    service = EventAdminService(base_path=base_path)
+
+    filtered = service.list_events(event_type="material", keyword="herb")
+
+    assert [item["event_id"] for item in filtered["items"]] == ["evt_material"]
+    rmtree(base_path)
+
+
+def test_service_reloads_runtime_config() -> None:
+    base_path = _make_test_base_path("admin-reload")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_reload",
+                    "event_name": "Reload",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Reload",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_reload"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_reload",
+                    "event_id": "evt_reload",
+                    "option_text": "Absorb",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {"resources": {"spirit_stone": 1}},
+                    "result_on_failure": {"resources": {}},
+                }
+            ],
+        }
+    )
+    run_service = _ReloadRunService()
+    service = EventAdminService(base_path=base_path, run_service=run_service)
+
+    result = service.reload_runtime_config()
+
+    assert result == {"reloaded": True, "template_count": 1, "option_count": 1}
+    assert run_service.reloaded_base_path == str(base_path)
+    rmtree(base_path)
+
+
+def _make_test_base_path(label: str) -> Path:
+    base_path = Path.cwd() / ".pytest_tmp" / f"{label}-{uuid4().hex}"
+    base_path.mkdir(parents=True, exist_ok=True)
+    return base_path
+
+
+class _ReloadRunService:
+    def __init__(self) -> None:
+        self.reloaded_base_path: str | None = None
+
+    def reload_event_config(self, event_config_base_path: str | None = None) -> None:
+        self.reloaded_base_path = event_config_base_path

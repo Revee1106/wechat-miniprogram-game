@@ -33,6 +33,7 @@ class ProgressionService:
             0.95,
             current_realm.base_success_rate
             + 0.10
+            + min(run.character.breakthrough_bonus * 0.01, 0.20)
             + run.character.pill_bonus
             + run.character.technique_bonus
             - run.character.status_penalty
