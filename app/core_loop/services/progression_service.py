@@ -1,24 +1,35 @@
 from __future__ import annotations
 
+from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.seeds import get_realm_configs
 from app.core_loop.services.dwelling_service import DwellingService
-from app.core_loop.types import BreakthroughResult, ConflictError, RunState
+from app.core_loop.types import BreakthroughResult, ConflictError, RealmConfig, RunState
 
 
 class ProgressionService:
-    def __init__(self, dwelling_service: DwellingService) -> None:
-        self._realm_configs = get_realm_configs()
+    def __init__(
+        self,
+        dwelling_service: DwellingService,
+        realm_configs: list[RealmConfig] | None = None,
+    ) -> None:
+        self._realm_configs = list(realm_configs) if realm_configs is not None else get_realm_configs()
         self._dwelling_service = dwelling_service
 
     def try_breakthrough(self, run: RunState) -> BreakthroughResult:
         if run.character.is_dead:
             raise ConflictError("dead characters cannot breakthrough")
 
+        current_realm_key = resolve_realm_key(run.character.realm, self._realm_configs)
         current_index = next(
-            index
-            for index, config in enumerate(self._realm_configs)
-            if config.key == run.character.realm
+            (
+                index
+                for index, config in enumerate(self._realm_configs)
+                if config.key == current_realm_key
+            ),
+            None,
         )
+        if current_index is None:
+            raise ConflictError(f"unknown realm '{run.character.realm}'")
         if current_index >= len(self._realm_configs) - 1:
             raise ConflictError("already at maximum realm")
 
@@ -26,7 +37,7 @@ class ProgressionService:
         next_realm = self._realm_configs[current_index + 1]
         if run.character.cultivation_exp < current_realm.required_exp:
             raise ConflictError("not enough cultivation exp to breakthrough")
-        if run.resources.spirit_stone < 50:
+        if run.resources.spirit_stone < current_realm.required_spirit_stone:
             raise ConflictError("not enough spirit stones to breakthrough")
 
         success_rate = min(
@@ -41,7 +52,7 @@ class ProgressionService:
             + self._dwelling_service.get_breakthrough_bonus(run.dwelling_level),
         )
 
-        run.resources.spirit_stone -= 50
+        run.resources.spirit_stone -= current_realm.required_spirit_stone
         previous_realm = run.character.realm
         run.character.realm = next_realm.key
         run.character.lifespan_max += next_realm.lifespan_bonus

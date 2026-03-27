@@ -71,6 +71,107 @@ def test_resolve_event_applies_selected_option_rewards() -> None:
         rmtree(base_path)
 
 
+def test_get_run_refreshes_pending_event_from_reloaded_config() -> None:
+    base_path = _make_test_base_path("run-service-refresh-pending-event")
+    repository = EventConfigRepository(base_path=base_path)
+    repository.save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_room_breathing",
+                    "event_name": "Room Breathing",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "safe",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Room Breathing",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_absorb", "opt_withdraw"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_absorb",
+                    "event_id": "evt_room_breathing",
+                    "option_text": "Absorb",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "success_rate_formula": "1.0",
+                    "result_on_success": {"character": {"cultivation_exp": 3}},
+                    "result_on_failure": {},
+                    "log_text_success": "absorb",
+                },
+                {
+                    "option_id": "opt_withdraw",
+                    "event_id": "evt_room_breathing",
+                    "option_text": "Withdraw",
+                    "sort_order": 2,
+                    "is_default": False,
+                    "success_rate_formula": "1.0",
+                    "result_on_success": {"character": {"cultivation_exp": 1}},
+                    "result_on_failure": {},
+                    "log_text_success": "withdraw",
+                },
+            ],
+        }
+    )
+
+    try:
+        service = RunService(event_config_base_path=str(base_path))
+        run = service.create_run(player_id="p1")
+        advanced = service.advance_time(run.run_id)
+
+        assert advanced.current_event is not None
+        assert advanced.current_event.choice_pattern == "binary_choice"
+        assert len(advanced.current_event.options) == 2
+
+        repository.save(
+            {
+                "templates": [
+                    {
+                        "event_id": "evt_room_breathing",
+                        "event_name": "Room Breathing",
+                        "event_type": "cultivation",
+                        "outcome_type": "cultivation",
+                        "risk_level": "safe",
+                        "trigger_sources": ["global"],
+                        "choice_pattern": "single_outcome",
+                        "title_text": "Room Breathing",
+                        "body_text": "Body",
+                        "weight": 1,
+                        "is_repeatable": True,
+                        "option_ids": ["opt_complete"],
+                    }
+                ],
+                "options": [
+                    {
+                        "option_id": "opt_complete",
+                        "event_id": "evt_room_breathing",
+                        "option_text": "Complete",
+                        "sort_order": 1,
+                        "is_default": True,
+                        "success_rate_formula": "1.0",
+                        "result_on_success": {"character": {"cultivation_exp": 5}},
+                        "result_on_failure": {},
+                        "log_text_success": "complete",
+                    }
+                ],
+            }
+        )
+        service.reload_event_config(event_config_base_path=str(base_path))
+
+        refreshed = service.get_run(run.run_id)
+
+        assert refreshed.current_event is not None
+        assert refreshed.current_event.choice_pattern == "single_outcome"
+        assert [option.option_id for option in refreshed.current_event.options] == ["opt_complete"]
+    finally:
+        rmtree(base_path)
+
+
 def test_resolve_event_keeps_run_progressing_under_random_selection() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")
@@ -101,19 +202,28 @@ def test_random_event_pool_excludes_evil_cultist_event() -> None:
     assert "evt_evil_cultist_012" not in seen_event_ids
 
 
-def test_breakthrough_success_updates_realm_and_lifespan() -> None:
+def test_create_run_starts_at_qi_refining_early() -> None:
+    service = RunService()
+
+    run = service.create_run(player_id="p1")
+
+    assert run.character.realm == "qi_refining_early"
+
+
+def test_breakthrough_uses_realm_config_cost_and_small_stage_chain() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")
-    before_realm = run.character.realm
     before_lifespan_max = run.character.lifespan_max
     run.character.cultivation_exp = 100
-    run.resources.spirit_stone = 50
+    run.resources.spirit_stone = 20
 
     result = service.breakthrough(run.run_id)
 
     assert result.success is True
-    assert result.new_realm != before_realm
+    assert result.previous_realm == "qi_refining_early"
+    assert result.new_realm == "qi_refining_mid"
     assert result.character.lifespan_max > before_lifespan_max
+    assert result.resources.spirit_stone == 20
 
 
 def test_rebirth_creates_new_run_with_permanent_bonus() -> None:

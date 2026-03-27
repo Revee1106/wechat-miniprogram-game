@@ -35,7 +35,7 @@
   },
   {
     "option_id": "opt_secluded_room_breathing_002_meditate",
-    "option_text": "默认结果",
+    "option_text": "完成事件",
     "sort_order": 1,
     "is_default": true,
     "requires_resources": {},
@@ -44,9 +44,6 @@
     "requires_equipment_tags": [],
     "success_rate_formula": "",
     "result_on_success": {
-      "resources": {
-        "spirit_stone": -1
-      },
       "character": {
         "cultivation_exp": 5
       }

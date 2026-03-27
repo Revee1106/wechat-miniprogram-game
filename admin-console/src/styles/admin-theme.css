@@ -189,6 +189,39 @@ textarea:focus {
   align-items: center;
 }
 
+.console-topbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.console-nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+}
+
+.console-nav__button {
+  padding: 0.58rem 0.96rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+}
+
+.console-nav__button--active {
+  color: var(--ink);
+  background: rgba(36, 69, 59, 0.1);
+  border-color: rgba(36, 69, 59, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(36, 69, 59, 0.08);
+}
+
 .console-userbar__badge {
   padding: 0.58rem 0.86rem;
   border: 1px solid var(--line);
@@ -344,6 +377,34 @@ textarea:focus {
   display: flex;
   flex-wrap: wrap;
   gap: 0.7rem;
+}
+
+.resource-editor__stack {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.resource-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(140px, 0.8fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.resource-row__remove {
+  align-self: center;
+}
+
+.resource-editor__empty {
+  padding: 1rem 1.05rem;
+  border: 1px dashed rgba(31, 53, 46, 0.18);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.45);
 }
 
 .choice-chip {
@@ -672,6 +733,18 @@ textarea:focus {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .console-topbar__actions {
+    justify-content: stretch;
+  }
+
+  .console-nav {
+    width: 100%;
+  }
+
+  .console-nav__button {
+    flex: 1;
+  }
+
   .console-userbar,
   .toolbar,
   .section-card__header,
@@ -701,5 +774,9 @@ textarea:focus {
 
   .editor-dialog__body {
     padding: 0.85rem;
+  }
+
+  .resource-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -80,6 +80,36 @@ export type AdminSession = {
   username: string;
 };
 
+export type RealmConfig = {
+  key: string;
+  display_name: string;
+  major_realm: string;
+  stage_index: number;
+  order_index: number;
+  base_success_rate: number;
+  required_cultivation_exp: number;
+  required_spirit_stone: number;
+  lifespan_bonus: number;
+  is_enabled: boolean;
+};
+
+export type RealmInput = RealmConfig;
+
+export type RealmListResponse = {
+  items: RealmConfig[];
+};
+
+export type RealmDetailResponse = RealmConfig;
+
+export type RealmReloadResponse = {
+  reloaded: boolean;
+  realm_count: number;
+};
+
+export type RealmReorderResponse = {
+  items: RealmConfig[];
+};
+
 export async function fetchEvents(filters?: {
   eventType?: string;
   riskLevel?: string;
@@ -112,6 +142,22 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetailResp
   return response.json();
 }
 
+export async function fetchRealms(): Promise<RealmListResponse> {
+  const response = await fetch("/admin/api/realms");
+  if (!response.ok) {
+    throw new Error("Failed to load realms");
+  }
+  return response.json();
+}
+
+export async function fetchRealmDetail(realmKey: string): Promise<RealmDetailResponse> {
+  const response = await fetch(`/admin/api/realms/${realmKey}`);
+  if (!response.ok) {
+    throw new Error("Failed to load realm detail");
+  }
+  return response.json();
+}
+
 export async function createEvent(payload: EventTemplateInput): Promise<EventTemplateInput> {
   return sendJson("/admin/api/events", {
     method: "POST",
@@ -121,6 +167,29 @@ export async function createEvent(payload: EventTemplateInput): Promise<EventTem
 
 export async function deleteEvent(eventId: string): Promise<void> {
   await sendJson(`/admin/api/events/${eventId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function createRealm(payload: RealmInput): Promise<RealmDetailResponse> {
+  return sendJson("/admin/api/realms", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateRealm(
+  realmKey: string,
+  payload: RealmInput
+): Promise<RealmDetailResponse> {
+  return sendJson(`/admin/api/realms/${realmKey}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteRealm(realmKey: string): Promise<void> {
+  await sendJson(`/admin/api/realms/${realmKey}`, {
     method: "DELETE",
   });
 }
@@ -167,6 +236,12 @@ export async function validateEvents(): Promise<ValidationResponse> {
   });
 }
 
+export async function validateRealms(): Promise<ValidationResponse> {
+  return sendJson("/admin/api/realms/validate", {
+    method: "POST",
+  });
+}
+
 export async function reloadEvents(): Promise<{
   reloaded: boolean;
   template_count: number;
@@ -174,6 +249,19 @@ export async function reloadEvents(): Promise<{
 }> {
   return sendJson("/admin/api/events/reload", {
     method: "POST",
+  });
+}
+
+export async function reloadRealms(): Promise<RealmReloadResponse> {
+  return sendJson("/admin/api/realms/reload", {
+    method: "POST",
+  });
+}
+
+export async function reorderRealms(keys: string[]): Promise<RealmReorderResponse> {
+  return sendJson("/admin/api/realms/reorder", {
+    method: "POST",
+    body: JSON.stringify({ keys }),
   });
 }
 

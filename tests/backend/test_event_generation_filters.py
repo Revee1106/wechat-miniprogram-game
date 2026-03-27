@@ -60,7 +60,7 @@ def _build_run() -> RunState:
         round_index=1,
         character=CharacterState(
             name="player-test-wanderer",
-            realm="qi_refining",
+            realm="qi_refining_early",
             cultivation_exp=0,
             lifespan_current=240,
             lifespan_max=240,
@@ -97,11 +97,11 @@ def test_event_selection_skips_realm_blocked_templates() -> None:
     service = EventService(
         registry=_build_registry(
             EventTemplateConfig(
-                event_id="evt_foundation_only",
-                event_name="Foundation Only",
+                event_id="evt_mid_only",
+                event_name="Mid Only",
                 event_type="cultivation",
-                option_ids=["opt_foundation_only"],
-                realm_min="foundation",
+                option_ids=["opt_mid_only"],
+                realm_min="qi_refining_mid",
             ),
             EventTemplateConfig(
                 event_id="evt_fallback",
@@ -116,6 +116,26 @@ def test_event_selection_skips_realm_blocked_templates() -> None:
     selected = service.select_event(run, rebirth_count=0)
 
     assert selected.event_id == "evt_fallback"
+
+
+def test_event_selection_legacy_realm_max_covers_entire_foundation_chain() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_foundation_chain",
+                event_name="Foundation Chain",
+                event_type="cultivation",
+                option_ids=["opt_foundation_chain"],
+                realm_max="foundation",
+            ),
+        )
+    )
+    run = _build_run()
+    run.character.realm = "foundation_mid"
+
+    selected = service.select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_foundation_chain"
 
 
 def test_event_selection_skips_resource_blocked_templates() -> None:

@@ -49,7 +49,7 @@
     "realm_min": null,
     "realm_max": null,
     "region": "starter-valley",
-    "weight": 9,
+    "weight": 100,
     "is_repeatable": true,
     "cooldown_rounds": 0,
     "max_trigger_per_run": 999999,

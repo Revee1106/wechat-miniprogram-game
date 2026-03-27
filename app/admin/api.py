@@ -11,11 +11,13 @@ from app.admin.auth import (
 )
 from app.admin.schemas import AdminLoginRequest, AdminSessionResponse
 from app.admin.services.event_admin_service import EventAdminService
+from app.admin.services.realm_admin_service import RealmAdminService
 from app.core_loop.types import NotFoundError
 
 
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 event_admin_service = EventAdminService()
+realm_admin_service = RealmAdminService()
 
 
 def _raise_http_error(error: Exception) -> None:
@@ -147,6 +149,79 @@ def validate_events() -> dict[str, object]:
 def reload_events() -> dict[str, object]:
     try:
         return event_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.get("/realms")
+def list_realms() -> dict[str, object]:
+    return realm_admin_service.list_realms()
+
+
+@router.post("/realms/validate")
+def validate_realms() -> dict[str, object]:
+    result = realm_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/realms/reload")
+def reload_realms() -> dict[str, object]:
+    try:
+        return realm_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/realms/reorder")
+def reorder_realms(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        keys = payload.get("keys")
+        if not isinstance(keys, list):
+            raise ValueError("realm reorder keys are required")
+        return realm_admin_service.reorder_realms([str(key) for key in keys])
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.get("/realms/{realm_key}")
+def get_realm(realm_key: str) -> dict[str, object]:
+    try:
+        return realm_admin_service.get_realm(realm_key)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/realms")
+def create_realm(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return realm_admin_service.create_realm(payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/realms/{realm_key}")
+def update_realm(realm_key: str, payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return realm_admin_service.update_realm(realm_key, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.delete("/realms/{realm_key}")
+def delete_realm(realm_key: str) -> dict[str, object]:
+    try:
+        realm_admin_service.delete_realm(realm_key)
+        return {"deleted": True}
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)
         raise

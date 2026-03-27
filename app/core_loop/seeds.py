@@ -1,18 +1,11 @@
 from __future__ import annotations
 
+from app.core_loop.realm_config import load_realm_configs
 from app.core_loop.types import EventChoice, EventTemplate, RealmConfig
 
 
-MONTHS_PER_YEAR = 12
-
-
 def get_realm_configs() -> list[RealmConfig]:
-    return [
-        RealmConfig("qi_refining", "炼气", 6 * MONTHS_PER_YEAR, 0.85, 100),
-        RealmConfig("foundation", "筑基", 12 * MONTHS_PER_YEAR, 0.65, 240),
-        RealmConfig("golden_core", "金丹", 24 * MONTHS_PER_YEAR, 0.45, 480),
-        RealmConfig("nascent_soul", "元婴", 40 * MONTHS_PER_YEAR, 0.30, 960),
-    ]
+    return load_realm_configs()
 
 
 def get_event_templates() -> list[EventTemplate]:

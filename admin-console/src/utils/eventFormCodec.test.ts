@@ -47,3 +47,19 @@ test("builds compact structured payloads from editor state", () => {
     statuses_add: ["blessed"],
   });
 });
+
+test("normalizes structured resource payload aliases into canonical editor keys", () => {
+  const state = parsePayloadEditorState({
+    resources: {
+      herbs: 2,
+      iron_essence: 4,
+      spirit_stone: 1,
+    },
+  });
+
+  expect(state.resources).toEqual({
+    spirit_stone: 1,
+    herb: 2,
+    ore: 4,
+  });
+});

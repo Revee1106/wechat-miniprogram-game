@@ -1,13 +1,12 @@
 import {
   buildPayloadFromEditorState,
-  formatKeyValueMap,
   formatLineList,
-  parseKeyValueMap,
   parseLineList,
   parseNumberInput,
   parsePayloadEditorState,
   type PayloadEditorState,
 } from "../utils/eventFormCodec";
+import { resourceOptions, sortResourceRecord } from "../utils/resourceCatalog";
 
 type ResultPayloadEditorProps = {
   labelPrefix: string;
@@ -21,6 +20,9 @@ export function ResultPayloadEditor({
   onChange,
 }: ResultPayloadEditorProps) {
   const state = parsePayloadEditorState(payload);
+  const resourceEntries = Object.entries(sortResourceRecord(state.resources));
+  const usedResourceKeys = resourceEntries.map(([key]) => key);
+  const canAddResource = usedResourceKeys.length < resourceOptions.length;
 
   function update(partial: Partial<PayloadEditorState>) {
     onChange(
@@ -31,17 +33,111 @@ export function ResultPayloadEditor({
     );
   }
 
+  function updateResources(entries: Array<[string, number]>) {
+    const resources = Object.fromEntries(
+      entries.filter(([key, amount]) => key && Number.isFinite(amount) && amount !== 0)
+    );
+    update({ resources });
+  }
+
+  function handleAddResource() {
+    const nextResource = resourceOptions.find(
+      (option) => !usedResourceKeys.includes(option.value)
+    );
+    if (!nextResource) {
+      return;
+    }
+    updateResources([...resourceEntries, [nextResource.value, 1]]);
+  }
+
+  function handleResourceKeyChange(index: number, nextKey: string) {
+    const nextEntries = resourceEntries.map(([key, amount], entryIndex) =>
+      entryIndex === index ? [nextKey, amount] : [key, amount]
+    ) as Array<[string, number]>;
+    updateResources(nextEntries);
+  }
+
+  function handleResourceAmountChange(index: number, nextAmount: string) {
+    const nextEntries = resourceEntries.map(([key, amount], entryIndex) =>
+      entryIndex === index ? [key, parseNumberInput(nextAmount, 0)] : [key, amount]
+    ) as Array<[string, number]>;
+    updateResources(nextEntries);
+  }
+
+  function handleRemoveResource(index: number) {
+    updateResources(resourceEntries.filter((_, entryIndex) => entryIndex !== index));
+  }
+
   return (
     <div className="field-grid">
-      <label className="field field--full">
-        <span className="field__label">{labelPrefix}资源变化</span>
-        <textarea
-          aria-label={`${labelPrefix}资源变化`}
-          placeholder="每行一个，格式为 名称:数量"
-          value={formatKeyValueMap(state.resources)}
-          onChange={(event) => update({ resources: parseKeyValueMap(event.target.value) })}
-        />
-      </label>
+      <div className="field field--full resource-editor">
+        <div className="field__label">
+          <span>{labelPrefix}资源变化</span>
+          <button
+            className="button-secondary"
+            disabled={!canAddResource}
+            type="button"
+            onClick={handleAddResource}
+          >
+            新增资源变化
+          </button>
+        </div>
+        <div className="resource-editor__stack">
+          {resourceEntries.length > 0 ? (
+            resourceEntries.map(([resourceKey, amount], index) => (
+              <div key={resourceKey} className="resource-row">
+                <label className="field">
+                  <span className="field__hint">资源名称</span>
+                  <select
+                    aria-label={`${labelPrefix}资源类型-${index + 1}`}
+                    value={resourceKey}
+                    onChange={(event) => handleResourceKeyChange(index, event.target.value)}
+                  >
+                    {resourceOptions.map((option) => {
+                      const isTakenByAnother =
+                        usedResourceKeys.includes(option.value) && option.value !== resourceKey;
+                      return (
+                        <option
+                          key={option.value}
+                          disabled={isTakenByAnother}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+
+                <label className="field">
+                  <span className="field__hint">增减数值</span>
+                  <input
+                    aria-label={`${labelPrefix}资源数值-${index + 1}`}
+                    type="number"
+                    value={amount}
+                    onChange={(event) => handleResourceAmountChange(index, event.target.value)}
+                  />
+                </label>
+
+                <button
+                  className="button-secondary resource-row__remove"
+                  type="button"
+                  onClick={() => handleRemoveResource(index)}
+                >
+                  删除
+                </button>
+              </div>
+            ))
+          ) : (
+            <div className="resource-editor__empty">
+              暂未配置资源变化，可通过“新增资源变化”补充收益或消耗。
+            </div>
+          )}
+        </div>
+        <span className="field__hint">
+          只支持系统内已定义的资源类型。正数表示获得，负数表示消耗。
+        </span>
+      </div>
 
       <label className="field">
         <span className="field__label">{labelPrefix}修为变化</span>

@@ -45,7 +45,7 @@ const PANEL_TITLES: Record<Exclude<EditorPanel, null>, string> = {
   singleOutcome: "单一结果",
 };
 
-const SINGLE_OUTCOME_TEXT = "默认结果";
+const SINGLE_OUTCOME_TEXT = "完成事件";
 
 export function EventEditorPage({
   eventId,
@@ -194,7 +194,33 @@ export function EventEditorPage({
       setOptions(normalizedOptions);
       setExistingOptionIds(normalizedOptions.map((option) => option.option_id));
       setRemovedOptionIds([]);
-      setStatusMessage("事件已保存。");
+      setEventLibrary((current) => {
+        const nextItem = {
+          event_id: templatePayload.event_id,
+          event_name: templatePayload.event_name,
+          event_type: templatePayload.event_type,
+          outcome_type: templatePayload.outcome_type,
+          risk_level: templatePayload.risk_level,
+          trigger_sources: templatePayload.trigger_sources,
+          region: templatePayload.region,
+          realm_min: templatePayload.realm_min,
+          realm_max: templatePayload.realm_max,
+          option_ids: templatePayload.option_ids,
+          is_repeatable: templatePayload.is_repeatable,
+          weight: templatePayload.weight,
+        };
+        const withoutCurrent = current.filter((item) => item.event_id !== templatePayload.event_id);
+        return [...withoutCurrent, nextItem];
+      });
+      try {
+        const result = await reloadEvents();
+        setStatusMessage(
+          `事件已保存，并已重载运行时。当前共载入 ${result.template_count} 条事件和 ${result.option_count} 个选项。`
+        );
+      } catch (reloadError) {
+        setStatusMessage("事件已保存，但运行时重载失败，请手动点击“重载运行时”。");
+        setErrorMessage((reloadError as Error).message);
+      }
       onSaved(eventIdValue);
     } catch (error) {
       setErrorMessage((error as Error).message);
@@ -240,10 +266,25 @@ export function EventEditorPage({
     field: K,
     value: EventTemplateInput[K]
   ) {
-    setTemplate((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    setTemplate((current) => {
+      if (field === "choice_pattern") {
+        const nextPattern = String(value);
+        if (nextPattern === "single_outcome" && current.choice_pattern !== "single_outcome") {
+          setOptions((currentOptions) => [
+            createCleanSingleOutcomeOption(
+              currentOptions[0],
+              current.event_id || "event",
+              current.event_name
+            ),
+          ]);
+        }
+      }
+
+      return {
+        ...current,
+        [field]: value,
+      };
+    });
   }
 
   function handleOptionChange(
@@ -560,6 +601,32 @@ function normalizeSingleOutcomeOption(
     requires_techniques: [],
     requires_equipment_tags: [],
     result_on_failure: {},
+    log_text_failure: "",
+  };
+}
+
+function createCleanSingleOutcomeOption(
+  option: EventOptionInput | undefined,
+  eventIdSeed: string,
+  eventNameSeed: string
+): EventOptionInput {
+  const normalized = normalizeOption(option ?? createEmptyOption(1));
+  return {
+    ...createEmptyOption(1),
+    ...normalized,
+    option_id: normalized.option_id || `${eventIdSeed}_default`,
+    option_text: SINGLE_OUTCOME_TEXT,
+    sort_order: 1,
+    is_default: true,
+    success_rate_formula: "",
+    requires_resources: {},
+    requires_statuses: [],
+    requires_techniques: [],
+    requires_equipment_tags: [],
+    result_on_success: {},
+    result_on_failure: {},
+    next_event_id: normalized.next_event_id ?? null,
+    log_text_success: normalized.log_text_success || eventNameSeed || "",
     log_text_failure: "",
   };
 }

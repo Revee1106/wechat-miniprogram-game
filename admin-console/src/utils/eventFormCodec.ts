@@ -1,3 +1,5 @@
+import { normalizeResourceRecord } from "./resourceCatalog";
+
 export function parseLineList(value: string): string[] {
   return value
     .split(/\r?\n|,/)
@@ -102,7 +104,7 @@ export function parsePayloadEditorState(
   return {
     resources:
       typeof payload.resources === "object" && payload.resources
-        ? (payload.resources as Record<string, number>)
+        ? normalizeResourceRecord(payload.resources as Record<string, number>)
         : {},
     cultivation_exp: Number(character.cultivation_exp ?? 0),
     lifespan_delta: Number(character.lifespan_delta ?? 0),
@@ -149,7 +151,10 @@ export function buildPayloadFromEditorState(
 
   const payload: Record<string, unknown> = {};
   if (Object.keys(state.resources).length > 0) {
-    payload.resources = state.resources;
+    const normalizedResources = normalizeResourceRecord(state.resources);
+    if (Object.keys(normalizedResources).length > 0) {
+      payload.resources = normalizedResources;
+    }
   }
   if (Object.keys(character).length > 0) {
     payload.character = character;

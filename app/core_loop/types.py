@@ -19,9 +19,14 @@ class ConflictError(CoreLoopError):
 class RealmConfig:
     key: str
     display_name: str
+    major_realm: str
+    stage_index: int
+    order_index: int
     lifespan_bonus: int
     base_success_rate: float
     required_exp: int
+    required_spirit_stone: int
+    is_enabled: bool = True
 
 
 @dataclass(frozen=True)

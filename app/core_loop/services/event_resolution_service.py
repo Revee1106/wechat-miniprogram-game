@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.event_config import EventRegistry, load_event_registry
 from app.core_loop.seeds import get_realm_configs
 from app.core_loop.types import (
@@ -106,7 +107,9 @@ class EventResolutionService:
         return success_rate >= 0.5
 
     def _evaluate_success_rate(self, run: RunState, formula: str) -> float:
-        realm_config = self._realm_configs.get(run.character.realm)
+        realm_config = self._realm_configs.get(
+            resolve_realm_key(run.character.realm, list(self._realm_configs.values()))
+        )
         if realm_config is None:
             raise CoreLoopError(f"unknown realm '{run.character.realm}'")
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 
+from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.event_config import EventRegistry, load_event_registry
 from app.core_loop.seeds import get_realm_configs
 from app.core_loop.types import (
@@ -51,6 +52,30 @@ class EventService:
         selected_type = self._choose_weighted_type(eligible_by_type)
         template = self._choose_weighted_template(eligible_by_type[selected_type])
         return self._build_current_event(template, run)
+
+    def refresh_pending_event(self, run: RunState) -> CurrentEvent | None:
+        if run.current_event is None:
+            return None
+
+        template = self._registry.templates.get(run.current_event.event_id)
+        if template is None:
+            return None
+
+        refreshed_event = self._build_current_event(template, run)
+        return CurrentEvent(
+            event_id=refreshed_event.event_id,
+            event_name=refreshed_event.event_name,
+            event_type=refreshed_event.event_type,
+            outcome_type=refreshed_event.outcome_type,
+            risk_level=refreshed_event.risk_level,
+            trigger_sources=refreshed_event.trigger_sources,
+            choice_pattern=refreshed_event.choice_pattern,
+            title_text=refreshed_event.title_text,
+            body_text=refreshed_event.body_text,
+            region=refreshed_event.region,
+            status=run.current_event.status,
+            options=refreshed_event.options,
+        )
 
     def _choose_weighted_type(
         self,
@@ -160,17 +185,23 @@ class EventService:
         )
 
     def _is_realm_eligible(self, template: EventTemplateConfig, realm_key: str) -> bool:
-        current_index = self._realm_indices.get(realm_key)
+        current_index = self._realm_indices.get(
+            resolve_realm_key(realm_key, self._realm_configs)
+        )
         if current_index is None:
             return False
 
         if template.realm_min is not None:
-            minimum_index = self._realm_indices.get(template.realm_min)
+            minimum_index = self._realm_indices.get(
+                resolve_realm_key(template.realm_min, self._realm_configs, boundary="min")
+            )
             if minimum_index is None or current_index < minimum_index:
                 return False
 
         if template.realm_max is not None:
-            maximum_index = self._realm_indices.get(template.realm_max)
+            maximum_index = self._realm_indices.get(
+                resolve_realm_key(template.realm_max, self._realm_configs, boundary="max")
+            )
             if maximum_index is None or current_index > maximum_index:
                 return False
 

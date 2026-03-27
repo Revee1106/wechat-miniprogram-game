@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+﻿import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { EventEditorPage } from "./EventEditorPage";
@@ -141,6 +141,7 @@ test("adds a new option from the option panel", async () => {
 test("single outcome events use a default result editor instead of option orchestration", async () => {
   let savedTemplate: Record<string, unknown> | null = null;
   let savedOption: Record<string, unknown> | null = null;
+  let reloaded = false;
 
   vi.stubGlobal(
     "fetch",
@@ -191,6 +192,17 @@ test("single outcome events use a default result editor instead of option orches
           json: async () => savedOption,
         };
       }
+      if (url.endsWith("/admin/api/events/reload") && init?.method === "POST") {
+        reloaded = true;
+        return {
+          ok: true,
+          json: async () => ({
+            reloaded: true,
+            template_count: 1,
+            option_count: 1,
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({ items: [] }),
@@ -212,10 +224,127 @@ test("single outcome events use a default result editor instead of option orches
   fireEvent.click(screen.getByText("编辑单一结果"));
   const dialog = await screen.findByRole("dialog", { name: "单一结果" });
   fireEvent.change(within(dialog).getByLabelText("结果日志"), {
-    target: { value: "默认结算" },
+    target: { value: "榛樿缁撶畻" },
   });
-  fireEvent.change(within(dialog).getByLabelText("结果资源变化"), {
-    target: { value: "spirit_stone:5" },
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增资源变化" }));
+  fireEvent.change(within(dialog).getByLabelText("结果资源数值-1"), {
+    target: { value: "5" },
+  });
+  fireEvent.click(screen.getByText("保存事件"));
+
+  await waitFor(() => {
+    expect(savedTemplate).not.toBeNull();
+    expect(savedOption).not.toBeNull();
+    expect(reloaded).toBe(true);
+  });
+
+  expect(savedTemplate).toMatchObject({
+    choice_pattern: "single_outcome",
+  });
+  expect(savedOption).toMatchObject({
+    option_id: "opt_single",
+    option_text: "完成事件",
+    sort_order: 1,
+    is_default: true,
+    log_text_success: "榛樿缁撶畻",
+    result_on_success: {
+      resources: { spirit_stone: 5 },
+    },
+  });
+});
+
+test("switching to single outcome clears hidden legacy rewards until they are explicitly reconfigured", async () => {
+  let savedTemplate: Record<string, unknown> | null = null;
+  let savedOption: Record<string, unknown> | null = null;
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events/evt_convert") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              event_id: "evt_convert",
+              event_name: "Convert Event",
+              event_type: "cultivation",
+              outcome_type: "cultivation",
+              risk_level: "normal",
+              trigger_sources: ["global"],
+              choice_pattern: "binary_choice",
+              title_text: "Convert Event",
+              body_text: "Body",
+              weight: 1,
+              is_repeatable: true,
+              option_ids: ["opt_convert"],
+            },
+            options: [
+              {
+                option_id: "opt_convert",
+                event_id: "evt_convert",
+                option_text: "Legacy option",
+                sort_order: 1,
+                is_default: true,
+                result_on_success: {
+                  resources: { spirit_stone: 1 },
+                },
+              },
+            ],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/events/evt_convert") && init?.method === "PUT") {
+        savedTemplate = JSON.parse(String(init.body));
+        return {
+          ok: true,
+          json: async () => savedTemplate,
+        };
+      }
+      if (url.endsWith("/admin/api/options/opt_convert") && init?.method === "PUT") {
+        savedOption = JSON.parse(String(init.body));
+        return {
+          ok: true,
+          json: async () => savedOption,
+        };
+      }
+      if (url.endsWith("/admin/api/events/reload") && init?.method === "POST") {
+        return {
+          ok: true,
+          json: async () => ({
+            reloaded: true,
+            template_count: 1,
+            option_count: 1,
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({ items: [] }),
+      };
+    })
+  );
+
+  render(
+    <EventEditorPage
+      eventId="evt_convert"
+      onBack={() => {}}
+      onSaved={() => {}}
+    />
+  );
+
+  fireEvent.click(await screen.findByText("编辑触发规则"));
+  let dialog = await screen.findByRole("dialog", { name: "触发规则" });
+  fireEvent.change(within(dialog).getByLabelText("选项模式"), {
+    target: { value: "single_outcome" },
+  });
+  fireEvent.click(within(dialog).getByText("完成编辑"));
+
+  expect(await screen.findByText("编辑单一结果")).toBeInTheDocument();
+  fireEvent.click(screen.getByText("编辑单一结果"));
+  dialog = await screen.findByRole("dialog", { name: "单一结果" });
+  fireEvent.change(within(dialog).getByLabelText("结果修为变化"), {
+    target: { value: "5" },
   });
 
   fireEvent.click(screen.getByText("保存事件"));
@@ -229,15 +358,13 @@ test("single outcome events use a default result editor instead of option orches
     choice_pattern: "single_outcome",
   });
   expect(savedOption).toMatchObject({
-    option_id: "opt_single",
-    option_text: "默认结果",
-    sort_order: 1,
-    is_default: true,
-    log_text_success: "默认结算",
+    option_id: "opt_convert",
+    option_text: "完成事件",
     result_on_success: {
-      resources: { spirit_stone: 5 },
+      character: { cultivation_exp: 5 },
     },
   });
+  expect(savedOption?.result_on_success).not.toHaveProperty("resources");
 });
 
 test("saves advanced template and option fields through section panels", async () => {
@@ -341,8 +468,9 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.change(within(dialog).getByLabelText("后续事件"), {
     target: { value: "evt_follow_up" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功资源变化"), {
-    target: { value: "spirit_stone:2" },
+  fireEvent.click(within(dialog).getAllByRole("button", { name: "新增资源变化" })[0]);
+  fireEvent.change(within(dialog).getByLabelText("成功资源数值-1"), {
+    target: { value: "2" },
   });
   fireEvent.change(within(dialog).getByLabelText("成功修为变化"), {
     target: { value: "6" },
@@ -466,3 +594,5 @@ test("shows current event type total weight in the workbench header", async () =
 
   expect(await screen.findByText("同类总权重 8")).toBeInTheDocument();
 });
+
+

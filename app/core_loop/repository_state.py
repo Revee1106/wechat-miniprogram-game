@@ -19,7 +19,7 @@ def build_initial_run(
         round_index=0,
         character=CharacterState(
             name=f"{player_id}-wanderer",
-            realm="qi_refining",
+            realm="qi_refining_early",
             cultivation_exp=0,
             lifespan_current=lifespan_max,
             lifespan_max=lifespan_max,
