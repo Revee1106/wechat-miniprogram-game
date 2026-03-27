@@ -223,6 +223,10 @@ class RealmAdminService:
                     base_success_rate=float(realm.get("base_success_rate", 0) or 0),
                     required_exp=int(realm.get("required_cultivation_exp", 0) or 0),
                     required_spirit_stone=int(realm.get("required_spirit_stone", 0) or 0),
+                    required_materials={
+                        str(key): int(value)
+                        for key, value in dict(realm.get("required_materials", {})).items()
+                    },
                     is_enabled=realm.get("is_enabled", True) is True,
                 )
                 for realm in realms

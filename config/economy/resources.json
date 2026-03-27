@@ -1,0 +1,57 @@
+[
+  {
+    "key": "spirit_stone",
+    "display_name": "灵石",
+    "category": "currency",
+    "tier": 1,
+    "rarity": "common",
+    "stackable": true,
+    "tags": [
+      "core"
+    ]
+  },
+  {
+    "key": "basic_herb",
+    "display_name": "普通灵植",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "common",
+    "stackable": true,
+    "tags": [
+      "basic"
+    ]
+  },
+  {
+    "key": "basic_ore",
+    "display_name": "普通灵矿",
+    "category": "ore",
+    "tier": 2,
+    "rarity": "common",
+    "stackable": true,
+    "tags": [
+      "basic"
+    ]
+  },
+  {
+    "key": "basic_breakthrough_material",
+    "display_name": "普通晋级材料",
+    "category": "breakthrough_material",
+    "tier": 2,
+    "rarity": "common",
+    "stackable": true,
+    "tags": [
+      "basic"
+    ]
+  },
+  {
+    "key": "rare_material",
+    "display_name": "稀有材料",
+    "category": "rare_material",
+    "tier": 3,
+    "rarity": "rare",
+    "stackable": true,
+    "tags": [
+      "rare"
+    ]
+  }
+]

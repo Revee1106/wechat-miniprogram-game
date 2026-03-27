@@ -26,6 +26,7 @@ class RealmConfig:
     base_success_rate: float
     required_exp: int
     required_spirit_stone: int
+    required_materials: dict[str, int] = field(default_factory=dict)
     is_enabled: bool = True
 
 
@@ -157,6 +158,12 @@ class ResourceState:
 
 
 @dataclass
+class RunResourceStack:
+    resource_key: str
+    amount: int
+
+
+@dataclass
 class CharacterState:
     name: str
     realm: str
@@ -184,6 +191,7 @@ class PlayerProfile:
     player_id: str
     total_rebirth_count: int = 0
     permanent_luck_bonus: int = 0
+    rebirth_points: int = 0
 
 
 @dataclass
@@ -193,6 +201,7 @@ class RunState:
     round_index: int
     character: CharacterState
     resources: ResourceState
+    resource_stacks: list[RunResourceStack] = field(default_factory=list)
     current_event: CurrentEvent | None = None
     dwelling_level: int = 1
     result_summary: str | None = None

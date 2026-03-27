@@ -337,6 +337,56 @@ def test_runtime_registry_loads_from_repository_files() -> None:
     rmtree(base_path)
 
 
+def test_registry_normalizes_single_outcome_template_to_one_option() -> None:
+    base_path = _make_test_base_path("registry-single-outcome-normalize")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_single",
+                    "event_name": "Single",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "safe",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "single_outcome",
+                    "title_text": "Single",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_first", "opt_default"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_first",
+                    "event_id": "evt_single",
+                    "option_text": "First",
+                    "sort_order": 1,
+                    "is_default": False,
+                    "result_on_success": {"character": {"cultivation_exp": 1}},
+                },
+                {
+                    "option_id": "opt_default",
+                    "event_id": "evt_single",
+                    "option_text": "Default",
+                    "sort_order": 2,
+                    "is_default": True,
+                    "result_on_success": {"character": {"cultivation_exp": 5}},
+                },
+            ],
+        }
+    )
+
+    registry = load_event_registry(base_path=base_path)
+
+    assert registry.templates["evt_single"].option_ids == ["opt_default"]
+    assert [option.option_id for option in registry.get_options_for_event("evt_single")] == [
+        "opt_default"
+    ]
+    rmtree(base_path)
+
+
 def _make_test_base_path(label: str) -> Path:
     base_path = Path.cwd() / ".pytest_tmp" / f"{label}-{uuid4().hex}"
     base_path.mkdir(parents=True, exist_ok=True)

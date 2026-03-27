@@ -14,4 +14,5 @@ class RebirthService:
 
     def apply_permanent_bonus(self, profile: PlayerProfile, run: RunState) -> RunState:
         run.resources.spirit_stone += profile.total_rebirth_count
+        run.resource_stacks = []
         return run

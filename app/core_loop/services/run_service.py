@@ -10,6 +10,7 @@ from app.core_loop.services.progression_service import ProgressionService
 from app.core_loop.services.rebirth_service import RebirthService
 from app.core_loop.services.time_advance_service import TimeAdvanceService
 from app.core_loop.types import RebirthResult, RunState
+from app.economy.services.rebirth_point_service import RebirthPointService
 
 
 class RunService:
@@ -19,6 +20,7 @@ class RunService:
         self._realm_config_base_path = event_config_base_path
         self._dwelling_service = DwellingService()
         self._rebirth_service = RebirthService()
+        self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
         self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
         self._progression_service = ProgressionService(
             self._dwelling_service,
@@ -67,6 +69,7 @@ class RunService:
         run = self._repo.get(run_id)
         profile = self._repo.get_or_create_profile(run.player_id)
         claimed_profile = self._rebirth_service.claim(profile, run)
+        claimed_profile.rebirth_points += self._rebirth_point_service.calculate(run)
         new_run = self.create_run(player_id=run.player_id)
         self._rebirth_service.apply_permanent_bonus(claimed_profile, new_run)
         self._repo.save(new_run)
@@ -96,6 +99,7 @@ class RunService:
         self._event_resolution_service = EventResolutionService(
             registry=self._event_registry,
             realm_configs=self._realm_configs,
+            economy_base_path=self._event_config_base_path,
         )
         self._time_advance_service = TimeAdvanceService(self._event_service)
 

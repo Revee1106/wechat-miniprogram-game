@@ -14,16 +14,14 @@ class EventRegistry:
     options: dict[str, EventOptionConfig]
 
     def get_options_for_event(self, event_id: str) -> list[EventOptionConfig]:
-        if event_id not in self.templates:
+        template = self.templates.get(event_id)
+        if template is None:
             raise ValueError(f"unknown event_id: {event_id}")
-        return sorted(
-            (
-                option
-                for option in self.options.values()
-                if option.event_id == event_id
-            ),
-            key=lambda option: (option.sort_order, option.option_id),
-        )
+        return [
+            self.options[option_id]
+            for option_id in template.option_ids
+            if option_id in self.options
+        ]
 
 
 def load_event_registry(base_path: str | None = None) -> EventRegistry:
@@ -41,16 +39,6 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
             for option_payload in payload.get("options", [])
         ]
 
-    templates: dict[str, EventTemplateConfig] = {}
-    for template in templates_source:
-        if template.event_id in templates:
-            raise ValueError(f"duplicate event_id: {template.event_id}")
-        if template.weight <= 0:
-            raise ValueError(f"template '{template.event_id}' must have positive weight")
-        if not template.option_ids:
-            raise ValueError(f"template '{template.event_id}' must include option_ids")
-        templates[template.event_id] = template
-
     options: dict[str, EventOptionConfig] = {}
     for option in options_source:
         if option.option_id in options:
@@ -64,8 +52,26 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
         )
         options[option.option_id] = normalized_option
 
-    option_reference_counts: dict[str, int] = {}
+    templates: dict[str, EventTemplateConfig] = {}
+    normalized_templates: list[EventTemplateConfig] = []
+    ignored_option_ids: set[str] = set()
     for template in templates_source:
+        if template.event_id in templates:
+            raise ValueError(f"duplicate event_id: {template.event_id}")
+        if template.weight <= 0:
+            raise ValueError(f"template '{template.event_id}' must have positive weight")
+        if not template.option_ids:
+            raise ValueError(f"template '{template.event_id}' must include option_ids")
+        normalized_template, ignored_option_ids_for_template = _normalize_template_options(
+            template,
+            options,
+        )
+        normalized_templates.append(normalized_template)
+        ignored_option_ids.update(ignored_option_ids_for_template)
+        templates[template.event_id] = normalized_template
+
+    option_reference_counts: dict[str, int] = {}
+    for template in normalized_templates:
         for option_id in template.option_ids:
             option = options.get(option_id)
             if option is None:
@@ -76,12 +82,14 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
 
     for option_id, option in options.items():
         reference_count = option_reference_counts.get(option_id, 0)
+        if option_id in ignored_option_ids:
+            continue
         if reference_count == 0:
             raise ValueError(f"orphan option_id: {option_id}")
         if reference_count > 1:
             raise ValueError(f"duplicate option reference: {option_id}")
 
-    for template in templates_source:
+    for template in normalized_templates:
         for option_id in template.option_ids:
             option = options[option_id]
             if option.event_id != template.event_id:
@@ -106,6 +114,33 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
                 )
 
     return EventRegistry(templates=templates, options=options)
+
+
+def _normalize_template_options(
+    template: EventTemplateConfig,
+    options: dict[str, EventOptionConfig],
+) -> tuple[EventTemplateConfig, set[str]]:
+    if template.choice_pattern != "single_outcome" or len(template.option_ids) <= 1:
+        return template, set()
+
+    referenced_options = [
+        options[option_id]
+        for option_id in template.option_ids
+        if option_id in options
+    ]
+    if not referenced_options:
+        return template, set()
+
+    selected_option = next(
+        (option for option in referenced_options if option.is_default),
+        sorted(referenced_options, key=lambda option: (option.sort_order, option.option_id))[0],
+    )
+    ignored_option_ids = {
+        option.option_id
+        for option in referenced_options
+        if option.option_id != selected_option.option_id
+    }
+    return replace(template, option_ids=[selected_option.option_id]), ignored_option_ids
 
 
 def _coerce_payload(

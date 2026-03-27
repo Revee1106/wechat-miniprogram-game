@@ -24,6 +24,10 @@ def load_realm_configs(base_path: Path | str | None = None) -> list[RealmConfig]
             base_success_rate=_coerce_float(realm.get("base_success_rate", 0)),
             required_exp=_coerce_int(realm.get("required_cultivation_exp", 0)),
             required_spirit_stone=_coerce_int(realm.get("required_spirit_stone", 0)),
+            required_materials={
+                str(key): _coerce_int(value)
+                for key, value in dict(realm.get("required_materials", {})).items()
+            },
             is_enabled=_coerce_bool(realm.get("is_enabled", True)),
         )
         for realm in realms

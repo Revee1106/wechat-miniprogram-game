@@ -39,6 +39,9 @@ class ProgressionService:
             raise ConflictError("not enough cultivation exp to breakthrough")
         if run.resources.spirit_stone < current_realm.required_spirit_stone:
             raise ConflictError("not enough spirit stones to breakthrough")
+        required_materials = current_realm.required_materials
+        if required_materials:
+            required_materials = dict(required_materials)
 
         success_rate = min(
             0.95,

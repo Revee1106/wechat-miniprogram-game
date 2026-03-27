@@ -12,6 +12,7 @@ from app.core_loop.types import (
     RealmConfig,
     RunState,
 )
+from app.economy.services.run_resource_service import RunResourceService
 
 
 class EventResolutionService:
@@ -19,11 +20,13 @@ class EventResolutionService:
         self,
         registry: EventRegistry | None = None,
         realm_configs: list[RealmConfig] | None = None,
+        economy_base_path: str | None = None,
     ) -> None:
         self._registry = registry or load_event_registry()
         self._realm_configs = {
             config.key: config for config in (realm_configs or get_realm_configs())
         }
+        self._run_resource_service = RunResourceService(base_path=economy_base_path)
 
     def resolve(self, run: RunState, option_id: str) -> RunState:
         if run.current_event is None:
@@ -211,18 +214,12 @@ class EventResolutionService:
         )
 
     def _apply_payload(self, run: RunState, payload: EventResultPayload) -> None:
-        updated_resources: dict[str, int] = {}
         for resource_name, delta in payload.resources.items():
-            resolved_name = self._resolve_resource_name(resource_name)
-            if resolved_name is None:
+            if not self._run_resource_service.supports(resource_name):
                 raise CoreLoopError(f"unknown resource '{resource_name}'")
-            updated_resources[resource_name] = max(
-                0,
-                self._get_resource_amount(run, resource_name) + delta,
-            )
 
-        for resource_name, updated_value in updated_resources.items():
-            self._set_resource_amount(run, resource_name, updated_value)
+        for resource_name, delta in payload.resources.items():
+            self._run_resource_service.add(run, resource_name, delta)
 
         run.character.cultivation_exp = max(
             0,

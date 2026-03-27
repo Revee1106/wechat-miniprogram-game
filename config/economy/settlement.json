@@ -1,0 +1,8 @@
+{
+  "weights": {
+    "realm": 10,
+    "survival_rounds": 1,
+    "rare_resources": 3,
+    "special_events": 5
+  }
+}
