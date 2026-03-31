@@ -25,19 +25,13 @@ class EventRegistry:
 
 
 def load_event_registry(base_path: str | None = None) -> EventRegistry:
-    if base_path is None:
+    payload = EventConfigRepository(base_path=base_path).load()
+    has_runtime_config = bool(payload.get("templates")) or bool(payload.get("options"))
+    if has_runtime_config:
+        templates_source, options_source = _coerce_registry_sources(payload)
+    else:
         templates_source = list(EVENT_TEMPLATE_CONFIGS)
         options_source = list(EVENT_OPTION_CONFIGS)
-    else:
-        payload = EventConfigRepository(base_path=base_path).load()
-        templates_source = [
-            EventTemplateConfig(**template_payload)
-            for template_payload in payload.get("templates", [])
-        ]
-        options_source = [
-            EventOptionConfig(**option_payload)
-            for option_payload in payload.get("options", [])
-        ]
 
     options: dict[str, EventOptionConfig] = {}
     for option in options_source:
@@ -114,6 +108,20 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
                 )
 
     return EventRegistry(templates=templates, options=options)
+
+
+def _coerce_registry_sources(
+    payload: dict[str, list[dict[str, object]]],
+) -> tuple[list[EventTemplateConfig], list[EventOptionConfig]]:
+    templates_source = [
+        EventTemplateConfig(**template_payload)
+        for template_payload in payload.get("templates", [])
+    ]
+    options_source = [
+        EventOptionConfig(**option_payload)
+        for option_payload in payload.get("options", [])
+    ]
+    return templates_source, options_source
 
 
 def _normalize_template_options(

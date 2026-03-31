@@ -11,6 +11,7 @@ $backendDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $workspaceDir = Split-Path -Parent $backendDir
 $frontendDir = Join-Path $workspaceDir "wechat-miniprogram-game-front"
 $healthUrl = "http://127.0.0.1:8000/api/health"
+$adminUrl = "http://127.0.0.1:8000/admin"
 
 function Test-CommandExists {
     param([Parameter(Mandatory = $true)][string]$Name)
@@ -98,6 +99,7 @@ Write-Host "=== Wendao Local Dev Startup ===" -ForegroundColor Cyan
 Write-Host "Backend: $backendDir"
 Write-Host "Frontend: $frontendDir"
 Write-Host "Health check: $healthUrl"
+Write-Host "Admin console: $adminUrl"
 Write-Host ""
 
 if ($DryRun) {
@@ -123,19 +125,20 @@ else {
 }
 
 if ($NoOpenFrontend) {
-    Write-Host "[Skip] Frontend folder open was skipped by parameter."
+    Write-Host "[Skip] Admin console open was skipped by parameter."
 }
 elseif ($DryRun) {
-    Write-Host "[DryRun] Frontend folder to open: $frontendDir" -ForegroundColor Yellow
+    Write-Host "[DryRun] Admin console page to open: $adminUrl" -ForegroundColor Yellow
 }
 else {
-    Start-Process -FilePath "explorer.exe" -ArgumentList $frontendDir | Out-Null
-    Write-Host "Frontend folder opened." -ForegroundColor Green
+    Start-Process -FilePath $adminUrl | Out-Null
+    Write-Host "Admin console page opened." -ForegroundColor Green
 }
 
 Write-Host ""
 Write-Host "Next steps:"
 Write-Host "1. Open this folder in WeChat DevTools: $frontendDir"
-Write-Host "2. Confirm utils/config.js points apiBaseUrl to http://127.0.0.1:8000"
-Write-Host '3. For local debugging, open the health URL and expect {"status":"ok"}'
+Write-Host "2. The admin console should open at $adminUrl"
+Write-Host "3. Confirm utils/config.js points apiBaseUrl to http://127.0.0.1:8000"
+Write-Host '4. For local debugging, open the health URL and expect {"status":"ok"}'
 Write-Host ""

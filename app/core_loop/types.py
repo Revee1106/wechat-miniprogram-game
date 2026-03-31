@@ -31,6 +31,14 @@ class RealmConfig:
 
 
 @dataclass(frozen=True)
+class BreakthroughRequirements:
+    target_realm_key: str
+    target_realm_display_name: str
+    required_cultivation_exp: int
+    required_spirit_stone: int
+
+
+@dataclass(frozen=True)
 class EventChoice:
     key: str
     display_name: str
@@ -164,12 +172,52 @@ class RunResourceStack:
 
 
 @dataclass
+class DwellingFacilityState:
+    facility_id: str
+    display_name: str
+    facility_type: str
+    summary: str
+    level: int = 0
+    max_level: int = 3
+    status: str = "unbuilt"
+    build_cost: dict[str, int] = field(default_factory=dict)
+    next_upgrade_cost: dict[str, int] = field(default_factory=dict)
+    maintenance_cost: dict[str, int] = field(default_factory=dict)
+    monthly_resource_yields: dict[str, int] = field(default_factory=dict)
+    monthly_cultivation_exp_gain: int = 0
+    function_unlock_text: str = ""
+    is_function_unlocked: bool = False
+
+
+@dataclass
+class DwellingSettlementEntry:
+    facility_id: str
+    display_name: str
+    status: str
+    maintenance_paid: dict[str, int] = field(default_factory=dict)
+    resource_gains: dict[str, int] = field(default_factory=dict)
+    cultivation_exp_gain: int = 0
+    summary: str = ""
+
+
+@dataclass
+class DwellingSettlement:
+    round_index: int
+    total_maintenance_paid: dict[str, int] = field(default_factory=dict)
+    total_resource_gains: dict[str, int] = field(default_factory=dict)
+    total_cultivation_exp_gain: int = 0
+    entries: list[DwellingSettlementEntry] = field(default_factory=list)
+    summary_lines: list[str] = field(default_factory=list)
+
+
+@dataclass
 class CharacterState:
     name: str
     realm: str
     cultivation_exp: int
     lifespan_current: int
     lifespan_max: int
+    realm_display_name: str = ""
     hp_current: int = 100
     hp_max: int = 100
     luck: int = 0
@@ -202,8 +250,11 @@ class RunState:
     character: CharacterState
     resources: ResourceState
     resource_stacks: list[RunResourceStack] = field(default_factory=list)
+    breakthrough_requirements: BreakthroughRequirements | None = None
     current_event: CurrentEvent | None = None
     dwelling_level: int = 1
+    dwelling_facilities: list[DwellingFacilityState] = field(default_factory=list)
+    dwelling_last_settlement: DwellingSettlement | None = None
     result_summary: str | None = None
     event_trigger_counts: dict[str, int] = field(default_factory=dict)
     event_cooldowns: dict[str, int] = field(default_factory=dict)
@@ -218,6 +269,7 @@ class BreakthroughResult:
     message: str
     character: CharacterState
     resources: ResourceState
+    breakthrough_requirements: BreakthroughRequirements | None = None
 
 
 @dataclass

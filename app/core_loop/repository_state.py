@@ -27,4 +27,6 @@ def build_initial_run(
         ),
         resources=ResourceState(),
         dwelling_level=1,
+        dwelling_facilities=[],
+        dwelling_last_settlement=None,
     )

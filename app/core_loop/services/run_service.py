@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core_loop.realm_config import load_realm_configs
+from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.event_config import load_event_registry
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
@@ -9,7 +9,7 @@ from app.core_loop.services.event_resolution_service import EventResolutionServi
 from app.core_loop.services.progression_service import ProgressionService
 from app.core_loop.services.rebirth_service import RebirthService
 from app.core_loop.services.time_advance_service import TimeAdvanceService
-from app.core_loop.types import RebirthResult, RunState
+from app.core_loop.types import BreakthroughRequirements, RebirthResult, RunState
 from app.economy.services.rebirth_point_service import RebirthPointService
 
 
@@ -18,7 +18,7 @@ class RunService:
         self._repo = InMemoryRunRepository()
         self._event_config_base_path = event_config_base_path
         self._realm_config_base_path = event_config_base_path
-        self._dwelling_service = DwellingService()
+        self._dwelling_service = DwellingService(base_path=event_config_base_path)
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
         self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
@@ -34,14 +34,18 @@ class RunService:
 
     def create_run(self, player_id: str) -> RunState:
         profile = self._repo.get_or_create_profile(player_id)
-        return self._repo.create(
+        run = self._repo.create(
             player_id=player_id,
             permanent_luck_bonus=profile.permanent_luck_bonus,
         )
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
 
     def get_run(self, run_id: str) -> RunState:
         run = self._repo.get(run_id)
-        return self._sync_pending_event(run)
+        run = self._sync_pending_event(run)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
 
     def advance_time(self, run_id: str) -> RunState:
         run = self._repo.get(run_id)
@@ -51,19 +55,35 @@ class RunService:
             run,
             rebirth_count=profile.total_rebirth_count,
         )
+        self._hydrate_runtime_metadata(updated)
         return self._repo.save(updated)
 
     def resolve_event(self, run_id: str, option_id: str) -> RunState:
         run = self._repo.get(run_id)
         run = self._sync_pending_event(run)
         updated = self._event_resolution_service.resolve(run, option_id)
+        self._hydrate_runtime_metadata(updated)
         return self._repo.save(updated)
 
     def breakthrough(self, run_id: str):
         run = self._repo.get(run_id)
         outcome = self._progression_service.try_breakthrough(run)
+        self._hydrate_runtime_metadata(run)
+        outcome.breakthrough_requirements = run.breakthrough_requirements
         self._repo.save(run)
         return outcome
+
+    def build_dwelling_facility(self, run_id: str, facility_id: str) -> RunState:
+        run = self._repo.get(run_id)
+        self._dwelling_service.build_facility(run, facility_id)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
+    def upgrade_dwelling_facility(self, run_id: str, facility_id: str) -> RunState:
+        run = self._repo.get(run_id)
+        self._dwelling_service.upgrade_facility(run, facility_id)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
 
     def rebirth(self, run_id: str) -> RebirthResult:
         run = self._repo.get(run_id)
@@ -72,6 +92,7 @@ class RunService:
         claimed_profile.rebirth_points += self._rebirth_point_service.calculate(run)
         new_run = self.create_run(player_id=run.player_id)
         self._rebirth_service.apply_permanent_bonus(claimed_profile, new_run)
+        self._hydrate_runtime_metadata(new_run)
         self._repo.save(new_run)
         return RebirthResult(player_profile=claimed_profile, new_run=new_run)
 
@@ -101,7 +122,10 @@ class RunService:
             realm_configs=self._realm_configs,
             economy_base_path=self._event_config_base_path,
         )
-        self._time_advance_service = TimeAdvanceService(self._event_service)
+        self._time_advance_service = TimeAdvanceService(
+            self._event_service,
+            self._dwelling_service,
+        )
 
     def _sync_pending_event(self, run: RunState) -> RunState:
         if run.current_event is None:
@@ -109,3 +133,34 @@ class RunService:
 
         run.current_event = self._event_service.refresh_pending_event(run)
         return self._repo.save(run)
+
+    def _hydrate_runtime_metadata(self, run: RunState) -> None:
+        self._dwelling_service.hydrate_run(run)
+        current_realm_key = resolve_realm_key(run.character.realm, self._realm_configs)
+        current_index = next(
+            (
+                index
+                for index, config in enumerate(self._realm_configs)
+                if config.key == current_realm_key
+            ),
+            None,
+        )
+        if current_index is None:
+            run.character.realm_display_name = run.character.realm
+            run.breakthrough_requirements = None
+            return
+
+        current_realm = self._realm_configs[current_index]
+        run.character.realm_display_name = current_realm.display_name or current_realm.key
+
+        if current_index >= len(self._realm_configs) - 1:
+            run.breakthrough_requirements = None
+            return
+
+        next_realm = self._realm_configs[current_index + 1]
+        run.breakthrough_requirements = BreakthroughRequirements(
+            target_realm_key=next_realm.key,
+            target_realm_display_name=next_realm.display_name or next_realm.key,
+            required_cultivation_exp=current_realm.required_exp,
+            required_spirit_stone=current_realm.required_spirit_stone,
+        )

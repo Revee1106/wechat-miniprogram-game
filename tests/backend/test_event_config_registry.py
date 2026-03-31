@@ -8,7 +8,7 @@ from app.core_loop.types import EventOptionConfig, EventResultPayload, EventTemp
 
 
 def test_event_registry_loads_twelve_seed_events() -> None:
-    registry = load_event_registry()
+    registry = load_event_registry(base_path=_make_empty_runtime_base_path("seed-default"))
 
     assert len(registry.templates) == 12
     assert "evt_mountain_spirit_tide_001" in registry.templates
@@ -22,7 +22,7 @@ def test_event_registry_loads_twelve_seed_events() -> None:
 
 
 def test_event_registry_exposes_spec_fields_and_sorted_options() -> None:
-    registry = load_event_registry()
+    registry = load_event_registry(base_path=_make_empty_runtime_base_path("seed-spec-fields"))
     template = registry.templates["evt_herb_gathering_003"]
     options = registry.get_options_for_event("evt_herb_gathering_003")
 
@@ -63,7 +63,7 @@ def test_event_registry_exposes_spec_fields_and_sorted_options() -> None:
 
 
 def test_event_registry_seed_data_uses_allowed_vocab_and_unique_option_links() -> None:
-    registry = load_event_registry()
+    registry = load_event_registry(base_path=_make_empty_runtime_base_path("seed-vocab"))
 
     allowed_event_types = {
         "cultivation",
@@ -73,7 +73,7 @@ def test_event_registry_seed_data_uses_allowed_vocab_and_unique_option_links() -
         "encounter",
         "survival",
     }
-    allowed_risk_levels = {"normal", "risky"}
+    allowed_risk_levels = {"normal", "risky", "safe"}
     allowed_trigger_sources = {
         "realm_based",
         "region_based",
@@ -152,7 +152,7 @@ def test_event_registry_rejects_orphan_and_duplicate_option_references(monkeypat
     )
 
     try:
-        load_event_registry()
+        load_event_registry(base_path=_make_empty_runtime_base_path("duplicate-option-links"))
     except ValueError as exc:
         message = str(exc)
         assert "duplicate option reference" in message or "orphan option" in message
@@ -161,7 +161,7 @@ def test_event_registry_rejects_orphan_and_duplicate_option_references(monkeypat
 
 
 def test_event_registry_rejects_unknown_event_option_lookup() -> None:
-    registry = load_event_registry()
+    registry = load_event_registry(base_path=_make_empty_runtime_base_path("seed-unknown-lookup"))
 
     try:
         registry.get_options_for_event("evt_missing")
@@ -192,7 +192,7 @@ def test_event_registry_rejects_duplicate_event_ids(monkeypatch) -> None:
     )
 
     try:
-        load_event_registry()
+        load_event_registry(base_path=_make_empty_runtime_base_path("duplicate-event-ids"))
     except ValueError as exc:
         assert "duplicate event_id" in str(exc)
     else:  # pragma: no cover - defensive
@@ -217,7 +217,7 @@ def test_event_registry_rejects_duplicate_option_ids(monkeypatch) -> None:
     )
 
     try:
-        load_event_registry()
+        load_event_registry(base_path=_make_empty_runtime_base_path("duplicate-option-ids"))
     except ValueError as exc:
         assert "duplicate option_id" in str(exc)
     else:  # pragma: no cover - defensive
@@ -248,7 +248,7 @@ def test_event_registry_rejects_missing_or_mismatched_option_links(monkeypatch) 
     )
 
     try:
-        load_event_registry()
+        load_event_registry(base_path=_make_empty_runtime_base_path("missing-option-links"))
     except ValueError as exc:
         message = str(exc)
         assert "missing option_id" in message or "event_id mismatch" in message
@@ -289,7 +289,7 @@ def test_event_registry_rejects_invalid_next_event_and_equipment_mutation(monkey
     )
 
     try:
-        load_event_registry()
+        load_event_registry(base_path=_make_empty_runtime_base_path("invalid-next-event"))
     except ValueError as exc:
         message = str(exc)
         assert "next_event_id" in message or "equipment" in message
@@ -335,6 +335,50 @@ def test_runtime_registry_loads_from_repository_files() -> None:
     assert "evt_from_json" in registry.templates
     assert "opt_from_json" in registry.options
     rmtree(base_path)
+
+
+def test_runtime_registry_prefers_repository_payload_when_base_path_is_omitted(
+    monkeypatch,
+) -> None:
+    from app.core_loop import event_config
+
+    monkeypatch.setattr(
+        event_config.EventConfigRepository,
+        "load",
+        lambda self: {
+            "templates": [
+                {
+                    "event_id": "evt_runtime_default",
+                    "event_name": "Runtime Default",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "single_outcome",
+                    "title_text": "Runtime Default",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_runtime_default"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_runtime_default",
+                    "event_id": "evt_runtime_default",
+                    "option_text": "Accept",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {"character": {"cultivation_exp": 1}},
+                }
+            ],
+        },
+    )
+
+    registry = load_event_registry()
+
+    assert "evt_runtime_default" in registry.templates
+    assert "opt_runtime_default" in registry.options
 
 
 def test_registry_normalizes_single_outcome_template_to_one_option() -> None:
@@ -390,4 +434,10 @@ def test_registry_normalizes_single_outcome_template_to_one_option() -> None:
 def _make_test_base_path(label: str) -> Path:
     base_path = Path.cwd() / ".pytest_tmp" / f"{label}-{uuid4().hex}"
     base_path.mkdir(parents=True, exist_ok=True)
+    return base_path
+
+
+def _make_empty_runtime_base_path(label: str) -> Path:
+    base_path = _make_test_base_path(label)
+    EventConfigRepository(base_path=base_path).save({"templates": [], "options": []})
     return base_path

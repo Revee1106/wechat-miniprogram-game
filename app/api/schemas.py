@@ -16,6 +16,11 @@ class RunIdRequest(BaseModel):
     run_id: str
 
 
+class FacilityActionRequest(BaseModel):
+    run_id: str
+    facility_id: str
+
+
 class ResolveEventRequest(BaseModel):
     run_id: str
     option_id: str | None = None

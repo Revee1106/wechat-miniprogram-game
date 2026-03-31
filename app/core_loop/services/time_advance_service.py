@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
 from app.core_loop.types import ConflictError, RunState
 
 
 class TimeAdvanceService:
-    def __init__(self, event_service: EventService) -> None:
+    def __init__(
+        self,
+        event_service: EventService,
+        dwelling_service: DwellingService | None = None,
+    ) -> None:
         self._event_service = event_service
+        self._dwelling_service = dwelling_service or DwellingService()
 
     def advance(self, run: RunState, rebirth_count: int = 0) -> RunState:
         if run.character.is_dead:
@@ -19,6 +25,7 @@ class TimeAdvanceService:
         next_run = deepcopy(run)
         next_run.round_index += 1
         next_run.character.lifespan_current -= 1
+        next_run.dwelling_last_settlement = self._dwelling_service.settle_month(next_run)
         next_run.event_cooldowns = {
             event_id: remaining - 1
             for event_id, remaining in next_run.event_cooldowns.items()
@@ -28,18 +35,12 @@ class TimeAdvanceService:
         if next_run.character.lifespan_current <= 0:
             next_run.character.lifespan_current = 0
             next_run.character.is_dead = True
-            run.round_index = next_run.round_index
-            run.character.lifespan_current = next_run.character.lifespan_current
-            run.character.is_dead = next_run.character.is_dead
-            run.result_summary = "瀵垮厓褰掗浂锛屾湰灞€缁撴潫銆?"
-            return run
+            next_run.result_summary = "寿元耗尽，此身行至终点。"
+            return next_run
 
-        next_event = self._event_service.select_event(
+        next_run.current_event = self._event_service.select_event(
             next_run,
             rebirth_count=rebirth_count,
         )
-        run.round_index = next_run.round_index
-        run.character.lifespan_current = next_run.character.lifespan_current
-        run.current_event = next_event
-        run.result_summary = "鏂扮殑浜嬩欢宸茬粡鍑虹幇銆?"
-        return run
+        next_run.result_summary = "时间推进一月，洞府完成本月结算。"
+        return next_run

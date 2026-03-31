@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
     CreateRunRequest,
+    FacilityActionRequest,
     ResolveEventRequest,
     RunIdRequest,
     serialize_breakthrough_result,
@@ -70,6 +71,28 @@ def resolve_event(payload: ResolveEventRequest) -> dict[str, object]:
 def breakthrough(payload: RunIdRequest) -> dict[str, object]:
     try:
         return serialize_breakthrough_result(run_service.breakthrough(payload.run_id))
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/dwelling/build")
+def build_dwelling_facility(payload: FacilityActionRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.build_dwelling_facility(payload.run_id, payload.facility_id)
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/dwelling/upgrade")
+def upgrade_dwelling_facility(payload: FacilityActionRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.upgrade_dwelling_facility(payload.run_id, payload.facility_id)
+        )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)
         raise

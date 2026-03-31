@@ -45,7 +45,7 @@
     "success_rate_formula": "",
     "result_on_success": {
       "character": {
-        "cultivation_exp": 5
+        "cultivation_exp": 20
       }
     },
     "result_on_failure": {},

@@ -67,6 +67,30 @@ def test_dead_character_cannot_advance_again() -> None:
     assert response.status_code == 409
 
 
+def test_build_and_upgrade_dwelling_facility_round_trip() -> None:
+    create_response = client.post("/api/run/create", json={"player_id": "p1"})
+    run_id = create_response.json()["run_id"]
+    run = run_service.get_run(run_id)
+    run.resources.spirit_stone = 300
+
+    build_response = client.post(
+        "/api/run/dwelling/build",
+        json={"run_id": run_id, "facility_id": "spirit_field"},
+    )
+    upgrade_response = client.post(
+        "/api/run/dwelling/upgrade",
+        json={"run_id": run_id, "facility_id": "spirit_field"},
+    )
+
+    assert build_response.status_code == 200
+    assert (
+        build_response.json()["dwelling_facilities"][0]["facility_id"] == "spirit_field"
+    )
+    assert build_response.json()["dwelling_facilities"][0]["level"] == 1
+    assert upgrade_response.status_code == 200
+    assert upgrade_response.json()["dwelling_facilities"][0]["level"] == 2
+
+
 def test_health_endpoint_returns_ok() -> None:
     response = client.get("/api/health")
 

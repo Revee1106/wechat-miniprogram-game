@@ -52,7 +52,7 @@ class ProgressionService:
             + run.character.technique_bonus
             - run.character.status_penalty
             + min(run.character.luck * 0.02, 0.10)
-            + self._dwelling_service.get_breakthrough_bonus(run.dwelling_level),
+            + self._dwelling_service.get_breakthrough_bonus(run),
         )
 
         run.resources.spirit_stone -= current_realm.required_spirit_stone

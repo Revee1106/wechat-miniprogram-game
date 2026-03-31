@@ -29,6 +29,8 @@ class StartDevLauncherTests(unittest.TestCase):
 
         self.assertIn("WeChat DevTools", source)
         self.assertIn("api/health", source)
+        self.assertIn("/admin", source)
+        self.assertNotIn("Frontend folder opened.", source)
 
     def test_powershell_launcher_validates_venv_and_has_local_python_fallback(self):
         source = PS1_PATH.read_text(encoding="utf-8")
