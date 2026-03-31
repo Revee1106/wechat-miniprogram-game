@@ -156,7 +156,7 @@ class CurrentEvent:
 
 @dataclass
 class ResourceState:
-    spirit_stone: int = 20
+    spirit_stone: int = 100
     herbs: int = 3
     iron_essence: int = 0
     ore: int = 0
@@ -211,6 +211,62 @@ class DwellingSettlement:
 
 
 @dataclass
+class AlchemyRecipeState:
+    recipe_id: str
+    display_name: str
+    category: str
+    description: str
+    required_alchemy_level: int
+    required_alchemy_room_level: int
+    duration_months: int
+    base_success_rate: float
+    ingredients: dict[str, int] = field(default_factory=dict)
+    can_start: bool = False
+    disabled_reason: str | None = None
+
+
+@dataclass
+class AlchemyInventoryItem:
+    item_id: str
+    display_name: str
+    quality: str
+    amount: int
+    effect_summary: str
+
+
+@dataclass
+class AlchemyJob:
+    recipe_id: str
+    recipe_name: str
+    total_months: int
+    remaining_months: int
+    use_spirit_spring: bool = False
+
+
+@dataclass
+class AlchemyResult:
+    recipe_id: str
+    recipe_name: str
+    outcome: str
+    quality: str
+    outcome_rank: int
+    amount: int
+    mastery_exp_gained: int
+    summary: str
+
+
+@dataclass
+class AlchemyState:
+    mastery_exp: int = 0
+    mastery_level: int = 0
+    mastery_title: str = "丹道未入门"
+    available_recipes: list[AlchemyRecipeState] = field(default_factory=list)
+    inventory: list[AlchemyInventoryItem] = field(default_factory=list)
+    active_job: AlchemyJob | None = None
+    last_result: AlchemyResult | None = None
+
+
+@dataclass
 class CharacterState:
     name: str
     realm: str
@@ -250,6 +306,7 @@ class RunState:
     character: CharacterState
     resources: ResourceState
     resource_stacks: list[RunResourceStack] = field(default_factory=list)
+    alchemy_state: AlchemyState = field(default_factory=AlchemyState)
     breakthrough_requirements: BreakthroughRequirements | None = None
     current_event: CurrentEvent | None = None
     dwelling_level: int = 1

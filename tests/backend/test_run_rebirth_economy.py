@@ -47,7 +47,7 @@ def test_rebirth_clears_run_resources_and_keeps_rebirth_points() -> None:
 
     assert result.player_profile.rebirth_points == 38
     assert result.new_run.resource_stacks == []
-    assert result.new_run.resources.spirit_stone == 21
+    assert result.new_run.resources.spirit_stone == 101
     rmtree(base_path)
 
 

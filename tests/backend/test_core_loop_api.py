@@ -91,6 +91,47 @@ def test_build_and_upgrade_dwelling_facility_round_trip() -> None:
     assert upgrade_response.json()["dwelling_facilities"][0]["level"] == 2
 
 
+def test_start_and_consume_alchemy_round_trip() -> None:
+    create_response = client.post("/api/run/create", json={"player_id": "p1"})
+    run_id = create_response.json()["run_id"]
+    run = run_service.get_run(run_id)
+    run.resources.spirit_stone = 200
+    run_service.build_dwelling_facility(run_id, "alchemy_room")
+
+    start_response = client.post(
+        "/api/run/alchemy/start",
+        json={"run_id": run_id, "recipe_id": "yang_qi_dan", "use_spirit_spring": False},
+    )
+    run_service.get_run(run_id).current_event = None
+    run_service.advance_time(run_id)
+    consume_response = client.post(
+        "/api/run/alchemy/consume",
+        json={"run_id": run_id, "item_id": "yang_qi_dan", "quality": "low"},
+    )
+
+    assert start_response.status_code == 200
+    assert start_response.json()["alchemy_state"]["active_job"]["recipe_id"] == "yang_qi_dan"
+    assert consume_response.status_code == 200
+    assert consume_response.json()["character"]["cultivation_exp"] > 0
+
+
+def test_sell_resource_round_trip() -> None:
+    create_response = client.post("/api/run/create", json={"player_id": "p1"})
+    run_id = create_response.json()["run_id"]
+    run = run_service.get_run(run_id)
+    run.resources.herbs = 4
+    run.resources.spirit_stone = 20
+
+    sell_response = client.post(
+        "/api/run/resource/sell",
+        json={"run_id": run_id, "resource_key": "herb", "amount": 3},
+    )
+
+    assert sell_response.status_code == 200
+    assert sell_response.json()["resources"]["spirit_stone"] == 23
+    assert sell_response.json()["resources"]["herbs"] == 1
+
+
 def test_health_endpoint_returns_ok() -> None:
     response = client.get("/api/health")
 

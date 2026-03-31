@@ -21,6 +21,24 @@ class FacilityActionRequest(BaseModel):
     facility_id: str
 
 
+class ResourceSaleRequest(BaseModel):
+    run_id: str
+    resource_key: str
+    amount: int
+
+
+class StartAlchemyRequest(BaseModel):
+    run_id: str
+    recipe_id: str
+    use_spirit_spring: bool = False
+
+
+class ConsumeAlchemyItemRequest(BaseModel):
+    run_id: str
+    item_id: str
+    quality: str | None = None
+
+
 class ResolveEventRequest(BaseModel):
     run_id: str
     option_id: str | None = None

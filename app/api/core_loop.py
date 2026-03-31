@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
+    ConsumeAlchemyItemRequest,
     CreateRunRequest,
     FacilityActionRequest,
+    ResourceSaleRequest,
     ResolveEventRequest,
     RunIdRequest,
+    StartAlchemyRequest,
     serialize_breakthrough_result,
     serialize_rebirth_result,
     serialize_run_state,
@@ -92,6 +95,51 @@ def upgrade_dwelling_facility(payload: FacilityActionRequest) -> dict[str, objec
     try:
         return serialize_run_state(
             run_service.upgrade_dwelling_facility(payload.run_id, payload.facility_id)
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/resource/sell")
+def sell_resource(payload: ResourceSaleRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.sell_resource(
+                payload.run_id,
+                payload.resource_key,
+                payload.amount,
+            )
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/alchemy/start")
+def start_alchemy(payload: StartAlchemyRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.start_alchemy(
+                payload.run_id,
+                payload.recipe_id,
+                use_spirit_spring=payload.use_spirit_spring,
+            )
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/alchemy/consume")
+def consume_alchemy_item(payload: ConsumeAlchemyItemRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.consume_alchemy_item(
+                payload.run_id,
+                payload.item_id,
+                quality=payload.quality,
+            )
         )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)

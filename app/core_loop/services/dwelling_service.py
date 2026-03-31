@@ -109,7 +109,8 @@ class DwellingService:
                 continue
 
             self._spend_cost(run, level_spec.maintenance_cost)
-            for resource_key, amount in level_spec.resource_yields.items():
+            resolved_yields = self._resolve_resource_yields(run, facility, level_spec)
+            for resource_key, amount in resolved_yields.items():
                 self._resource_service.add(run, resource_key, amount)
                 settlement.total_resource_gains[resource_key] = (
                     settlement.total_resource_gains.get(resource_key, 0) + amount
@@ -127,9 +128,9 @@ class DwellingService:
                 display_name=facility.display_name,
                 status=facility.status,
                 maintenance_paid=dict(level_spec.maintenance_cost),
-                resource_gains=dict(level_spec.resource_yields),
+                resource_gains=resolved_yields,
                 cultivation_exp_gain=level_spec.cultivation_exp_gain,
-                summary=self._build_entry_summary(facility, level_spec),
+                summary=self._build_entry_summary(facility, level_spec, resolved_yields),
             )
             settlement.entries.append(entry)
             settlement.summary_lines.append(entry.summary)
@@ -152,6 +153,20 @@ class DwellingService:
         if facility is None or facility.level == 0:
             return 0.0
         return min(0.02 * facility.level, 0.08)
+
+    def get_mine_spirit_stone_bonus(self, run: RunState) -> float:
+        self.hydrate_run(run)
+        facility = next(
+            (
+                item
+                for item in run.dwelling_facilities
+                if item.facility_id == "spirit_gathering_array"
+            ),
+            None,
+        )
+        if facility is None or facility.level == 0:
+            return 0.0
+        return min(0.10 * facility.level, 0.30)
 
     def _get_facility(
         self,
@@ -230,6 +245,7 @@ class DwellingService:
         self,
         facility: DwellingFacilityState,
         level_spec: DwellingLevelSpec,
+        resolved_yields: dict[str, int] | None = None,
     ) -> str:
         parts = []
         if level_spec.maintenance_cost:
@@ -240,12 +256,13 @@ class DwellingService:
                     for resource_key, amount in level_spec.maintenance_cost.items()
                 )
             )
-        if level_spec.resource_yields:
+        actual_yields = resolved_yields if resolved_yields is not None else level_spec.resource_yields
+        if actual_yields:
             parts.append(
                 "产出 "
                 + " / ".join(
                     f"{resource_key} +{amount}"
-                    for resource_key, amount in level_spec.resource_yields.items()
+                    for resource_key, amount in actual_yields.items()
                 )
             )
         if level_spec.cultivation_exp_gain:
@@ -257,6 +274,26 @@ class DwellingService:
     def _calculate_dwelling_level(self, run: RunState) -> int:
         built_levels = [facility.level for facility in run.dwelling_facilities if facility.level > 0]
         return max(built_levels, default=1)
+
+    def _resolve_resource_yields(
+        self,
+        run: RunState,
+        facility: DwellingFacilityState,
+        level_spec: DwellingLevelSpec,
+    ) -> dict[str, int]:
+        yields = dict(level_spec.resource_yields)
+        if facility.facility_id != "mine_cave":
+            return yields
+
+        spirit_stone_gain = yields.get("spirit_stone", 0)
+        if spirit_stone_gain <= 0:
+            return yields
+
+        yields["spirit_stone"] = max(
+            spirit_stone_gain,
+            int(spirit_stone_gain * (1 + self.get_mine_spirit_stone_bonus(run))),
+        )
+        return yields
 
     def _active_status_for_level(self, level: int, max_level: int) -> str:
         if level >= max_level:
@@ -277,19 +314,47 @@ def _build_facility_specs() -> list[DwellingFacilitySpec]:
                 1: DwellingLevelSpec(
                     level=1,
                     maintenance_cost={"spirit_stone": 2},
-                    resource_yields={"herb": 2},
+                    resource_yields={"basic_herb": 2},
                     upgrade_cost={"spirit_stone": 40},
                 ),
                 2: DwellingLevelSpec(
                     level=2,
                     maintenance_cost={"spirit_stone": 3},
-                    resource_yields={"herb": 3},
+                    resource_yields={"basic_herb": 3},
                     upgrade_cost={"spirit_stone": 55},
                 ),
                 3: DwellingLevelSpec(
                     level=3,
                     maintenance_cost={"spirit_stone": 4},
-                    resource_yields={"herb": 5},
+                    resource_yields={"basic_herb": 5},
+                ),
+            },
+        ),
+        DwellingFacilitySpec(
+            facility_id="spirit_spring",
+            display_name="灵泉",
+            facility_type="production",
+            summary="提供炼丹辅用灵泉水，作为中期炼丹品质与成功率的稳定辅助。",
+            build_cost={"spirit_stone": 70},
+            max_level=3,
+            function_unlock_text="灵泉已通，可为丹房额外提供灵泉水。",
+            levels={
+                1: DwellingLevelSpec(
+                    level=1,
+                    maintenance_cost={"spirit_stone": 3},
+                    resource_yields={"spirit_spring_water": 1},
+                    upgrade_cost={"spirit_stone": 50},
+                ),
+                2: DwellingLevelSpec(
+                    level=2,
+                    maintenance_cost={"spirit_stone": 4},
+                    resource_yields={"spirit_spring_water": 2},
+                    upgrade_cost={"spirit_stone": 65},
+                ),
+                3: DwellingLevelSpec(
+                    level=3,
+                    maintenance_cost={"spirit_stone": 5},
+                    resource_yields={"spirit_spring_water": 3},
                 ),
             },
         ),
@@ -297,26 +362,26 @@ def _build_facility_specs() -> list[DwellingFacilitySpec]:
             facility_id="mine_cave",
             display_name="矿洞",
             facility_type="production",
-            summary="提供基础矿材，缓解炼器与建设对事件掉落的依赖。",
+            summary="提供稳定灵石与基础矿材，是洞府最直接的保底现金流来源。",
             build_cost={"spirit_stone": 60},
             max_level=3,
             levels={
                 1: DwellingLevelSpec(
                     level=1,
                     maintenance_cost={"spirit_stone": 3},
-                    resource_yields={"ore": 1},
+                    resource_yields={"spirit_stone": 4, "basic_ore": 1},
                     upgrade_cost={"spirit_stone": 45},
                 ),
                 2: DwellingLevelSpec(
                     level=2,
                     maintenance_cost={"spirit_stone": 4},
-                    resource_yields={"ore": 2},
+                    resource_yields={"spirit_stone": 7, "basic_ore": 2},
                     upgrade_cost={"spirit_stone": 60},
                 ),
                 3: DwellingLevelSpec(
                     level=3,
                     maintenance_cost={"spirit_stone": 5},
-                    resource_yields={"ore": 3},
+                    resource_yields={"spirit_stone": 10, "basic_ore": 3},
                 ),
             },
         ),

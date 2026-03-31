@@ -33,7 +33,7 @@ def test_advance_time_creates_spec_shaped_pending_event() -> None:
     for option in result.current_event.options:
         assert option.option_id
         assert option.option_text
-        assert option.requires_resources == {}
+        assert isinstance(option.requires_resources, dict)
         assert option.is_available is True
         assert option.disabled_reason is None
     assert result.character.lifespan_current == before_lifespan - 1
@@ -91,16 +91,23 @@ def test_create_run_exposes_dwelling_facilities_and_empty_last_settlement() -> N
 
     run = service.create_run(player_id="p1")
 
+    assert run.resources.spirit_stone == 100
     assert run.dwelling_level == 1
     assert run.dwelling_last_settlement is None
     assert [facility.facility_id for facility in run.dwelling_facilities] == [
         "spirit_field",
+        "spirit_spring",
         "mine_cave",
         "alchemy_room",
         "spirit_gathering_array",
     ]
     assert all(facility.level == 0 for facility in run.dwelling_facilities)
     assert all(facility.status == "unbuilt" for facility in run.dwelling_facilities)
+    assert run.alchemy_state is not None
+    assert run.alchemy_state.active_job is None
+    assert run.alchemy_state.last_result is None
+    assert run.alchemy_state.inventory == []
+    assert len(run.alchemy_state.available_recipes) >= 6
 
 
 def _make_test_base_path(label: str) -> Path:

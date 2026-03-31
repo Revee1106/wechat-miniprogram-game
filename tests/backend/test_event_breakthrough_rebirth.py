@@ -237,7 +237,7 @@ def test_rebirth_creates_new_run_with_permanent_bonus() -> None:
     assert result.new_run.run_id != run.run_id
     assert result.new_run.character.luck == result.player_profile.permanent_luck_bonus
     assert result.new_run.character.luck == 1
-    assert result.new_run.resources.spirit_stone == 21
+    assert result.new_run.resources.spirit_stone == 101
 
 
 def _make_test_base_path(label: str) -> Path:

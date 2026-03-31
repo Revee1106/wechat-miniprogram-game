@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from app.core_loop.services.alchemy_service import AlchemyService
 from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
 from app.core_loop.types import ConflictError, RunState
@@ -12,9 +13,11 @@ class TimeAdvanceService:
         self,
         event_service: EventService,
         dwelling_service: DwellingService | None = None,
+        alchemy_service: AlchemyService | None = None,
     ) -> None:
         self._event_service = event_service
         self._dwelling_service = dwelling_service or DwellingService()
+        self._alchemy_service = alchemy_service or AlchemyService()
 
     def advance(self, run: RunState, rebirth_count: int = 0) -> RunState:
         if run.character.is_dead:
@@ -26,6 +29,7 @@ class TimeAdvanceService:
         next_run.round_index += 1
         next_run.character.lifespan_current -= 1
         next_run.dwelling_last_settlement = self._dwelling_service.settle_month(next_run)
+        self._alchemy_service.advance_month(next_run)
         next_run.event_cooldowns = {
             event_id: remaining - 1
             for event_id, remaining in next_run.event_cooldowns.items()

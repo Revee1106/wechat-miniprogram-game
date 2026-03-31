@@ -33,6 +33,18 @@
     ]
   },
   {
+    "key": "spirit_spring_water",
+    "display_name": "灵泉水",
+    "category": "alchemy_auxiliary",
+    "tier": 2,
+    "rarity": "common",
+    "stackable": true,
+    "tags": [
+      "alchemy",
+      "auxiliary"
+    ]
+  },
+  {
     "key": "basic_breakthrough_material",
     "display_name": "普通晋级材料",
     "category": "breakthrough_material",

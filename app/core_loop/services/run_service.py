@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.event_config import load_event_registry
+from app.core_loop.services.alchemy_service import AlchemyService
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
@@ -11,6 +12,7 @@ from app.core_loop.services.rebirth_service import RebirthService
 from app.core_loop.services.time_advance_service import TimeAdvanceService
 from app.core_loop.types import BreakthroughRequirements, RebirthResult, RunState
 from app.economy.services.rebirth_point_service import RebirthPointService
+from app.economy.services.resource_sale_service import ResourceSaleService
 
 
 class RunService:
@@ -19,8 +21,10 @@ class RunService:
         self._event_config_base_path = event_config_base_path
         self._realm_config_base_path = event_config_base_path
         self._dwelling_service = DwellingService(base_path=event_config_base_path)
+        self._alchemy_service = AlchemyService(base_path=event_config_base_path)
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
+        self._resource_sale_service = ResourceSaleService(base_path=event_config_base_path)
         self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
         self._progression_service = ProgressionService(
             self._dwelling_service,
@@ -85,6 +89,28 @@ class RunService:
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
+    def start_alchemy(
+        self,
+        run_id: str,
+        recipe_id: str,
+        use_spirit_spring: bool = False,
+    ) -> RunState:
+        run = self._repo.get(run_id)
+        self._alchemy_service.start(run, recipe_id, use_spirit_spring=use_spirit_spring)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
+    def consume_alchemy_item(
+        self,
+        run_id: str,
+        item_id: str,
+        quality: str | None = None,
+    ) -> RunState:
+        run = self._repo.get(run_id)
+        self._alchemy_service.consume(run, item_id, quality=quality)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
     def rebirth(self, run_id: str) -> RebirthResult:
         run = self._repo.get(run_id)
         profile = self._repo.get_or_create_profile(run.player_id)
@@ -95,6 +121,12 @@ class RunService:
         self._hydrate_runtime_metadata(new_run)
         self._repo.save(new_run)
         return RebirthResult(player_profile=claimed_profile, new_run=new_run)
+
+    def sell_resource(self, run_id: str, resource_key: str, amount: int) -> RunState:
+        run = self._repo.get(run_id)
+        self._resource_sale_service.sell(run, resource_key, amount)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
 
     def reload_event_config(self, event_config_base_path: str | None = None) -> None:
         if event_config_base_path is not None:
@@ -125,6 +157,7 @@ class RunService:
         self._time_advance_service = TimeAdvanceService(
             self._event_service,
             self._dwelling_service,
+            self._alchemy_service,
         )
 
     def _sync_pending_event(self, run: RunState) -> RunState:
@@ -136,6 +169,7 @@ class RunService:
 
     def _hydrate_runtime_metadata(self, run: RunState) -> None:
         self._dwelling_service.hydrate_run(run)
+        self._alchemy_service.hydrate_run(run)
         current_realm_key = resolve_realm_key(run.character.realm, self._realm_configs)
         current_index = next(
             (
