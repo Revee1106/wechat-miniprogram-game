@@ -12,6 +12,7 @@ from app.core_loop.services.rebirth_service import RebirthService
 from app.core_loop.services.time_advance_service import TimeAdvanceService
 from app.core_loop.types import BreakthroughRequirements, RebirthResult, RunState
 from app.economy.services.rebirth_point_service import RebirthPointService
+from app.economy.services.resource_conversion_service import ResourceConversionService
 from app.economy.services.resource_sale_service import ResourceSaleService
 
 
@@ -25,6 +26,9 @@ class RunService:
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
         self._resource_sale_service = ResourceSaleService(base_path=event_config_base_path)
+        self._resource_conversion_service = ResourceConversionService(
+            base_path=event_config_base_path
+        )
         self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
         self._progression_service = ProgressionService(
             self._dwelling_service,
@@ -125,6 +129,12 @@ class RunService:
     def sell_resource(self, run_id: str, resource_key: str, amount: int) -> RunState:
         run = self._repo.get(run_id)
         self._resource_sale_service.sell(run, resource_key, amount)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
+    def convert_spirit_stone_to_cultivation(self, run_id: str, amount: int) -> RunState:
+        run = self._repo.get(run_id)
+        self._resource_conversion_service.convert_spirit_stone_to_cultivation(run, amount)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 

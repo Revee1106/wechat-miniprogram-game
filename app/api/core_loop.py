@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
+    ResourceConversionRequest,
     ConsumeAlchemyItemRequest,
     CreateRunRequest,
     FacilityActionRequest,
@@ -108,6 +109,22 @@ def sell_resource(payload: ResourceSaleRequest) -> dict[str, object]:
             run_service.sell_resource(
                 payload.run_id,
                 payload.resource_key,
+                payload.amount,
+            )
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/resource/convert-cultivation")
+def convert_spirit_stone_to_cultivation(
+    payload: ResourceConversionRequest,
+) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.convert_spirit_stone_to_cultivation(
+                payload.run_id,
                 payload.amount,
             )
         )

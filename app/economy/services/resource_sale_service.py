@@ -16,7 +16,7 @@ class ResourceSaleService:
     def __init__(self, base_path: str | None = None) -> None:
         self._resource_service = RunResourceService(base_path=base_path)
         self._rules = {
-            "herb": SaleRule(price=1, uses_legacy_resource=True),
+            "herb": SaleRule(price=2, uses_legacy_resource=True),
             "ore": SaleRule(price=2, uses_legacy_resource=True),
             "basic_herb": SaleRule(price=1),
             "basic_ore": SaleRule(price=2),

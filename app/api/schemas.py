@@ -27,6 +27,11 @@ class ResourceSaleRequest(BaseModel):
     amount: int
 
 
+class ResourceConversionRequest(BaseModel):
+    run_id: str
+    amount: int
+
+
 class StartAlchemyRequest(BaseModel):
     run_id: str
     recipe_id: str

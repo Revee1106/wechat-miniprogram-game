@@ -128,8 +128,25 @@ def test_sell_resource_round_trip() -> None:
     )
 
     assert sell_response.status_code == 200
-    assert sell_response.json()["resources"]["spirit_stone"] == 23
+    assert sell_response.json()["resources"]["spirit_stone"] == 26
     assert sell_response.json()["resources"]["herbs"] == 1
+
+
+def test_convert_spirit_stone_to_cultivation_round_trip() -> None:
+    create_response = client.post("/api/run/create", json={"player_id": "p1"})
+    run_id = create_response.json()["run_id"]
+    run = run_service.get_run(run_id)
+    run.resources.spirit_stone = 12
+    run.character.cultivation_exp = 9
+
+    convert_response = client.post(
+        "/api/run/resource/convert-cultivation",
+        json={"run_id": run_id, "amount": 4},
+    )
+
+    assert convert_response.status_code == 200
+    assert convert_response.json()["resources"]["spirit_stone"] == 8
+    assert convert_response.json()["character"]["cultivation_exp"] == 29
 
 
 def test_health_endpoint_returns_ok() -> None:

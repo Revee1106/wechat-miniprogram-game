@@ -12,7 +12,7 @@ def test_sell_resource_converts_inventory_into_spirit_stone() -> None:
 
     updated = service.sell_resource(run.run_id, "herb", 3)
 
-    assert updated.resources.spirit_stone == 23
+    assert updated.resources.spirit_stone == 26
     assert updated.resources.herbs == 2
 
 
@@ -60,3 +60,28 @@ def test_sell_resource_rejects_non_sellable_resource() -> None:
 
     with pytest.raises(ConflictError):
         service.sell_resource(run.run_id, "spirit_stone", 1)
+
+
+def test_convert_spirit_stone_to_cultivation_consumes_stone_and_adds_exp() -> None:
+    service = RunService()
+    run = service.create_run(player_id="converter")
+    run.resources.spirit_stone = 10
+    run.character.cultivation_exp = 7
+
+    updated = service.convert_spirit_stone_to_cultivation(run.run_id, 3)
+
+    assert updated.resources.spirit_stone == 7
+    assert updated.character.cultivation_exp == 22
+
+
+def test_convert_spirit_stone_to_cultivation_rejects_insufficient_stone() -> None:
+    service = RunService()
+    run = service.create_run(player_id="poor-converter")
+    run.resources.spirit_stone = 2
+    run.character.cultivation_exp = 4
+
+    with pytest.raises(ConflictError):
+        service.convert_spirit_stone_to_cultivation(run.run_id, 3)
+
+    assert run.resources.spirit_stone == 2
+    assert run.character.cultivation_exp == 4
