@@ -1,10 +1,9 @@
-import { within } from "@testing-library/react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import { RealmListPage } from "./RealmListPage";
 
-test("renders realm spectrum cards with key fields", async () => {
+test("renders compact realm toolbar and opens drawer editing", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
@@ -40,13 +39,15 @@ test("renders realm spectrum cards with key fields", async () => {
     }))
   );
 
-  render(<RealmListPage onCreateRealm={() => {}} onEditRealm={() => {}} />);
+  render(<RealmListPage />);
 
-  expect(await screen.findByRole("heading", { name: "境界谱册" })).toBeInTheDocument();
-  expect(screen.getByText("Qi Refining Early")).toBeInTheDocument();
-  expect(within(screen.getAllByRole("article")[0]).getByText(/qi_refining_early/)).toBeInTheDocument();
-  expect(screen.getByText(/100/)).toBeInTheDocument();
-  expect(screen.getByText(/80/)).toBeInTheDocument();
+  expect(await screen.findByLabelText("当前境界")).toBeInTheDocument();
+  expect(document.querySelector(".registry-group")).toBeNull();
+  expect(screen.getByRole("button", { name: "基础信息" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "突破配置" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "基础信息" }));
+  expect(await screen.findByRole("dialog", { name: "基础信息" })).toBeInTheDocument();
 });
 
 test("moves a realm upward and reloads runtime immediately", async () => {
@@ -113,14 +114,21 @@ test("moves a realm upward and reloads runtime immediately", async () => {
     })
   );
 
-  render(<RealmListPage onCreateRealm={() => {}} onEditRealm={() => {}} />);
+  render(<RealmListPage />);
 
-  expect(await screen.findByText("Qi Refining Early")).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole("button", { name: "move-up qi_refining_mid" }));
+  expect(await screen.findByLabelText("当前境界")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("当前境界"), {
+    target: { value: "qi_refining_mid" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "上移" }));
 
   await waitFor(() => {
     expect(reloadCalls).toBe(1);
-    expect(within(screen.getAllByRole("article")[0]).getByText("Qi Refining Mid")).toBeInTheDocument();
   });
+
+  const selector = screen.getByLabelText("当前境界") as HTMLSelectElement;
+  const optionLabels = Array.from(selector.options)
+    .slice(1)
+    .map((option) => option.textContent?.trim());
+  expect(optionLabels.slice(0, 2)).toEqual(["Qi Refining Mid", "Qi Refining Early"]);
 });

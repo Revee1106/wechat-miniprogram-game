@@ -10,6 +10,7 @@ from app.admin.auth import (
     set_admin_session,
 )
 from app.admin.schemas import AdminLoginRequest, AdminSessionResponse
+from app.admin.services.dwelling_admin_service import DwellingAdminService
 from app.admin.services.event_admin_service import EventAdminService
 from app.admin.services.realm_admin_service import RealmAdminService
 from app.core_loop.types import NotFoundError
@@ -18,6 +19,7 @@ from app.core_loop.types import NotFoundError
 router = APIRouter(prefix="/admin/api", tags=["admin"])
 event_admin_service = EventAdminService()
 realm_admin_service = RealmAdminService()
+dwelling_admin_service = DwellingAdminService()
 
 
 def _raise_http_error(error: Exception) -> None:
@@ -157,6 +159,51 @@ def reload_events() -> dict[str, object]:
 @router.get("/realms")
 def list_realms() -> dict[str, object]:
     return realm_admin_service.list_realms()
+
+
+@router.get("/dwelling/facilities")
+def list_dwelling_facilities() -> dict[str, object]:
+    return dwelling_admin_service.list_facilities()
+
+
+@router.get("/dwelling/facilities/{facility_id}")
+def get_dwelling_facility(facility_id: str) -> dict[str, object]:
+    try:
+        return dwelling_admin_service.get_facility(facility_id)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/dwelling/facilities/{facility_id}")
+def update_dwelling_facility(
+    facility_id: str,
+    payload: dict[str, object],
+) -> dict[str, object]:
+    try:
+        return dwelling_admin_service.update_facility(facility_id, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/dwelling/validate")
+def validate_dwelling() -> dict[str, object]:
+    result = dwelling_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/dwelling/reload")
+def reload_dwelling() -> dict[str, object]:
+    try:
+        return dwelling_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
 
 
 @router.post("/realms/validate")

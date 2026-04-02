@@ -17,11 +17,23 @@ from app.economy.services.resource_sale_service import ResourceSaleService
 
 
 class RunService:
-    def __init__(self, event_config_base_path: str | None = None) -> None:
+    def __init__(
+        self,
+        event_config_base_path: str | None = None,
+        realm_config_base_path: str | None = None,
+        dwelling_config_base_path: str | None = None,
+    ) -> None:
         self._repo = InMemoryRunRepository()
         self._event_config_base_path = event_config_base_path
-        self._realm_config_base_path = event_config_base_path
-        self._dwelling_service = DwellingService(base_path=event_config_base_path)
+        self._realm_config_base_path = (
+            realm_config_base_path if realm_config_base_path is not None else event_config_base_path
+        )
+        self._dwelling_config_base_path = (
+            dwelling_config_base_path
+            if dwelling_config_base_path is not None
+            else event_config_base_path
+        )
+        self._dwelling_service = DwellingService(base_path=self._dwelling_config_base_path)
         self._alchemy_service = AlchemyService(base_path=event_config_base_path)
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
@@ -148,6 +160,12 @@ class RunService:
         if realm_config_base_path is not None:
             self._realm_config_base_path = realm_config_base_path
         self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
+        self._rebuild_runtime_services()
+
+    def reload_dwelling_config(self, dwelling_config_base_path: str | None = None) -> None:
+        if dwelling_config_base_path is not None:
+            self._dwelling_config_base_path = dwelling_config_base_path
+        self._dwelling_service.reload_config(base_path=self._dwelling_config_base_path)
         self._rebuild_runtime_services()
 
     def _rebuild_runtime_services(self) -> None:

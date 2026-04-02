@@ -1,0 +1,257 @@
+[
+  {
+    "facility_id": "spirit_field",
+    "display_name": "灵田",
+    "facility_type": "production",
+    "summary": "提供稳定灵植产出，为后续丹药与事件需求打底。",
+    "function_unlock_text": "",
+    "levels": [
+      {
+        "level": 1,
+        "entry_cost": {
+          "spirit_stone": 50
+        },
+        "maintenance_cost": {
+          "spirit_stone": 2
+        },
+        "resource_yields": {
+          "basic_herb": 2
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 2,
+        "entry_cost": {
+          "spirit_stone": 40
+        },
+        "maintenance_cost": {
+          "spirit_stone": 3
+        },
+        "resource_yields": {
+          "basic_herb": 3
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 3,
+        "entry_cost": {
+          "spirit_stone": 55
+        },
+        "maintenance_cost": {
+          "spirit_stone": 4
+        },
+        "resource_yields": {
+          "basic_herb": 5
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      }
+    ]
+  },
+  {
+    "facility_id": "spirit_spring",
+    "display_name": "灵泉",
+    "facility_type": "production",
+    "summary": "提供炼丹辅助灵泉水，作为中期炼丹品质与成功率的稳定辅助。",
+    "function_unlock_text": "灵泉已通，可为丹房额外提供灵泉水。",
+    "levels": [
+      {
+        "level": 1,
+        "entry_cost": {
+          "spirit_stone": 70
+        },
+        "maintenance_cost": {
+          "spirit_stone": 3
+        },
+        "resource_yields": {
+          "spirit_spring_water": 1
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 2,
+        "entry_cost": {
+          "spirit_stone": 50
+        },
+        "maintenance_cost": {
+          "spirit_stone": 4
+        },
+        "resource_yields": {
+          "spirit_spring_water": 2
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 3,
+        "entry_cost": {
+          "spirit_stone": 65
+        },
+        "maintenance_cost": {
+          "spirit_stone": 5
+        },
+        "resource_yields": {
+          "spirit_spring_water": 3
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      }
+    ]
+  },
+  {
+    "facility_id": "mine_cave",
+    "display_name": "矿洞",
+    "facility_type": "production",
+    "summary": "提供稳定灵石与基础矿材，是洞府最直接的保底现金流来源。",
+    "function_unlock_text": "",
+    "levels": [
+      {
+        "level": 1,
+        "entry_cost": {
+          "spirit_stone": 60
+        },
+        "maintenance_cost": {
+          "spirit_stone": 3
+        },
+        "resource_yields": {
+          "spirit_stone": 4,
+          "basic_ore": 1
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 2,
+        "entry_cost": {
+          "spirit_stone": 45
+        },
+        "maintenance_cost": {
+          "spirit_stone": 4
+        },
+        "resource_yields": {
+          "spirit_stone": 7,
+          "basic_ore": 2
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 3,
+        "entry_cost": {
+          "spirit_stone": 60
+        },
+        "maintenance_cost": {
+          "spirit_stone": 5
+        },
+        "resource_yields": {
+          "spirit_stone": 10,
+          "basic_ore": 3
+        },
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      }
+    ]
+  },
+  {
+    "facility_id": "alchemy_room",
+    "display_name": "炼丹房",
+    "facility_type": "function",
+    "summary": "承载后续炼丹系统，本次只开放设施本体与入口占位。",
+    "function_unlock_text": "炼丹入口已解锁，完整炼丹玩法将在后续版本补齐。",
+    "levels": [
+      {
+        "level": 1,
+        "entry_cost": {
+          "spirit_stone": 80
+        },
+        "maintenance_cost": {
+          "spirit_stone": 3
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 2,
+        "entry_cost": {
+          "spirit_stone": 55
+        },
+        "maintenance_cost": {
+          "spirit_stone": 4
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      },
+      {
+        "level": 3,
+        "entry_cost": {
+          "spirit_stone": 70
+        },
+        "maintenance_cost": {
+          "spirit_stone": 5
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 0,
+        "special_effects": {}
+      }
+    ]
+  },
+  {
+    "facility_id": "spirit_gathering_array",
+    "display_name": "聚灵阵",
+    "facility_type": "boost",
+    "summary": "按月提供固定修为，并持续辅助突破准备。",
+    "function_unlock_text": "聚灵阵正在运转，可持续辅助修炼与突破。",
+    "levels": [
+      {
+        "level": 1,
+        "entry_cost": {
+          "spirit_stone": 100
+        },
+        "maintenance_cost": {
+          "spirit_stone": 4
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 6,
+        "special_effects": {
+          "breakthrough_bonus_rate": 0.02,
+          "mine_spirit_stone_bonus_rate": 0.1
+        }
+      },
+      {
+        "level": 2,
+        "entry_cost": {
+          "spirit_stone": 70
+        },
+        "maintenance_cost": {
+          "spirit_stone": 5
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 10,
+        "special_effects": {
+          "breakthrough_bonus_rate": 0.04,
+          "mine_spirit_stone_bonus_rate": 0.2
+        }
+      },
+      {
+        "level": 3,
+        "entry_cost": {
+          "spirit_stone": 90
+        },
+        "maintenance_cost": {
+          "spirit_stone": 6
+        },
+        "resource_yields": {},
+        "cultivation_exp_gain": 14,
+        "special_effects": {
+          "breakthrough_bonus_rate": 0.06,
+          "mine_spirit_stone_bonus_rate": 0.3
+        }
+      }
+    ]
+  }
+]

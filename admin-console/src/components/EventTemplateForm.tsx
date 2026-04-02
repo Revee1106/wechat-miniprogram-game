@@ -6,11 +6,11 @@ import {
   riskLevelOptions,
   triggerSourceOptions,
 } from "./FieldLabelMap";
+import { RequirementFieldGroup } from "./RequirementFieldGroup";
+import { ResourceRecordEditor } from "./ResourceRecordEditor";
 import { SectionCard } from "./SectionCard";
 import {
-  formatKeyValueMap,
   formatLineList,
-  parseKeyValueMap,
   parseLineList,
   parseNumberInput,
   parseOptionalNumber,
@@ -47,6 +47,162 @@ export function EventTemplateForm({
       : [...current, source];
     onChange("trigger_sources", next.length > 0 ? next : ["global"]);
   }
+
+  const requirementFields = [
+    {
+      key: "required_resources",
+      label: "所需资源",
+      isActive: Object.keys(template.required_resources ?? {}).length > 0,
+      onActivate: () => onChange("required_resources", {}),
+      onReset: () => onChange("required_resources", {}),
+      render: () => (
+        <ResourceRecordEditor
+          addLabel="新增资源"
+          emptyMessage="当前还没有资源前置。"
+          hideLabel
+          label="所需资源"
+          onChange={(value) => onChange("required_resources", value)}
+          value={template.required_resources}
+        />
+      ),
+    },
+    {
+      key: "required_statuses",
+      label: "需要状态",
+      isActive: (template.required_statuses ?? []).length > 0,
+      onActivate: () => onChange("required_statuses", []),
+      onReset: () => onChange("required_statuses", []),
+      render: () => (
+        <textarea
+          aria-label="需要状态"
+          className="requirement-field__input"
+          placeholder="每行一个状态"
+          value={formatLineList(template.required_statuses)}
+          onChange={(event) => onChange("required_statuses", parseLineList(event.target.value))}
+        />
+      ),
+    },
+    {
+      key: "excluded_statuses",
+      label: "排斥状态",
+      isActive: (template.excluded_statuses ?? []).length > 0,
+      onActivate: () => onChange("excluded_statuses", []),
+      onReset: () => onChange("excluded_statuses", []),
+      render: () => (
+        <textarea
+          aria-label="排斥状态"
+          className="requirement-field__input"
+          placeholder="每行一个状态"
+          value={formatLineList(template.excluded_statuses)}
+          onChange={(event) => onChange("excluded_statuses", parseLineList(event.target.value))}
+        />
+      ),
+    },
+    {
+      key: "required_techniques",
+      label: "所需功法",
+      isActive: (template.required_techniques ?? []).length > 0,
+      onActivate: () => onChange("required_techniques", []),
+      onReset: () => onChange("required_techniques", []),
+      render: () => (
+        <textarea
+          aria-label="所需功法"
+          className="requirement-field__input"
+          placeholder="每行一个功法编号"
+          value={formatLineList(template.required_techniques)}
+          onChange={(event) => onChange("required_techniques", parseLineList(event.target.value))}
+        />
+      ),
+    },
+    {
+      key: "required_equipment_tags",
+      label: "所需装备标签",
+      isActive: (template.required_equipment_tags ?? []).length > 0,
+      onActivate: () => onChange("required_equipment_tags", []),
+      onReset: () => onChange("required_equipment_tags", []),
+      render: () => (
+        <textarea
+          aria-label="所需装备标签"
+          className="requirement-field__input"
+          placeholder="每行一个装备标签"
+          value={formatLineList(template.required_equipment_tags)}
+          onChange={(event) =>
+            onChange("required_equipment_tags", parseLineList(event.target.value))
+          }
+        />
+      ),
+    },
+    {
+      key: "required_rebirth_count",
+      label: "最低转生次数",
+      isActive: (template.required_rebirth_count ?? 0) > 0,
+      onActivate: () => onChange("required_rebirth_count", 1),
+      onReset: () => onChange("required_rebirth_count", 0),
+      render: () => (
+        <input
+          aria-label="最低转生次数"
+          className="requirement-field__input"
+          min={0}
+          type="number"
+          value={template.required_rebirth_count ?? 0}
+          onChange={(event) =>
+            onChange("required_rebirth_count", parseNumberInput(event.target.value, 0))
+          }
+        />
+      ),
+    },
+    {
+      key: "required_karma_min",
+      label: "最低因果",
+      isActive: template.required_karma_min !== null && template.required_karma_min !== undefined,
+      onActivate: () => onChange("required_karma_min", 0),
+      onReset: () => onChange("required_karma_min", null),
+      render: () => (
+        <input
+          aria-label="最低因果"
+          className="requirement-field__input"
+          type="number"
+          value={template.required_karma_min ?? ""}
+          onChange={(event) => onChange("required_karma_min", parseOptionalNumber(event.target.value))}
+        />
+      ),
+    },
+    {
+      key: "required_luck_min",
+      label: "最低气运",
+      isActive: (template.required_luck_min ?? 0) > 0,
+      onActivate: () => onChange("required_luck_min", 1),
+      onReset: () => onChange("required_luck_min", 0),
+      render: () => (
+        <input
+          aria-label="最低气运"
+          className="requirement-field__input"
+          min={0}
+          type="number"
+          value={template.required_luck_min ?? 0}
+          onChange={(event) =>
+            onChange("required_luck_min", parseNumberInput(event.target.value, 0))
+          }
+        />
+      ),
+    },
+    {
+      key: "flags",
+      label: "附加标记",
+      isActive: (template.flags ?? []).length > 0,
+      onActivate: () => onChange("flags", []),
+      onReset: () => onChange("flags", []),
+      render: () => (
+        <textarea
+          aria-label="附加标记"
+          className="requirement-field__input"
+          placeholder="每行一个标记，用于后续扩展"
+          value={formatLineList(template.flags)}
+          onChange={(event) => onChange("flags", parseLineList(event.target.value))}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="section-grid">
@@ -215,7 +371,7 @@ export function EventTemplateForm({
               <span className="field__label">最低境界</span>
               <input
                 aria-label="最低境界"
-                placeholder="例如 炼气期"
+                placeholder="填写境界标识"
                 value={template.realm_min ?? ""}
                 onChange={(event) => onChange("realm_min", event.target.value || null)}
               />
@@ -225,7 +381,7 @@ export function EventTemplateForm({
               <span className="field__label">最高境界</span>
               <input
                 aria-label="最高境界"
-                placeholder="例如 金丹期"
+                placeholder="填写境界标识"
                 value={template.realm_max ?? ""}
                 onChange={(event) => onChange("realm_max", event.target.value || null)}
               />
@@ -274,120 +430,7 @@ export function EventTemplateForm({
       ) : null}
 
       {visibleSections.includes("requirements") ? (
-        <SectionCard
-          title="前置条件"
-          description="定义事件出现前需要满足的资源、状态、功法与养成条件。"
-        >
-          <div className="field-grid">
-            <label className="field field--full">
-              <span className="field__label">所需资源</span>
-              <textarea
-                aria-label="所需资源"
-                placeholder="每行一个，格式为 名称:数量"
-                value={formatKeyValueMap(template.required_resources)}
-                onChange={(event) =>
-                  onChange("required_resources", parseKeyValueMap(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">需要状态</span>
-              <textarea
-                aria-label="需要状态"
-                placeholder="每行一个状态"
-                value={formatLineList(template.required_statuses)}
-                onChange={(event) =>
-                  onChange("required_statuses", parseLineList(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">排斥状态</span>
-              <textarea
-                aria-label="排斥状态"
-                placeholder="每行一个状态"
-                value={formatLineList(template.excluded_statuses)}
-                onChange={(event) =>
-                  onChange("excluded_statuses", parseLineList(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">所需功法</span>
-              <textarea
-                aria-label="所需功法"
-                placeholder="每行一个功法编号"
-                value={formatLineList(template.required_techniques)}
-                onChange={(event) =>
-                  onChange("required_techniques", parseLineList(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">所需装备标签</span>
-              <textarea
-                aria-label="所需装备标签"
-                placeholder="每行一个装备标签"
-                value={formatLineList(template.required_equipment_tags)}
-                onChange={(event) =>
-                  onChange("required_equipment_tags", parseLineList(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">最低转生次数</span>
-              <input
-                aria-label="最低转生次数"
-                min={0}
-                type="number"
-                value={template.required_rebirth_count ?? 0}
-                onChange={(event) =>
-                  onChange("required_rebirth_count", parseNumberInput(event.target.value, 0))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">最低因果</span>
-              <input
-                aria-label="最低因果"
-                type="number"
-                value={template.required_karma_min ?? ""}
-                onChange={(event) =>
-                  onChange("required_karma_min", parseOptionalNumber(event.target.value))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span className="field__label">最低气运</span>
-              <input
-                aria-label="最低气运"
-                min={0}
-                type="number"
-                value={template.required_luck_min ?? 0}
-                onChange={(event) =>
-                  onChange("required_luck_min", parseNumberInput(event.target.value, 0))
-                }
-              />
-            </label>
-
-            <label className="field field--full">
-              <span className="field__label">附加标记</span>
-              <textarea
-                aria-label="附加标记"
-                placeholder="每行一个标记，用于后续扩展"
-                value={formatLineList(template.flags)}
-                onChange={(event) => onChange("flags", parseLineList(event.target.value))}
-              />
-            </label>
-          </div>
-        </SectionCard>
+        <RequirementFieldGroup fields={requirementFields} />
       ) : null}
 
       {visibleSections.includes("summary") ? (
@@ -410,8 +453,7 @@ export function EventTemplateForm({
             事件正文决定玩家看到的叙事，触发规则决定它何时进入随机池，前置条件决定它是否可被抽到。
           </p>
           <p className="field__hint">
-            若你主要在做内容维护，优先保证 `事件名称`、`标题文案`、`正文文案` 和
-            `选项文案` 可读，再回头补条件与数值。
+            如果主要在做内容维护，优先保证事件名称、标题文案、正文文案和选项文案可读，再回头补条件与数值。
           </p>
         </SectionCard>
       ) : null}

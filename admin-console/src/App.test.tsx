@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 
 import App from "./App";
@@ -15,8 +15,9 @@ test("shows redesigned login page when session is missing", async () => {
 
   render(<App />);
 
-  expect(await screen.findByText("问道控制台")).toBeInTheDocument();
-  expect(await screen.findByText("控制台登录")).toBeInTheDocument();
+  expect(await screen.findByText("WENDAO CONTROL")).toBeInTheDocument();
+  expect(screen.getByDisplayValue("admin")).toBeInTheDocument();
+  expect(screen.getByRole("button")).toBeInTheDocument();
 });
 
 test("shows shell and sign out action when session is active", async () => {
@@ -30,20 +31,63 @@ test("shows shell and sign out action when session is active", async () => {
           json: async () => ({ authenticated: true, username: "admin" }),
         };
       }
+      if (url.includes("/admin/api/events/event_one")) {
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              event_id: "event_one",
+              event_name: "Event One",
+              event_type: "cultivation",
+              outcome_type: "cultivation",
+              risk_level: "normal",
+              trigger_sources: ["global"],
+              choice_pattern: "binary_choice",
+              title_text: "Event One",
+              body_text: "Body",
+              weight: 1,
+              is_repeatable: true,
+              option_ids: ["option_one"],
+            },
+            options: [
+              {
+                option_id: "option_one",
+                event_id: "event_one",
+                option_text: "Absorb",
+                sort_order: 1,
+                is_default: true,
+              },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
-        json: async () => ({ items: [] }),
+        json: async () => ({
+          items: [
+            {
+              event_id: "event_one",
+              event_name: "Event One",
+              event_type: "cultivation",
+              risk_level: "normal",
+              weight: 1,
+              option_ids: ["option_one"],
+              is_repeatable: true,
+            },
+          ],
+        }),
       };
     })
   );
 
   render(<App />);
 
-  expect(await screen.findByText("事件库")).toBeInTheDocument();
+  expect(await screen.findByDisplayValue("Event One")).toBeInTheDocument();
+  expect(screen.getByRole("navigation")).toBeInTheDocument();
   expect(screen.getByText("退出登录")).toBeInTheDocument();
 });
 
-test("shows realm entry and switches to realm library", async () => {
+test("switches between event, realm, and dwelling workbenches", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL) => {
@@ -54,14 +98,44 @@ test("shows realm entry and switches to realm library", async () => {
           json: async () => ({ authenticated: true, username: "admin" }),
         };
       }
+      if (url.includes("/admin/api/events/event_one")) {
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              event_id: "event_one",
+              event_name: "Event One",
+              event_type: "cultivation",
+              outcome_type: "cultivation",
+              risk_level: "normal",
+              trigger_sources: ["global"],
+              choice_pattern: "binary_choice",
+              title_text: "Event One",
+              body_text: "Body",
+              weight: 1,
+              is_repeatable: true,
+              option_ids: ["option_one"],
+            },
+            options: [
+              {
+                option_id: "option_one",
+                event_id: "event_one",
+                option_text: "Absorb",
+                sort_order: 1,
+                is_default: true,
+              },
+            ],
+          }),
+        };
+      }
       if (url.includes("/admin/api/realms")) {
         return {
           ok: true,
           json: async () => ({
             items: [
               {
-                key: "qi_refining_early",
-                display_name: "炼气初期",
+                key: "realm_one",
+                display_name: "Realm One",
                 major_realm: "qi_refining",
                 stage_index: 1,
                 order_index: 1,
@@ -75,20 +149,77 @@ test("shows realm entry and switches to realm library", async () => {
           }),
         };
       }
+      if (url.includes("/admin/api/dwelling/facilities/spirit_field")) {
+        return {
+          ok: true,
+          json: async () => ({
+            facility_id: "spirit_field",
+            display_name: "Spirit Field",
+            facility_type: "production",
+            summary: "Provides herbs",
+            function_unlock_text: "",
+            levels: [
+              {
+                level: 1,
+                entry_cost: { spirit_stone: 50 },
+                maintenance_cost: { spirit_stone: 2 },
+                resource_yields: { basic_herb: 2 },
+                cultivation_exp_gain: 0,
+                special_effects: {},
+              },
+            ],
+          }),
+        };
+      }
+      if (url.includes("/admin/api/dwelling/facilities")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                facility_id: "spirit_field",
+                display_name: "Spirit Field",
+                facility_type: "production",
+                summary: "Provides herbs",
+                max_level: 3,
+                level_count: 3,
+              },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
-        json: async () => ({ items: [] }),
+        json: async () => ({
+          items: [
+            {
+              event_id: "event_one",
+              event_name: "Event One",
+              event_type: "cultivation",
+              risk_level: "normal",
+              weight: 1,
+              option_ids: ["option_one"],
+              is_repeatable: true,
+            },
+          ],
+        }),
       };
     })
   );
 
   render(<App />);
 
-  expect(await screen.findByRole("button", { name: "境界配置" })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "境界配置" }));
+  expect(await screen.findByDisplayValue("Event One")).toBeInTheDocument();
 
-  expect(await screen.findByText("境界谱册")).toBeInTheDocument();
-  expect(screen.getByText("炼气初期")).toBeInTheDocument();
+  const navButtons = within(screen.getByRole("navigation", { name: "主导航" })).getAllByRole(
+    "button"
+  );
+
+  fireEvent.click(navButtons[1]);
+  expect(await screen.findByDisplayValue("Realm One")).toBeInTheDocument();
+
+  fireEvent.click(navButtons[2]);
+  expect(await screen.findByDisplayValue("Spirit Field")).toBeInTheDocument();
 });
 
 test("shows backend login error detail", async () => {
@@ -117,12 +248,21 @@ test("shows backend login error detail", async () => {
     })
   );
 
-  render(<App />);
+  const { container } = render(<App />);
 
-  fireEvent.change(await screen.findByLabelText("管理密码"), {
+  fireEvent.change(await screen.findByDisplayValue("admin"), {
+    target: { value: "admin" },
+  });
+
+  const passwordInput = container.querySelector('input[type="password"]');
+  if (!passwordInput) {
+    throw new Error("Password input not found");
+  }
+  fireEvent.change(passwordInput, {
     target: { value: "bad-password" },
   });
-  fireEvent.click(screen.getAllByRole("button", { name: "进入控制台" })[0]);
+
+  fireEvent.click(screen.getByRole("button"));
 
   expect(await screen.findByRole("alert")).toHaveTextContent("invalid admin credentials");
 });

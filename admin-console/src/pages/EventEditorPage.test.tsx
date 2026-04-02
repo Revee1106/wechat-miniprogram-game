@@ -226,8 +226,10 @@ test("single outcome events use a default result editor instead of option orches
   fireEvent.change(within(dialog).getByLabelText("结果日志"), {
     target: { value: "榛樿缁撶畻" },
   });
-  fireEvent.click(within(dialog).getByRole("button", { name: "新增资源变化" }));
-  fireEvent.change(within(dialog).getByLabelText("结果资源数值-1"), {
+  fireEvent.change(within(dialog).getByLabelText("结果新增变化项"), {
+    target: { value: "resource:spirit_stone" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("结果变化数值-1"), {
     target: { value: "5" },
   });
   fireEvent.click(screen.getByText("保存事件"));
@@ -343,7 +345,10 @@ test("switching to single outcome clears hidden legacy rewards until they are ex
   expect(await screen.findByText("编辑单一结果")).toBeInTheDocument();
   fireEvent.click(screen.getByText("编辑单一结果"));
   dialog = await screen.findByRole("dialog", { name: "单一结果" });
-  fireEvent.change(within(dialog).getByLabelText("结果修为变化"), {
+  fireEvent.change(within(dialog).getByLabelText("结果新增变化项"), {
+    target: { value: "stat:cultivation_exp" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("结果变化数值-1"), {
     target: { value: "5" },
   });
 
@@ -446,12 +451,41 @@ test("saves advanced template and option fields through section panels", async (
 
   fireEvent.click(screen.getByText("编辑前置条件"));
   dialog = await screen.findByRole("dialog", { name: "前置条件" });
-  fireEvent.change(within(dialog).getByLabelText("所需资源"), {
-    target: { value: "spirit_stone:3\nherb:2" },
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "required_resources" },
   });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增资源" }));
+  fireEvent.change(within(dialog).getByLabelText("所需资源-资源类型-1"), {
+    target: { value: "spirit_stone" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("所需资源-数量-1"), {
+    target: { value: "3" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增资源" }));
+  fireEvent.change(within(dialog).getByLabelText("所需资源-资源类型-2"), {
+    target: { value: "herb" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("所需资源-数量-2"), {
+    target: { value: "2" },
+  });
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "required_statuses" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
   fireEvent.change(within(dialog).getByLabelText("需要状态"), {
     target: { value: "blessed\nfocused" },
   });
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "required_karma_min" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
   fireEvent.change(within(dialog).getByLabelText("最低因果"), {
     target: { value: "5" },
   });
@@ -459,6 +493,11 @@ test("saves advanced template and option fields through section panels", async (
 
   fireEvent.click(screen.getByText("编辑选项编排"));
   dialog = await screen.findByRole("dialog", { name: "选项编排" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "requires_statuses" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
   fireEvent.change(within(dialog).getByLabelText("选项需要状态"), {
     target: { value: "injured" },
   });
@@ -468,11 +507,16 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.change(within(dialog).getByLabelText("后续事件"), {
     target: { value: "evt_follow_up" },
   });
-  fireEvent.click(within(dialog).getAllByRole("button", { name: "新增资源变化" })[0]);
-  fireEvent.change(within(dialog).getByLabelText("成功资源数值-1"), {
+  fireEvent.change(within(dialog).getByLabelText("成功新增变化项"), {
+    target: { value: "resource:spirit_stone" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("成功变化数值-1"), {
     target: { value: "2" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功修为变化"), {
+  fireEvent.change(within(dialog).getByLabelText("成功新增变化项"), {
+    target: { value: "stat:cultivation_exp" },
+  });
+  fireEvent.change(within(dialog).getByLabelText("成功变化数值-2"), {
     target: { value: "6" },
   });
   fireEvent.change(within(dialog).getByLabelText("成功日志"), {

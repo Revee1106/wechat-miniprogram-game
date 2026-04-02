@@ -6,17 +6,12 @@ import {
   logoutAdmin,
   type AdminSession,
 } from "./api/client";
-import { EventEditorPage } from "./pages/EventEditorPage";
+import { DwellingListPage } from "./pages/DwellingListPage";
 import { EventListPage } from "./pages/EventListPage";
 import { LoginPage } from "./pages/LoginPage";
-import { RealmEditorPage } from "./pages/RealmEditorPage";
 import { RealmListPage } from "./pages/RealmListPage";
 
-type ViewState =
-  | { mode: "events" }
-  | { mode: "event-editor"; eventId?: string }
-  | { mode: "realms" }
-  | { mode: "realm-editor"; realmKey?: string };
+type ViewMode = "events" | "realms" | "dwelling";
 
 export default function App() {
   const [authState, setAuthState] = useState<
@@ -26,9 +21,7 @@ export default function App() {
     | { status: "error"; message: string }
   >({ status: "loading" });
   const [isSigningIn, setIsSigningIn] = useState(false);
-  const [view, setView] = useState<ViewState>({ mode: "events" });
-  const [eventRefreshToken, setEventRefreshToken] = useState(0);
-  const [realmRefreshToken, setRealmRefreshToken] = useState(0);
+  const [view, setView] = useState<ViewMode>("events");
 
   useEffect(() => {
     let isMounted = true;
@@ -66,7 +59,7 @@ export default function App() {
     try {
       const session = await loginAdmin(username, password);
       setAuthState({ status: "authenticated", session });
-      setView({ mode: "events" });
+      setView("events");
     } catch (error) {
       setAuthState({
         status: "error",
@@ -79,7 +72,7 @@ export default function App() {
 
   async function handleLogout() {
     await logoutAdmin();
-    setView({ mode: "events" });
+    setView("events");
     setAuthState({ status: "unauthenticated" });
   }
 
@@ -103,20 +96,14 @@ export default function App() {
     );
   }
 
-  const isRealmMode = view.mode === "realms" || view.mode === "realm-editor";
-  const pageTitle = isRealmMode ? "境界工坊" : view.mode === "event-editor" ? "事件工坊" : "事件谱册";
+  const pageTitle =
+    view === "dwelling" ? "洞府工坊" : view === "realms" ? "境界谱录" : "事件工坊";
   const pageSubtitle =
-    view.mode === "event-editor"
-      ? view.eventId
-        ? `正在整理事件 ${view.eventId}`
-        : "正在新建事件配置"
-      : view.mode === "realm-editor"
-        ? view.realmKey
-          ? `正在整理境界 ${view.realmKey}`
-          : "正在新建境界配置"
-        : isRealmMode
-          ? "维护境界谱册、突破门槛与开放状态"
-          : "维护事件模板、选项与运行配置";
+    view === "dwelling"
+      ? "紧凑式设施清单与等级配置工作台"
+      : view === "realms"
+        ? "紧凑式境界清单与突破配置工作台"
+        : "紧凑式事件清单与结果编排工作台";
 
   return (
     <div className="console-shell">
@@ -131,18 +118,25 @@ export default function App() {
         <div className="console-topbar__actions">
           <nav className="console-nav" aria-label="主导航">
             <button
-              className={`console-nav__button ${!isRealmMode ? "console-nav__button--active" : ""}`}
+              className={`console-nav__button ${view === "events" ? "console-nav__button--active" : ""}`}
               type="button"
-              onClick={() => setView({ mode: "events" })}
+              onClick={() => setView("events")}
             >
               事件配置
             </button>
             <button
-              className={`console-nav__button ${isRealmMode ? "console-nav__button--active" : ""}`}
+              className={`console-nav__button ${view === "realms" ? "console-nav__button--active" : ""}`}
               type="button"
-              onClick={() => setView({ mode: "realms" })}
+              onClick={() => setView("realms")}
             >
               境界配置
+            </button>
+            <button
+              className={`console-nav__button ${view === "dwelling" ? "console-nav__button--active" : ""}`}
+              type="button"
+              onClick={() => setView("dwelling")}
+            >
+              洞府配置
             </button>
           </nav>
           <div className="console-userbar">
@@ -155,49 +149,9 @@ export default function App() {
       </header>
 
       <div className="console-page">
-        {view.mode === "event-editor" ? (
-          <EventEditorPage
-            eventId={view.eventId}
-            onBack={() => {
-              setEventRefreshToken((value) => value + 1);
-              setView({ mode: "events" });
-            }}
-            onSaved={(eventId) => {
-              setEventRefreshToken((value) => value + 1);
-              setView({ mode: "event-editor", eventId });
-            }}
-          />
-        ) : null}
-
-        {view.mode === "realm-editor" ? (
-          <RealmEditorPage
-            realmKey={view.realmKey}
-            onBack={() => {
-              setRealmRefreshToken((value) => value + 1);
-              setView({ mode: "realms" });
-            }}
-            onSaved={(realmKey) => {
-              setRealmRefreshToken((value) => value + 1);
-              setView({ mode: "realm-editor", realmKey });
-            }}
-          />
-        ) : null}
-
-        {view.mode === "events" ? (
-          <EventListPage
-            refreshToken={eventRefreshToken}
-            onCreateEvent={() => setView({ mode: "event-editor" })}
-            onEditEvent={(eventId) => setView({ mode: "event-editor", eventId })}
-          />
-        ) : null}
-
-        {view.mode === "realms" ? (
-          <RealmListPage
-            refreshToken={realmRefreshToken}
-            onCreateRealm={() => setView({ mode: "realm-editor" })}
-            onEditRealm={(realmKey) => setView({ mode: "realm-editor", realmKey })}
-          />
-        ) : null}
+        {view === "events" ? <EventListPage /> : null}
+        {view === "realms" ? <RealmListPage /> : null}
+        {view === "dwelling" ? <DwellingListPage /> : null}
       </div>
     </div>
   );

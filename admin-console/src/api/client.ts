@@ -110,6 +110,42 @@ export type RealmReorderResponse = {
   items: RealmConfig[];
 };
 
+export type DwellingLevelInput = {
+  level: number;
+  entry_cost: Record<string, number>;
+  maintenance_cost: Record<string, number>;
+  resource_yields: Record<string, number>;
+  cultivation_exp_gain: number;
+  special_effects: Record<string, number>;
+};
+
+export type DwellingFacilityInput = {
+  facility_id: string;
+  display_name: string;
+  facility_type: string;
+  summary: string;
+  function_unlock_text: string;
+  levels: DwellingLevelInput[];
+};
+
+export type DwellingFacilityListItem = {
+  facility_id: string;
+  display_name: string;
+  facility_type: string;
+  summary: string;
+  max_level: number;
+  level_count: number;
+};
+
+export type DwellingFacilityListResponse = {
+  items: DwellingFacilityListItem[];
+};
+
+export type DwellingReloadResponse = {
+  reloaded: boolean;
+  facility_count: number;
+};
+
 export async function fetchEvents(filters?: {
   eventType?: string;
   riskLevel?: string;
@@ -158,6 +194,24 @@ export async function fetchRealmDetail(realmKey: string): Promise<RealmDetailRes
   return response.json();
 }
 
+export async function fetchDwellingFacilities(): Promise<DwellingFacilityListResponse> {
+  const response = await fetch("/admin/api/dwelling/facilities");
+  if (!response.ok) {
+    throw new Error("Failed to load dwelling facilities");
+  }
+  return response.json();
+}
+
+export async function fetchDwellingFacilityDetail(
+  facilityId: string
+): Promise<DwellingFacilityInput> {
+  const response = await fetch(`/admin/api/dwelling/facilities/${facilityId}`);
+  if (!response.ok) {
+    throw new Error("Failed to load dwelling facility detail");
+  }
+  return response.json();
+}
+
 export async function createEvent(payload: EventTemplateInput): Promise<EventTemplateInput> {
   return sendJson("/admin/api/events", {
     method: "POST",
@@ -191,6 +245,16 @@ export async function updateRealm(
 export async function deleteRealm(realmKey: string): Promise<void> {
   await sendJson(`/admin/api/realms/${realmKey}`, {
     method: "DELETE",
+  });
+}
+
+export async function updateDwellingFacility(
+  facilityId: string,
+  payload: DwellingFacilityInput
+): Promise<DwellingFacilityInput> {
+  return sendJson(`/admin/api/dwelling/facilities/${facilityId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
   });
 }
 
@@ -242,6 +306,12 @@ export async function validateRealms(): Promise<ValidationResponse> {
   });
 }
 
+export async function validateDwelling(): Promise<ValidationResponse> {
+  return sendJson("/admin/api/dwelling/validate", {
+    method: "POST",
+  });
+}
+
 export async function reloadEvents(): Promise<{
   reloaded: boolean;
   template_count: number;
@@ -254,6 +324,12 @@ export async function reloadEvents(): Promise<{
 
 export async function reloadRealms(): Promise<RealmReloadResponse> {
   return sendJson("/admin/api/realms/reload", {
+    method: "POST",
+  });
+}
+
+export async function reloadDwelling(): Promise<DwellingReloadResponse> {
+  return sendJson("/admin/api/dwelling/reload", {
     method: "POST",
   });
 }

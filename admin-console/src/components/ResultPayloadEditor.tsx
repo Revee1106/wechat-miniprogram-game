@@ -14,15 +14,144 @@ type ResultPayloadEditorProps = {
   onChange: (value: Record<string, unknown>) => void;
 };
 
+type ScalarFieldKey =
+  | "cultivation_exp"
+  | "lifespan_delta"
+  | "hp_delta"
+  | "breakthrough_bonus"
+  | "technique_exp"
+  | "luck_delta"
+  | "karma_delta"
+  | "rebirth_progress_delta";
+
+type ListFieldKey =
+  | "statuses_add"
+  | "statuses_remove"
+  | "techniques_add"
+  | "equipment_add"
+  | "equipment_remove";
+
+type ChangeCatalogItem =
+  | {
+      id: string;
+      label: string;
+      type: "resource";
+      resourceKey: string;
+    }
+  | {
+      id: string;
+      label: string;
+      type: "scalar";
+      stateKey: ScalarFieldKey;
+    };
+
+type ExtraFieldDefinition =
+  | {
+      key: ListFieldKey;
+      type: "list";
+      label: string;
+      placeholder: string;
+      emptyValue: string[];
+    }
+  | {
+      key: "death";
+      type: "boolean";
+      label: string;
+      hint: string;
+      emptyValue: boolean;
+    };
+
+type ChangeEntry = {
+  id: string;
+  amount: number;
+};
+
+const scalarFieldDefinitions: Array<{ key: ScalarFieldKey; label: string }> = [
+  { key: "cultivation_exp", label: "修为变化" },
+  { key: "lifespan_delta", label: "寿元变化" },
+  { key: "hp_delta", label: "气血变化" },
+  { key: "breakthrough_bonus", label: "突破加成" },
+  { key: "technique_exp", label: "功法经验" },
+  { key: "luck_delta", label: "气运变化" },
+  { key: "karma_delta", label: "因果变化" },
+  { key: "rebirth_progress_delta", label: "转生进度" },
+];
+
+const extraFieldDefinitions: ExtraFieldDefinition[] = [
+  {
+    key: "statuses_add",
+    type: "list",
+    label: "增加状态",
+    placeholder: "每行一个状态",
+    emptyValue: [],
+  },
+  {
+    key: "statuses_remove",
+    type: "list",
+    label: "移除状态",
+    placeholder: "每行一个状态",
+    emptyValue: [],
+  },
+  {
+    key: "techniques_add",
+    type: "list",
+    label: "获得功法",
+    placeholder: "每行一个功法",
+    emptyValue: [],
+  },
+  {
+    key: "equipment_add",
+    type: "list",
+    label: "获得装备标签",
+    placeholder: "每行一个装备标签",
+    emptyValue: [],
+  },
+  {
+    key: "equipment_remove",
+    type: "list",
+    label: "移除装备标签",
+    placeholder: "每行一个装备标签",
+    emptyValue: [],
+  },
+  {
+    key: "death",
+    type: "boolean",
+    label: "导致死亡",
+    hint: "只在需要直接终结角色时开启。",
+    emptyValue: false,
+  },
+];
+
+const changeCatalog: ChangeCatalogItem[] = [
+  ...resourceOptions.map((option) => ({
+    id: `resource:${option.value}`,
+    label: option.label,
+    type: "resource" as const,
+    resourceKey: option.value,
+  })),
+  ...scalarFieldDefinitions.map((field) => ({
+    id: `stat:${field.key}`,
+    label: field.label,
+    type: "scalar" as const,
+    stateKey: field.key,
+  })),
+];
+
+const changeCatalogById = Object.fromEntries(
+  changeCatalog.map((item) => [item.id, item])
+) as Record<string, ChangeCatalogItem>;
+
 export function ResultPayloadEditor({
   labelPrefix,
   payload,
   onChange,
 }: ResultPayloadEditorProps) {
   const state = parsePayloadEditorState(payload);
-  const resourceEntries = Object.entries(sortResourceRecord(state.resources));
-  const usedResourceKeys = resourceEntries.map(([key]) => key);
-  const canAddResource = usedResourceKeys.length < resourceOptions.length;
+  const changeEntries = buildChangeEntries(state);
+  const usedChangeIds = changeEntries.map((entry) => entry.id);
+  const addableChangeOptions = changeCatalog.filter((item) => !usedChangeIds.includes(item.id));
+  const activeExtraFields = extraFieldDefinitions.filter((field) => isExtraFieldActive(state, field));
+  const addableExtraFields = extraFieldDefinitions.filter((field) => !isExtraFieldActive(state, field));
 
   function update(partial: Partial<PayloadEditorState>) {
     onChange(
@@ -33,268 +162,269 @@ export function ResultPayloadEditor({
     );
   }
 
-  function updateResources(entries: Array<[string, number]>) {
-    const resources = Object.fromEntries(
-      entries.filter(([key, amount]) => key && Number.isFinite(amount) && amount !== 0)
-    );
-    update({ resources });
+  function updateChangeEntries(entries: ChangeEntry[]) {
+    const nextResources: Record<string, number> = {};
+    const nextScalarState = Object.fromEntries(
+      scalarFieldDefinitions.map((field) => [field.key, 0])
+    ) as Pick<PayloadEditorState, ScalarFieldKey>;
+
+    for (const entry of entries) {
+      const catalogItem = changeCatalogById[entry.id];
+      if (!catalogItem || !Number.isFinite(entry.amount) || entry.amount === 0) {
+        continue;
+      }
+      if (catalogItem.type === "resource") {
+        nextResources[catalogItem.resourceKey] = entry.amount;
+        continue;
+      }
+      nextScalarState[catalogItem.stateKey] = entry.amount;
+    }
+
+    update({
+      resources: sortResourceRecord(nextResources),
+      ...nextScalarState,
+    });
   }
 
-  function handleAddResource() {
-    const nextResource = resourceOptions.find(
-      (option) => !usedResourceKeys.includes(option.value)
-    );
-    if (!nextResource) {
+  function handleAddChange(changeId: string) {
+    if (!changeId || usedChangeIds.includes(changeId)) {
       return;
     }
-    updateResources([...resourceEntries, [nextResource.value, 1]]);
+    updateChangeEntries([...changeEntries, { id: changeId, amount: 1 }]);
   }
 
-  function handleResourceKeyChange(index: number, nextKey: string) {
-    const nextEntries = resourceEntries.map(([key, amount], entryIndex) =>
-      entryIndex === index ? [nextKey, amount] : [key, amount]
-    ) as Array<[string, number]>;
-    updateResources(nextEntries);
+  function handleChangeType(index: number, nextId: string) {
+    const nextEntries = changeEntries.map((entry, entryIndex) =>
+      entryIndex === index ? { ...entry, id: nextId } : entry
+    );
+    updateChangeEntries(nextEntries);
   }
 
-  function handleResourceAmountChange(index: number, nextAmount: string) {
-    const nextEntries = resourceEntries.map(([key, amount], entryIndex) =>
-      entryIndex === index ? [key, parseNumberInput(nextAmount, 0)] : [key, amount]
-    ) as Array<[string, number]>;
-    updateResources(nextEntries);
+  function handleChangeAmount(index: number, nextAmount: string) {
+    const nextEntries = changeEntries.map((entry, entryIndex) =>
+      entryIndex === index ? { ...entry, amount: parseNumberInput(nextAmount, 0) } : entry
+    );
+    updateChangeEntries(nextEntries);
   }
 
-  function handleRemoveResource(index: number) {
-    updateResources(resourceEntries.filter((_, entryIndex) => entryIndex !== index));
+  function handleRemoveChange(index: number) {
+    updateChangeEntries(changeEntries.filter((_, entryIndex) => entryIndex !== index));
+  }
+
+  function handleActivateExtra(fieldKey: string) {
+    const definition = extraFieldDefinitions.find((field) => field.key === fieldKey);
+    if (!definition) {
+      return;
+    }
+    if (definition.type === "boolean") {
+      update({ death: true });
+      return;
+    }
+    update({ [definition.key]: [] } as Partial<PayloadEditorState>);
+  }
+
+  function handleResetExtra(field: ExtraFieldDefinition) {
+    update({ [field.key]: field.emptyValue } as Partial<PayloadEditorState>);
   }
 
   return (
-    <div className="field-grid">
-      <div className="field field--full resource-editor">
-        <div className="field__label">
-          <span>{labelPrefix}资源变化</span>
-          <button
-            className="button-secondary"
-            disabled={!canAddResource}
-            type="button"
-            onClick={handleAddResource}
-          >
-            新增资源变化
-          </button>
-        </div>
-        <div className="resource-editor__stack">
-          {resourceEntries.length > 0 ? (
-            resourceEntries.map(([resourceKey, amount], index) => (
-              <div key={resourceKey} className="resource-row">
-                <label className="field">
-                  <span className="field__hint">资源名称</span>
-                  <select
-                    aria-label={`${labelPrefix}资源类型-${index + 1}`}
-                    value={resourceKey}
-                    onChange={(event) => handleResourceKeyChange(index, event.target.value)}
-                  >
-                    {resourceOptions.map((option) => {
-                      const isTakenByAnother =
-                        usedResourceKeys.includes(option.value) && option.value !== resourceKey;
-                      return (
-                        <option
-                          key={option.value}
-                          disabled={isTakenByAnother}
-                          value={option.value}
-                        >
-                          {option.label}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </label>
+    <div className="result-payload-editor">
+      <section className="result-payload-editor__resource-panel">
+        <div className="result-payload-editor__resource-header">
+          <div className="result-payload-editor__resource-title">
+            <h3>{labelPrefix}变化</h3>
+            <p>资源和数值变化统一在这里维护。正数表示获得，负数表示消耗。</p>
+          </div>
+          <div className="result-payload-editor__actions">
+            <label className="field result-payload-editor__resource-action">
+              <span className="sr-only">新增变化项</span>
+              <select
+                aria-label={`${labelPrefix}新增变化项`}
+                defaultValue=""
+                onChange={(event) => {
+                  handleAddChange(event.target.value);
+                  event.target.value = "";
+                }}
+              >
+                <option value="">新增变化项</option>
+                {addableChangeOptions.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-                <label className="field">
-                  <span className="field__hint">增减数值</span>
-                  <input
-                    aria-label={`${labelPrefix}资源数值-${index + 1}`}
-                    type="number"
-                    value={amount}
-                    onChange={(event) => handleResourceAmountChange(index, event.target.value)}
-                  />
-                </label>
-
-                <button
-                  className="button-secondary resource-row__remove"
-                  type="button"
-                  onClick={() => handleRemoveResource(index)}
+            {addableExtraFields.length > 0 ? (
+              <label className="field result-payload-editor__resource-action">
+                <span className="sr-only">新增附加变化</span>
+                <select
+                  aria-label={`${labelPrefix}新增附加变化`}
+                  defaultValue=""
+                  onChange={(event) => {
+                    handleActivateExtra(event.target.value);
+                    event.target.value = "";
+                  }}
                 >
-                  删除
-                </button>
-              </div>
-            ))
+                  <option value="">新增附加变化</option>
+                  {addableExtraFields.map((field) => (
+                    <option key={field.key} value={field.key}>
+                      {field.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="resource-editor__stack">
+          {changeEntries.length > 0 ? (
+            changeEntries.map((entry, index) => {
+              const currentItem = changeCatalogById[entry.id];
+              return (
+                <div key={`${entry.id}-${index}`} className="result-payload-editor__resource-row">
+                  <label className="field">
+                    <span className="field__hint">变化类型</span>
+                    <select
+                      aria-label={`${labelPrefix}变化项类型-${index + 1}`}
+                      value={entry.id}
+                      onChange={(event) => handleChangeType(index, event.target.value)}
+                    >
+                      {changeCatalog.map((item) => {
+                        const isTakenByAnother =
+                          usedChangeIds.includes(item.id) && item.id !== currentItem?.id;
+                        return (
+                          <option
+                            key={item.id}
+                            disabled={isTakenByAnother}
+                            value={item.id}
+                          >
+                            {item.label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </label>
+
+                  <label className="field">
+                    <span className="field__hint">变动数值</span>
+                    <input
+                      aria-label={`${labelPrefix}变化数值-${index + 1}`}
+                      type="number"
+                      value={entry.amount}
+                      onChange={(event) => handleChangeAmount(index, event.target.value)}
+                    />
+                  </label>
+
+                  <button
+                    className="button-secondary result-payload-editor__resource-remove"
+                    type="button"
+                    onClick={() => handleRemoveChange(index)}
+                  >
+                    删除
+                  </button>
+                </div>
+              );
+            })
           ) : (
             <div className="resource-editor__empty">
-              暂未配置资源变化，可通过“新增资源变化”补充收益或消耗。
+              暂未配置变化项，可通过“新增变化项”补充收益、消耗或属性变动。
             </div>
           )}
         </div>
-        <span className="field__hint">
-          只支持系统内已定义的资源类型。正数表示获得，负数表示消耗。
-        </span>
-      </div>
+      </section>
 
-      <label className="field">
-        <span className="field__label">{labelPrefix}修为变化</span>
-        <input
-          aria-label={`${labelPrefix}修为变化`}
-          type="number"
-          value={state.cultivation_exp}
-          onChange={(event) =>
-            update({ cultivation_exp: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
+      {activeExtraFields.length > 0 ? (
+        <section className="result-payload-editor__extras">
+          <div className="result-payload-editor__resource-title">
+            <h3>{labelPrefix}附加变化</h3>
+            <p>只有实际启用的状态、功法、装备和死亡标记才会显示。</p>
+          </div>
 
-      <label className="field">
-        <span className="field__label">{labelPrefix}寿元变化</span>
-        <input
-          aria-label={`${labelPrefix}寿元变化`}
-          type="number"
-          value={state.lifespan_delta}
-          onChange={(event) =>
-            update({ lifespan_delta: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
+          <div className="requirement-group">
+            {activeExtraFields.map((field) => {
+              if (field.type === "boolean") {
+                return (
+                  <div key={field.key} className="requirement-field">
+                    <div className="requirement-field__toolbar">
+                      <span className="requirement-field__label">{labelPrefix}{field.label}</span>
+                      <button
+                        className="button-secondary"
+                        type="button"
+                        onClick={() => handleResetExtra(field)}
+                      >
+                        移除
+                      </button>
+                    </div>
+                    <label className="switch-field field--full">
+                      <span>
+                        <strong>{labelPrefix}{field.label}</strong>
+                        <span className="field__hint">{field.hint}</span>
+                      </span>
+                      <input
+                        aria-label={`${labelPrefix}${field.label}`}
+                        checked={state.death}
+                        type="checkbox"
+                        onChange={(event) => update({ death: event.target.checked })}
+                      />
+                    </label>
+                  </div>
+                );
+              }
 
-      <label className="field">
-        <span className="field__label">{labelPrefix}气血变化</span>
-        <input
-          aria-label={`${labelPrefix}气血变化`}
-          type="number"
-          value={state.hp_delta}
-          onChange={(event) => update({ hp_delta: parseNumberInput(event.target.value, 0) })}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}突破加成</span>
-        <input
-          aria-label={`${labelPrefix}突破加成`}
-          type="number"
-          value={state.breakthrough_bonus}
-          onChange={(event) =>
-            update({ breakthrough_bonus: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}功法经验</span>
-        <input
-          aria-label={`${labelPrefix}功法经验`}
-          type="number"
-          value={state.technique_exp}
-          onChange={(event) =>
-            update({ technique_exp: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}气运变化</span>
-        <input
-          aria-label={`${labelPrefix}气运变化`}
-          type="number"
-          value={state.luck_delta}
-          onChange={(event) =>
-            update({ luck_delta: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}因果变化</span>
-        <input
-          aria-label={`${labelPrefix}因果变化`}
-          type="number"
-          value={state.karma_delta}
-          onChange={(event) =>
-            update({ karma_delta: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}转生进度</span>
-        <input
-          aria-label={`${labelPrefix}转生进度`}
-          type="number"
-          value={state.rebirth_progress_delta}
-          onChange={(event) =>
-            update({ rebirth_progress_delta: parseNumberInput(event.target.value, 0) })
-          }
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}增加状态</span>
-        <textarea
-          aria-label={`${labelPrefix}增加状态`}
-          placeholder="每行一个状态"
-          value={formatLineList(state.statuses_add)}
-          onChange={(event) => update({ statuses_add: parseLineList(event.target.value) })}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}移除状态</span>
-        <textarea
-          aria-label={`${labelPrefix}移除状态`}
-          placeholder="每行一个状态"
-          value={formatLineList(state.statuses_remove)}
-          onChange={(event) => update({ statuses_remove: parseLineList(event.target.value) })}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}获得功法</span>
-        <textarea
-          aria-label={`${labelPrefix}获得功法`}
-          placeholder="每行一个功法"
-          value={formatLineList(state.techniques_add)}
-          onChange={(event) => update({ techniques_add: parseLineList(event.target.value) })}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}获得装备标签</span>
-        <textarea
-          aria-label={`${labelPrefix}获得装备标签`}
-          placeholder="每行一个装备标签"
-          value={formatLineList(state.equipment_add)}
-          onChange={(event) => update({ equipment_add: parseLineList(event.target.value) })}
-        />
-      </label>
-
-      <label className="field">
-        <span className="field__label">{labelPrefix}移除装备标签</span>
-        <textarea
-          aria-label={`${labelPrefix}移除装备标签`}
-          placeholder="每行一个装备标签"
-          value={formatLineList(state.equipment_remove)}
-          onChange={(event) => update({ equipment_remove: parseLineList(event.target.value) })}
-        />
-      </label>
-
-      <label className="switch-field field--full">
-        <span>
-          <strong>{labelPrefix}导致死亡</strong>
-          <span className="field__hint">只在需要直接终结角色时开启。</span>
-        </span>
-        <input
-          aria-label={`${labelPrefix}导致死亡`}
-          checked={state.death}
-          type="checkbox"
-          onChange={(event) => update({ death: event.target.checked })}
-        />
-      </label>
+              return (
+                <div key={field.key} className="requirement-field">
+                  <div className="requirement-field__toolbar">
+                    <span className="requirement-field__label">{labelPrefix}{field.label}</span>
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => handleResetExtra(field)}
+                    >
+                      移除
+                    </button>
+                  </div>
+                  <textarea
+                    aria-label={`${labelPrefix}${field.label}`}
+                    className="requirement-field__input"
+                    placeholder={field.placeholder}
+                    value={formatLineList(state[field.key])}
+                    onChange={(event) =>
+                      update({ [field.key]: parseLineList(event.target.value) } as Partial<PayloadEditorState>)
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
+}
+
+function buildChangeEntries(state: PayloadEditorState): ChangeEntry[] {
+  const resourceEntries = Object.entries(sortResourceRecord(state.resources)).map(
+    ([resourceKey, amount]) => ({
+      id: `resource:${resourceKey}`,
+      amount,
+    })
+  );
+
+  const scalarEntries = scalarFieldDefinitions
+    .map((field) => ({
+      id: `stat:${field.key}`,
+      amount: state[field.key],
+    }))
+    .filter((entry) => entry.amount !== 0);
+
+  return [...resourceEntries, ...scalarEntries];
+}
+
+function isExtraFieldActive(state: PayloadEditorState, field: ExtraFieldDefinition): boolean {
+  if (field.type === "boolean") {
+    return state.death;
+  }
+  return state[field.key].length > 0;
 }

@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from copy import deepcopy
+from dataclasses import dataclass, field
 
+from app.admin.repositories.dwelling_config_repository import DwellingConfigRepository
 from app.core_loop.types import (
     ConflictError,
     DwellingFacilityState,
@@ -16,10 +17,11 @@ from app.economy.services.run_resource_service import RunResourceService
 @dataclass(frozen=True)
 class DwellingLevelSpec:
     level: int
+    entry_cost: dict[str, int]
     maintenance_cost: dict[str, int]
     resource_yields: dict[str, int]
     cultivation_exp_gain: int = 0
-    upgrade_cost: dict[str, int] | None = None
+    special_effects: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -28,16 +30,37 @@ class DwellingFacilitySpec:
     display_name: str
     facility_type: str
     summary: str
-    build_cost: dict[str, int]
-    max_level: int
+    function_unlock_text: str
     levels: dict[int, DwellingLevelSpec]
-    function_unlock_text: str = ""
+
+    @property
+    def max_level(self) -> int:
+        return max(self.levels.keys(), default=0)
+
+    @property
+    def build_cost(self) -> dict[str, int]:
+        level_one = self.levels.get(1)
+        return dict(level_one.entry_cost) if level_one is not None else {}
 
 
 class DwellingService:
     def __init__(self, base_path: str | None = None) -> None:
         self._resource_service = RunResourceService(base_path=base_path)
-        self._facility_specs = _build_facility_specs()
+        self._repository = DwellingConfigRepository(base_path=base_path)
+        self._facility_specs: list[DwellingFacilitySpec] = []
+        self._specs_by_id: dict[str, DwellingFacilitySpec] = {}
+        self.reload_config(base_path=base_path)
+
+    def reload_config(self, base_path: str | None = None) -> None:
+        if base_path is not None:
+            self._resource_service = RunResourceService(base_path=base_path)
+            self._repository = DwellingConfigRepository(base_path=base_path)
+
+        payload = self._repository.load()
+        self._facility_specs = _load_facility_specs(payload.get("facilities", []))
+        self._specs_by_id = {
+            facility_spec.facility_id: facility_spec for facility_spec in self._facility_specs
+        }
 
     def hydrate_run(self, run: RunState) -> None:
         facilities_by_id = {
@@ -78,9 +101,8 @@ class DwellingService:
         if facility.level >= spec.max_level:
             raise ConflictError(f"facility '{facility_id}' is already at max level")
 
-        current_level_spec = spec.levels[facility.level]
-        upgrade_cost = current_level_spec.upgrade_cost or {}
-        self._spend_cost(run, upgrade_cost)
+        next_level_spec = spec.levels[facility.level + 1]
+        self._spend_cost(run, next_level_spec.entry_cost)
         facility.level += 1
         facility.status = self._active_status_for_level(facility.level, spec.max_level)
         self._hydrate_facility_state(facility, spec)
@@ -141,20 +163,12 @@ class DwellingService:
         return settlement
 
     def get_breakthrough_bonus(self, run: RunState) -> float:
-        self.hydrate_run(run)
-        facility = next(
-            (
-                item
-                for item in run.dwelling_facilities
-                if item.facility_id == "spirit_gathering_array"
-            ),
-            None,
-        )
-        if facility is None or facility.level == 0:
-            return 0.0
-        return min(0.02 * facility.level, 0.08)
+        return self._get_array_special_effect(run, "breakthrough_bonus_rate")
 
     def get_mine_spirit_stone_bonus(self, run: RunState) -> float:
+        return self._get_array_special_effect(run, "mine_spirit_stone_bonus_rate")
+
+    def _get_array_special_effect(self, run: RunState, effect_key: str) -> float:
         self.hydrate_run(run)
         facility = next(
             (
@@ -166,7 +180,14 @@ class DwellingService:
         )
         if facility is None or facility.level == 0:
             return 0.0
-        return min(0.10 * facility.level, 0.30)
+
+        spec = self._specs_by_id.get("spirit_gathering_array")
+        if spec is None:
+            return 0.0
+        level_spec = spec.levels.get(facility.level)
+        if level_spec is None:
+            return 0.0
+        return float(level_spec.special_effects.get(effect_key, 0.0) or 0.0)
 
     def _get_facility(
         self,
@@ -177,7 +198,7 @@ class DwellingService:
             (item for item in run.dwelling_facilities if item.facility_id == facility_id),
             None,
         )
-        spec = next((item for item in self._facility_specs if item.facility_id == facility_id), None)
+        spec = self._specs_by_id.get(facility_id)
         if facility is None or spec is None:
             raise ConflictError(f"unknown dwelling facility '{facility_id}'")
         return facility, spec
@@ -191,13 +212,13 @@ class DwellingService:
         facility.facility_type = spec.facility_type
         facility.summary = spec.summary
         facility.max_level = spec.max_level
-        facility.build_cost = dict(spec.build_cost)
+        facility.build_cost = spec.build_cost
         facility.function_unlock_text = spec.function_unlock_text
         facility.is_function_unlocked = facility.level > 0 and bool(spec.function_unlock_text)
 
         if facility.level <= 0:
             facility.status = "unbuilt"
-            facility.next_upgrade_cost = dict(spec.build_cost)
+            facility.next_upgrade_cost = spec.build_cost
             facility.maintenance_cost = {}
             facility.monthly_resource_yields = {}
             facility.monthly_cultivation_exp_gain = 0
@@ -207,14 +228,18 @@ class DwellingService:
         facility.maintenance_cost = dict(level_spec.maintenance_cost)
         facility.monthly_resource_yields = dict(level_spec.resource_yields)
         facility.monthly_cultivation_exp_gain = level_spec.cultivation_exp_gain
+        next_level_spec = spec.levels.get(facility.level + 1)
         facility.next_upgrade_cost = (
-            dict(level_spec.upgrade_cost) if level_spec.upgrade_cost else {}
+            dict(next_level_spec.entry_cost) if next_level_spec is not None else {}
         )
         if facility.status != "stalled":
             facility.status = self._active_status_for_level(facility.level, spec.max_level)
 
     def _can_afford(self, run: RunState, cost: dict[str, int]) -> bool:
-        return all(self._get_resource_amount(run, resource_key) >= amount for resource_key, amount in cost.items())
+        return all(
+            self._get_resource_amount(run, resource_key) >= amount
+            for resource_key, amount in cost.items()
+        )
 
     def _spend_cost(self, run: RunState, cost: dict[str, int]) -> None:
         if not self._can_afford(run, cost):
@@ -289,9 +314,10 @@ class DwellingService:
         if spirit_stone_gain <= 0:
             return yields
 
+        bonus_rate = self.get_mine_spirit_stone_bonus(run)
         yields["spirit_stone"] = max(
             spirit_stone_gain,
-            int(spirit_stone_gain * (1 + self.get_mine_spirit_stone_bonus(run))),
+            int(spirit_stone_gain * (1 + bonus_rate)),
         )
         return yields
 
@@ -301,147 +327,79 @@ class DwellingService:
         return "active"
 
 
-def _build_facility_specs() -> list[DwellingFacilitySpec]:
-    return [
-        DwellingFacilitySpec(
-            facility_id="spirit_field",
-            display_name="灵田",
-            facility_type="production",
-            summary="提供稳定灵植产出，为后续丹药与事件需求打底。",
-            build_cost={"spirit_stone": 50},
-            max_level=3,
-            levels={
-                1: DwellingLevelSpec(
-                    level=1,
-                    maintenance_cost={"spirit_stone": 2},
-                    resource_yields={"basic_herb": 2},
-                    upgrade_cost={"spirit_stone": 40},
-                ),
-                2: DwellingLevelSpec(
-                    level=2,
-                    maintenance_cost={"spirit_stone": 3},
-                    resource_yields={"basic_herb": 3},
-                    upgrade_cost={"spirit_stone": 55},
-                ),
-                3: DwellingLevelSpec(
-                    level=3,
-                    maintenance_cost={"spirit_stone": 4},
-                    resource_yields={"basic_herb": 5},
-                ),
-            },
-        ),
-        DwellingFacilitySpec(
-            facility_id="spirit_spring",
-            display_name="灵泉",
-            facility_type="production",
-            summary="提供炼丹辅用灵泉水，作为中期炼丹品质与成功率的稳定辅助。",
-            build_cost={"spirit_stone": 70},
-            max_level=3,
-            function_unlock_text="灵泉已通，可为丹房额外提供灵泉水。",
-            levels={
-                1: DwellingLevelSpec(
-                    level=1,
-                    maintenance_cost={"spirit_stone": 3},
-                    resource_yields={"spirit_spring_water": 1},
-                    upgrade_cost={"spirit_stone": 50},
-                ),
-                2: DwellingLevelSpec(
-                    level=2,
-                    maintenance_cost={"spirit_stone": 4},
-                    resource_yields={"spirit_spring_water": 2},
-                    upgrade_cost={"spirit_stone": 65},
-                ),
-                3: DwellingLevelSpec(
-                    level=3,
-                    maintenance_cost={"spirit_stone": 5},
-                    resource_yields={"spirit_spring_water": 3},
-                ),
-            },
-        ),
-        DwellingFacilitySpec(
-            facility_id="mine_cave",
-            display_name="矿洞",
-            facility_type="production",
-            summary="提供稳定灵石与基础矿材，是洞府最直接的保底现金流来源。",
-            build_cost={"spirit_stone": 60},
-            max_level=3,
-            levels={
-                1: DwellingLevelSpec(
-                    level=1,
-                    maintenance_cost={"spirit_stone": 3},
-                    resource_yields={"spirit_stone": 4, "basic_ore": 1},
-                    upgrade_cost={"spirit_stone": 45},
-                ),
-                2: DwellingLevelSpec(
-                    level=2,
-                    maintenance_cost={"spirit_stone": 4},
-                    resource_yields={"spirit_stone": 7, "basic_ore": 2},
-                    upgrade_cost={"spirit_stone": 60},
-                ),
-                3: DwellingLevelSpec(
-                    level=3,
-                    maintenance_cost={"spirit_stone": 5},
-                    resource_yields={"spirit_stone": 10, "basic_ore": 3},
-                ),
-            },
-        ),
-        DwellingFacilitySpec(
-            facility_id="alchemy_room",
-            display_name="炼丹房",
-            facility_type="function",
-            summary="承载后续炼丹系统，本次只开放设施本体与入口占位。",
-            build_cost={"spirit_stone": 80},
-            max_level=3,
-            function_unlock_text="炼丹入口已解锁，完整炼丹玩法将在后续版本补齐。",
-            levels={
-                1: DwellingLevelSpec(
-                    level=1,
-                    maintenance_cost={"spirit_stone": 3},
-                    resource_yields={},
-                    upgrade_cost={"spirit_stone": 55},
-                ),
-                2: DwellingLevelSpec(
-                    level=2,
-                    maintenance_cost={"spirit_stone": 4},
-                    resource_yields={},
-                    upgrade_cost={"spirit_stone": 70},
-                ),
-                3: DwellingLevelSpec(
-                    level=3,
-                    maintenance_cost={"spirit_stone": 5},
-                    resource_yields={},
-                ),
-            },
-        ),
-        DwellingFacilitySpec(
-            facility_id="spirit_gathering_array",
-            display_name="聚灵阵",
-            facility_type="boost",
-            summary="按月提供固定修为，并持续辅助突破准备。",
-            build_cost={"spirit_stone": 100},
-            max_level=3,
-            function_unlock_text="聚灵阵正在运转，可持续辅助修炼与突破。",
-            levels={
-                1: DwellingLevelSpec(
-                    level=1,
-                    maintenance_cost={"spirit_stone": 4},
-                    resource_yields={},
-                    cultivation_exp_gain=6,
-                    upgrade_cost={"spirit_stone": 70},
-                ),
-                2: DwellingLevelSpec(
-                    level=2,
-                    maintenance_cost={"spirit_stone": 5},
-                    resource_yields={},
-                    cultivation_exp_gain=10,
-                    upgrade_cost={"spirit_stone": 90},
-                ),
-                3: DwellingLevelSpec(
-                    level=3,
-                    maintenance_cost={"spirit_stone": 6},
-                    resource_yields={},
-                    cultivation_exp_gain=14,
-                ),
-            },
-        ),
-    ]
+def _load_facility_specs(facilities: list[dict[str, object]]) -> list[DwellingFacilitySpec]:
+    specs: list[DwellingFacilitySpec] = []
+    for facility in facilities:
+        facility_id = str(facility.get("facility_id", "")).strip()
+        if not facility_id:
+            continue
+
+        levels_payload = facility.get("levels") or []
+        levels: dict[int, DwellingLevelSpec] = {}
+        if isinstance(levels_payload, list):
+            for level_payload in levels_payload:
+                if not isinstance(level_payload, dict):
+                    continue
+                level = _coerce_int(level_payload.get("level"), default=0)
+                if level <= 0:
+                    continue
+                levels[level] = DwellingLevelSpec(
+                    level=level,
+                    entry_cost=_coerce_int_map(level_payload.get("entry_cost")),
+                    maintenance_cost=_coerce_int_map(level_payload.get("maintenance_cost")),
+                    resource_yields=_coerce_int_map(level_payload.get("resource_yields")),
+                    cultivation_exp_gain=_coerce_int(
+                        level_payload.get("cultivation_exp_gain"),
+                        default=0,
+                    ),
+                    special_effects=_coerce_float_map(level_payload.get("special_effects")),
+                )
+
+        specs.append(
+            DwellingFacilitySpec(
+                facility_id=facility_id,
+                display_name=str(facility.get("display_name", "")).strip(),
+                facility_type=str(facility.get("facility_type", "")).strip(),
+                summary=str(facility.get("summary", "")).strip(),
+                function_unlock_text=str(facility.get("function_unlock_text", "")).strip(),
+                levels=dict(sorted(levels.items(), key=lambda item: item[0])),
+            )
+        )
+    return specs
+
+
+def _coerce_int(value: object, *, default: int) -> int:
+    if isinstance(value, bool):
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_int_map(value: object) -> dict[str, int]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, int] = {}
+    for key, raw in value.items():
+        resource_key = str(key).strip()
+        if not resource_key:
+            continue
+        result[resource_key] = _coerce_int(raw, default=0)
+    return result
+
+
+def _coerce_float_map(value: object) -> dict[str, float]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, float] = {}
+    for key, raw in value.items():
+        effect_key = str(key).strip()
+        if not effect_key or isinstance(raw, bool):
+            continue
+        try:
+            result[effect_key] = float(raw)
+        except (TypeError, ValueError):
+            continue
+    return result
+
