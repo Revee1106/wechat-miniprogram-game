@@ -5,11 +5,14 @@
     "major_realm": "qi_refining",
     "stage_index": 1,
     "order_index": 1,
-    "base_success_rate": 0.95,
-    "required_cultivation_exp": 100,
+    "base_success_rate": 0,
+    "required_cultivation_exp": 0,
     "required_spirit_stone": 0,
-    "lifespan_bonus": 6,
-    "is_enabled": true
+    "lifespan_bonus": 0,
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 6,
+    "base_spirit_stone_cost_per_advance": 2
   },
   {
     "key": "qi_refining_mid",
@@ -17,11 +20,14 @@
     "major_realm": "qi_refining",
     "stage_index": 2,
     "order_index": 2,
-    "base_success_rate": 0.9,
-    "required_cultivation_exp": 200,
-    "required_spirit_stone": 30,
-    "lifespan_bonus": 6,
-    "is_enabled": true
+    "base_success_rate": 1,
+    "required_cultivation_exp": 90,
+    "required_spirit_stone": 15,
+    "lifespan_bonus": 0,
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_spirit_stone_cost_per_advance": 3,
+    "base_cultivation_gain_per_advance": 8
   },
   {
     "key": "qi_refining_late",
@@ -29,11 +35,14 @@
     "major_realm": "qi_refining",
     "stage_index": 3,
     "order_index": 3,
-    "base_success_rate": 0.85,
-    "required_cultivation_exp": 320,
-    "required_spirit_stone": 40,
-    "lifespan_bonus": 6,
-    "is_enabled": true
+    "base_success_rate": 1,
+    "required_cultivation_exp": 130,
+    "required_spirit_stone": 20,
+    "lifespan_bonus": 0,
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 10,
+    "base_spirit_stone_cost_per_advance": 3
   },
   {
     "key": "qi_refining_peak",
@@ -41,11 +50,18 @@
     "major_realm": "qi_refining",
     "stage_index": 4,
     "order_index": 4,
-    "base_success_rate": 0.8,
-    "required_cultivation_exp": 480,
-    "required_spirit_stone": 50,
-    "lifespan_bonus": 6,
-    "is_enabled": true
+    "base_success_rate": 0.9,
+    "required_cultivation_exp": 130,
+    "required_spirit_stone": 20,
+    "lifespan_bonus": 0,
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -20
+      }
+    },
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 24,
+    "base_spirit_stone_cost_per_advance": 4
   },
   {
     "key": "foundation_early",
@@ -53,11 +69,18 @@
     "major_realm": "foundation",
     "stage_index": 1,
     "order_index": 5,
-    "base_success_rate": 0.78,
-    "required_cultivation_exp": 700,
+    "base_success_rate": 0.75,
+    "required_cultivation_exp": 220,
     "required_spirit_stone": 80,
-    "lifespan_bonus": 12,
-    "is_enabled": true
+    "lifespan_bonus": 360,
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -200
+      }
+    },
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 30,
+    "base_spirit_stone_cost_per_advance": 5
   },
   {
     "key": "foundation_mid",
@@ -65,11 +88,14 @@
     "major_realm": "foundation",
     "stage_index": 2,
     "order_index": 6,
-    "base_success_rate": 0.72,
-    "required_cultivation_exp": 950,
-    "required_spirit_stone": 100,
-    "lifespan_bonus": 12,
-    "is_enabled": true
+    "base_success_rate": 1,
+    "required_cultivation_exp": 180,
+    "required_spirit_stone": 35,
+    "lifespan_bonus": 0,
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 36,
+    "base_spirit_stone_cost_per_advance": 7
   },
   {
     "key": "foundation_late",
@@ -77,11 +103,18 @@
     "major_realm": "foundation",
     "stage_index": 3,
     "order_index": 7,
-    "base_success_rate": 0.66,
-    "required_cultivation_exp": 1250,
-    "required_spirit_stone": 120,
-    "lifespan_bonus": 12,
-    "is_enabled": true
+    "base_success_rate": 0.95,
+    "required_cultivation_exp": 260,
+    "required_spirit_stone": 45,
+    "lifespan_bonus": 0,
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -50
+      }
+    },
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 42,
+    "base_spirit_stone_cost_per_advance": 8
   },
   {
     "key": "foundation_peak",
@@ -89,11 +122,18 @@
     "major_realm": "foundation",
     "stage_index": 4,
     "order_index": 8,
-    "base_success_rate": 0.6,
-    "required_cultivation_exp": 1600,
-    "required_spirit_stone": 140,
-    "lifespan_bonus": 12,
-    "is_enabled": true
+    "base_success_rate": 0.9,
+    "required_cultivation_exp": 360,
+    "required_spirit_stone": 60,
+    "lifespan_bonus": 0,
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -100
+      }
+    },
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 50,
+    "base_spirit_stone_cost_per_advance": 10
   },
   {
     "key": "golden_core_early",
@@ -101,11 +141,18 @@
     "major_realm": "golden_core",
     "stage_index": 1,
     "order_index": 9,
-    "base_success_rate": 0.58,
-    "required_cultivation_exp": 2200,
-    "required_spirit_stone": 180,
-    "lifespan_bonus": 24,
-    "is_enabled": true
+    "base_success_rate": 0.55,
+    "required_cultivation_exp": 700,
+    "required_spirit_stone": 260,
+    "lifespan_bonus": 720,
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -500
+      }
+    },
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 58,
+    "base_spirit_stone_cost_per_advance": 14
   },
   {
     "key": "golden_core_mid",
@@ -113,11 +160,14 @@
     "major_realm": "golden_core",
     "stage_index": 2,
     "order_index": 10,
-    "base_success_rate": 0.52,
-    "required_cultivation_exp": 3000,
-    "required_spirit_stone": 220,
+    "base_success_rate": 0.58,
+    "required_cultivation_exp": 2200,
+    "required_spirit_stone": 180,
     "lifespan_bonus": 24,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 68,
+    "base_spirit_stone_cost_per_advance": 16
   },
   {
     "key": "golden_core_late",
@@ -125,11 +175,14 @@
     "major_realm": "golden_core",
     "stage_index": 3,
     "order_index": 11,
-    "base_success_rate": 0.46,
-    "required_cultivation_exp": 3900,
-    "required_spirit_stone": 260,
+    "base_success_rate": 0.52,
+    "required_cultivation_exp": 3000,
+    "required_spirit_stone": 220,
     "lifespan_bonus": 24,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 80,
+    "base_spirit_stone_cost_per_advance": 18
   },
   {
     "key": "golden_core_peak",
@@ -137,11 +190,14 @@
     "major_realm": "golden_core",
     "stage_index": 4,
     "order_index": 12,
-    "base_success_rate": 0.4,
-    "required_cultivation_exp": 5000,
-    "required_spirit_stone": 300,
+    "base_success_rate": 0.46,
+    "required_cultivation_exp": 3900,
+    "required_spirit_stone": 260,
     "lifespan_bonus": 24,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 95,
+    "base_spirit_stone_cost_per_advance": 22
   },
   {
     "key": "nascent_soul_early",
@@ -149,11 +205,14 @@
     "major_realm": "nascent_soul",
     "stage_index": 1,
     "order_index": 13,
-    "base_success_rate": 0.38,
-    "required_cultivation_exp": 6500,
-    "required_spirit_stone": 360,
+    "base_success_rate": 0.4,
+    "required_cultivation_exp": 5000,
+    "required_spirit_stone": 300,
     "lifespan_bonus": 40,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 110,
+    "base_spirit_stone_cost_per_advance": 30
   },
   {
     "key": "nascent_soul_mid",
@@ -161,11 +220,14 @@
     "major_realm": "nascent_soul",
     "stage_index": 2,
     "order_index": 14,
-    "base_success_rate": 0.34,
-    "required_cultivation_exp": 8000,
-    "required_spirit_stone": 420,
+    "base_success_rate": 0.38,
+    "required_cultivation_exp": 6500,
+    "required_spirit_stone": 360,
     "lifespan_bonus": 40,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 125,
+    "base_spirit_stone_cost_per_advance": 35
   },
   {
     "key": "nascent_soul_late",
@@ -173,11 +235,14 @@
     "major_realm": "nascent_soul",
     "stage_index": 3,
     "order_index": 15,
-    "base_success_rate": 0.3,
-    "required_cultivation_exp": 9800,
-    "required_spirit_stone": 480,
+    "base_success_rate": 0.34,
+    "required_cultivation_exp": 8000,
+    "required_spirit_stone": 420,
     "lifespan_bonus": 40,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 145,
+    "base_spirit_stone_cost_per_advance": 40
   },
   {
     "key": "nascent_soul_peak",
@@ -185,10 +250,13 @@
     "major_realm": "nascent_soul",
     "stage_index": 4,
     "order_index": 16,
-    "base_success_rate": 0.26,
-    "required_cultivation_exp": 12000,
-    "required_spirit_stone": 540,
+    "base_success_rate": 0.3,
+    "required_cultivation_exp": 9800,
+    "required_spirit_stone": 480,
     "lifespan_bonus": 40,
-    "is_enabled": true
+    "failure_penalty": {},
+    "is_enabled": true,
+    "base_cultivation_gain_per_advance": 165,
+    "base_spirit_stone_cost_per_advance": 48
   }
 ]

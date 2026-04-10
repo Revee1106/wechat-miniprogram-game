@@ -197,3 +197,221 @@ test("uses four direct editor tabs and a right drawer instead of summary cards",
   expect(within(dialog).getByLabelText("事件名称")).toHaveValue("Cultivation One");
   expect(within(dialog).getByLabelText("标题文案")).toHaveValue("Cultivation One");
 });
+
+test("draft option additions auto-generate non-editable option ids in the compact workbench", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                event_id: "evt_cultivation_1",
+                event_name: "Cultivation One",
+                event_type: "cultivation",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_cultivation_1"],
+                is_repeatable: true,
+              },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({ items: [] }),
+      };
+    })
+  );
+
+  render(<EventListPage />);
+
+  expect(await screen.findByLabelText("按类型新建")).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("按类型新建"), {
+    target: { value: "cultivation" },
+  });
+
+  let dialog = await screen.findByRole("dialog", { name: "基础信息" });
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2")).toBeDisabled();
+  fireEvent.click(within(dialog).getByRole("button", { name: "关闭" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "选项与结果" }));
+  dialog = await screen.findByRole("dialog", { name: "选项与结果" });
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2_option_1")).toBeDisabled();
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增选项" }));
+
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2_option_2")).toBeDisabled();
+});
+
+test("draft events auto-generate event ids and recompute them when the type changes", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                event_id: "evt_cultivation_1",
+                event_name: "Cultivation One",
+                event_type: "cultivation",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_cultivation_1"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_material_1",
+                event_name: "Material One",
+                event_type: "material",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_material_1"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_material_3",
+                event_name: "Material Three",
+                event_type: "material",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_material_3"],
+                is_repeatable: true,
+              },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({ items: [] }),
+      };
+    })
+  );
+
+  render(<EventListPage />);
+
+  expect(await screen.findByLabelText("按类型新建")).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("按类型新建"), {
+    target: { value: "cultivation" },
+  });
+
+  const dialog = await screen.findByRole("dialog", { name: "基础信息" });
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2")).toBeDisabled();
+
+  fireEvent.change(within(dialog).getByLabelText("事件类型"), {
+    target: { value: "material" },
+  });
+
+  expect(within(dialog).getByDisplayValue("evt_material_2")).toBeDisabled();
+});
+
+test("save regenerates missing option ids before posting options", async () => {
+  let createdOption: Record<string, unknown> | null = null;
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+
+      if (url.includes("/admin/api/events/reload")) {
+        return {
+          ok: true,
+          json: async () => ({
+            reloaded: true,
+            template_count: 1,
+            option_count: 1,
+          }),
+        };
+      }
+
+      if (url.endsWith("/admin/api/events/evt_existing") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              event_id: "evt_existing",
+              event_name: "Existing Event",
+              event_type: "cultivation",
+              outcome_type: "cultivation",
+              risk_level: "normal",
+              trigger_sources: ["global"],
+              choice_pattern: "binary_choice",
+              title_text: "Existing Event",
+              body_text: "Body",
+              weight: 2,
+              is_repeatable: true,
+              option_ids: [""],
+            },
+            options: [
+              {
+                option_id: "",
+                event_id: "evt_existing",
+                option_text: "Observe",
+                sort_order: 1,
+                is_default: true,
+              },
+            ],
+          }),
+        };
+      }
+
+      if (url.endsWith("/admin/api/events/evt_existing/options") && init?.method === "POST") {
+        createdOption = JSON.parse(String(init.body));
+        return {
+          ok: true,
+          json: async () => createdOption,
+        };
+      }
+
+      if (url.includes("/admin/api/options/") && init?.method === "PUT") {
+        throw new Error(`unexpected option update path: ${url}`);
+      }
+
+      if (url.endsWith("/admin/api/events/evt_existing") && init?.method === "PUT") {
+        return {
+          ok: true,
+          json: async () => JSON.parse(String(init.body)),
+        };
+      }
+
+      return {
+        ok: true,
+        json: async () => ({
+          items: [
+            {
+              event_id: "evt_existing",
+              event_name: "Existing Event",
+              event_type: "cultivation",
+              risk_level: "normal",
+              weight: 2,
+              option_ids: [""],
+              is_repeatable: true,
+            },
+          ],
+        }),
+      };
+    })
+  );
+
+  render(<EventListPage />);
+
+  expect(await screen.findByLabelText("当前事件")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "保存事件" }));
+
+  await waitFor(() => {
+    expect(createdOption).not.toBeNull();
+  });
+
+  expect(createdOption).toMatchObject({
+    option_id: "evt_existing_option_1",
+    option_text: "Observe",
+  });
+});

@@ -225,8 +225,8 @@ export function RealmEditorPage({
         />
         <WorkbenchCard
           buttonText="编辑突破配置"
-          description="突破所需修为、灵石、基础成功率与寿元加成。"
-          summary={`修为 ${realm.required_cultivation_exp || 0} · 灵石 ${realm.required_spirit_stone || 0}`}
+          description="配置突破到当前境界时的消耗、成功率与失败惩罚。"
+          summary={formatBreakthroughSummary(realm)}
           title="突破配置"
           onClick={() => setActivePanel("breakthrough")}
         />
@@ -345,10 +345,13 @@ function createEmptyRealm(): RealmInput {
     major_realm: "qi_refining",
     stage_index: 1,
     order_index: 1,
+    base_cultivation_gain_per_advance: 0,
+    base_spirit_stone_cost_per_advance: 0,
     base_success_rate: 0.95,
     required_cultivation_exp: 100,
     required_spirit_stone: 20,
     lifespan_bonus: 6,
+    failure_penalty: {},
     is_enabled: true,
   };
 }
@@ -362,10 +365,38 @@ function normalizeRealm(realm: RealmInput): RealmInput {
     major_realm: String(realm.major_realm ?? "qi_refining"),
     stage_index: Number(realm.stage_index ?? 0) || 0,
     order_index: Number(realm.order_index ?? 0) || 0,
+    base_cultivation_gain_per_advance:
+      Number(realm.base_cultivation_gain_per_advance ?? 0) || 0,
+    base_spirit_stone_cost_per_advance:
+      Number(realm.base_spirit_stone_cost_per_advance ?? 0) || 0,
     base_success_rate: Number(realm.base_success_rate ?? 0) || 0,
     required_cultivation_exp: Number(realm.required_cultivation_exp ?? 0) || 0,
     required_spirit_stone: Number(realm.required_spirit_stone ?? 0) || 0,
     lifespan_bonus: Number(realm.lifespan_bonus ?? 0) || 0,
+    failure_penalty: normalizeFailurePenalty(realm.failure_penalty),
     is_enabled: realm.is_enabled === true,
   };
+}
+
+function normalizeFailurePenalty(
+  penalty: RealmInput["failure_penalty"]
+): RealmInput["failure_penalty"] {
+  const cultivationExp = Number(penalty?.character?.cultivation_exp ?? 0) || 0;
+  if (cultivationExp >= 0) {
+    return {};
+  }
+  return {
+    character: {
+      cultivation_exp: cultivationExp,
+    },
+  };
+}
+
+function formatBreakthroughSummary(realm: RealmInput): string {
+  if (realm.key === "qi_refining_early") {
+    return "起始层，无需突破配置";
+  }
+  const cultivationPenalty = Math.abs(realm.failure_penalty?.character?.cultivation_exp ?? 0);
+  const penaltyText = cultivationPenalty > 0 ? `失败扣修为 ${cultivationPenalty}` : "无失败惩罚";
+  return `修为 ${realm.required_cultivation_exp || 0} · 灵石 ${realm.required_spirit_stone || 0} · ${penaltyText}`;
 }

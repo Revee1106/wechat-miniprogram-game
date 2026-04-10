@@ -105,9 +105,9 @@ def test_spirit_gathering_array_increases_breakthrough_success_rate() -> None:
         stage_index=1,
         order_index=1,
         lifespan_bonus=6,
-        base_success_rate=0.40,
-        required_exp=100,
-        required_spirit_stone=20,
+        base_success_rate=0,
+        required_exp=0,
+        required_spirit_stone=0,
     )
     next_realm = RealmConfig(
         key="qi_refining_mid",
@@ -117,8 +117,8 @@ def test_spirit_gathering_array_increases_breakthrough_success_rate() -> None:
         order_index=2,
         lifespan_bonus=6,
         base_success_rate=0.45,
-        required_exp=200,
-        required_spirit_stone=30,
+        required_exp=100,
+        required_spirit_stone=20,
     )
     progression_service = ProgressionService(
         DwellingService(),

@@ -41,6 +41,7 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
             raise ValueError(f"option '{option.option_id}' must have sort_order >= 1")
         normalized_option = replace(
             option,
+            resolution_mode=_normalize_resolution_mode(option),
             result_on_success=_coerce_payload(option.result_on_success),
             result_on_failure=_coerce_payload(option.result_on_failure),
         )
@@ -222,6 +223,44 @@ def _coerce_payload(
         ) + int(normalized_value)
 
     return EventResultPayload(resources=resources, character=character, death=death)
+
+
+def _normalize_resolution_mode(option: EventOptionConfig) -> str:
+    if option.resolution_mode in {"direct", "combat"}:
+        return option.resolution_mode
+
+    if (
+        (option.success_rate_formula or "").strip()
+        or bool(option.log_text_failure.strip())
+        or _has_meaningful_payload(option.result_on_failure)
+    ):
+        return "combat"
+    return "direct"
+
+
+def _has_meaningful_payload(
+    payload: str | dict[str, object] | EventResultPayload,
+) -> bool:
+    if isinstance(payload, EventResultPayload):
+        return any(
+            (
+                payload.resources,
+                payload.character,
+                payload.statuses_add,
+                payload.statuses_remove,
+                payload.techniques_add,
+                payload.equipment_add,
+                payload.equipment_remove,
+                payload.battle,
+                payload.death,
+                payload.rebirth_progress_delta,
+            )
+        )
+
+    if isinstance(payload, dict):
+        return any(payload.values())
+
+    return bool(payload.strip())
 
 
 def _normalize_resource_key(resource_name: str) -> str:

@@ -41,6 +41,26 @@ export function SingleOutcomeEditor({
         </label>
       </div>
 
+      <SectionCard
+        title="事件耗时（月）"
+        description="表示执行该事件结果额外消耗的时间，会单独扣减寿元，不等同于结果中的寿元变化。"
+      >
+        <div className="field-grid">
+          <label className="field">
+            <span className="field__label">事件耗时（月）</span>
+            <input
+              aria-label="事件耗时（月）"
+              min={0}
+              type="number"
+              value={option.time_cost_months ?? 0}
+              onChange={(event) =>
+                onChange("time_cost_months", Math.max(0, Number(event.target.value) || 0))
+              }
+            />
+          </label>
+        </div>
+      </SectionCard>
+
       <ResultPayloadEditor
         labelPrefix="结果"
         payload={option.result_on_success}

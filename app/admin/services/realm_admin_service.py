@@ -196,6 +196,12 @@ class RealmAdminService:
     ) -> dict[str, object]:
         normalized = dict(realm_payload)
         normalized["key"] = realm_key
+        normalized["base_cultivation_gain_per_advance"] = int(
+            normalized.get("base_cultivation_gain_per_advance", 0) or 0
+        )
+        normalized["base_spirit_stone_cost_per_advance"] = int(
+            normalized.get("base_spirit_stone_cost_per_advance", 0) or 0
+        )
         return normalized
 
     def _normalize_key(self, value: object) -> str:
@@ -219,6 +225,12 @@ class RealmAdminService:
                     major_realm=str(realm.get("major_realm", "")),
                     stage_index=int(realm.get("stage_index", 0) or 0),
                     order_index=int(realm.get("order_index", 0) or 0),
+                    base_cultivation_gain_per_advance=int(
+                        realm.get("base_cultivation_gain_per_advance", 0) or 0
+                    ),
+                    base_spirit_stone_cost_per_advance=int(
+                        realm.get("base_spirit_stone_cost_per_advance", 0) or 0
+                    ),
                     lifespan_bonus=int(realm.get("lifespan_bonus", 0) or 0),
                     base_success_rate=float(realm.get("base_success_rate", 0) or 0),
                     required_exp=int(realm.get("required_cultivation_exp", 0) or 0),
@@ -227,6 +239,7 @@ class RealmAdminService:
                         str(key): int(value)
                         for key, value in dict(realm.get("required_materials", {})).items()
                     },
+                    failure_penalty=_normalize_failure_penalty(realm.get("failure_penalty")),
                     is_enabled=realm.get("is_enabled", True) is True,
                 )
                 for realm in realms
@@ -237,3 +250,16 @@ class RealmAdminService:
 
     def _index_map(self, realm_models: list[RealmConfig]) -> dict[str, int]:
         return {config.key: index for index, config in enumerate(realm_models)}
+
+
+def _normalize_failure_penalty(value: object) -> dict[str, dict[str, int]]:
+    if not isinstance(value, dict):
+        return {}
+    character_payload = value.get("character")
+    if not isinstance(character_payload, dict):
+        return {}
+    normalized = {
+        str(key): int(amount)
+        for key, amount in character_payload.items()
+    }
+    return {"character": normalized} if normalized else {}

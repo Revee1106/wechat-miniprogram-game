@@ -27,7 +27,11 @@ class InMemoryRunRepository:
         try:
             return self._state.runs[run_id]
         except KeyError as error:
-            raise NotFoundError(f"run '{run_id}' not found") from error
+            raise NotFoundError(
+                f"run '{run_id}' not found",
+                code="core.run.not_found",
+                params={"run_id": run_id},
+            ) from error
 
     def save(self, run: RunState) -> RunState:
         self._state.runs[run.run_id] = run

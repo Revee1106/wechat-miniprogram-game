@@ -114,13 +114,35 @@ test("supports selecting multiple trigger sources", async () => {
 test("adds a new option from the option panel", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        template: {},
-        options: [],
-      }),
-    }))
+    vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                event_id: "evt_cultivation_1",
+                event_name: "Cultivation Event",
+                event_type: "cultivation",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_cultivation"],
+                is_repeatable: true,
+              },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          template: {},
+          options: [],
+          items: [],
+        }),
+      };
+    })
   );
 
   render(
@@ -134,8 +156,81 @@ test("adds a new option from the option panel", async () => {
   const dialog = await screen.findByRole("dialog", { name: "选项编排" });
 
   expect(within(dialog).getAllByLabelText("选项文案")).toHaveLength(1);
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2_option_1")).toBeDisabled();
   fireEvent.click(within(dialog).getByText("新增选项"));
   expect(within(dialog).getAllByLabelText("选项文案")).toHaveLength(2);
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2_option_2")).toBeDisabled();
+});
+
+test("new events auto-generate a disabled event id and recompute it when the type changes", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                event_id: "evt_cultivation_1",
+                event_name: "Cultivation One",
+                event_type: "cultivation",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_cultivation_1"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_material_1",
+                event_name: "Material One",
+                event_type: "material",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_material_1"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_material_3",
+                event_name: "Material Three",
+                event_type: "material",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_material_3"],
+                is_repeatable: true,
+              },
+            ],
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          template: {},
+          options: [],
+          items: [],
+        }),
+      };
+    })
+  );
+
+  render(
+    <EventEditorPage
+      onBack={() => {}}
+      onSaved={() => {}}
+    />
+  );
+
+  fireEvent.click(await screen.findByText("编辑基础信息"));
+  const dialog = await screen.findByRole("dialog", { name: "基础信息" });
+
+  expect(within(dialog).getByDisplayValue("evt_cultivation_2")).toBeDisabled();
+
+  fireEvent.change(within(dialog).getByLabelText("事件类型"), {
+    target: { value: "material" },
+  });
+
+  expect(within(dialog).getByDisplayValue("evt_material_2")).toBeDisabled();
 });
 
 test("single outcome events use a default result editor instead of option orchestration", async () => {
@@ -223,6 +318,10 @@ test("single outcome events use a default result editor instead of option orches
 
   fireEvent.click(screen.getByText("编辑单一结果"));
   const dialog = await screen.findByRole("dialog", { name: "单一结果" });
+  expect(within(dialog).getByRole("heading", { name: "事件耗时（月）" })).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByLabelText("事件耗时（月）"), {
+    target: { value: "2" },
+  });
   fireEvent.change(within(dialog).getByLabelText("结果日志"), {
     target: { value: "榛樿缁撶畻" },
   });
@@ -248,6 +347,7 @@ test("single outcome events use a default result editor instead of option orches
     option_text: "完成事件",
     sort_order: 1,
     is_default: true,
+    time_cost_months: 2,
     log_text_success: "榛樿缁撶畻",
     result_on_success: {
       resources: { spirit_stone: 5 },
@@ -501,8 +601,15 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.change(within(dialog).getByLabelText("选项需要状态"), {
     target: { value: "injured" },
   });
+  fireEvent.change(within(dialog).getByLabelText("结算模式"), {
+    target: { value: "combat" },
+  });
   fireEvent.change(within(dialog).getByLabelText("成功率公式"), {
     target: { value: "base_success_rate + 0.1" },
+  });
+  expect(within(dialog).getByRole("heading", { name: "事件耗时（月）" })).toBeInTheDocument();
+  fireEvent.change(within(dialog).getByLabelText("事件耗时（月）"), {
+    target: { value: "3" },
   });
   fireEvent.change(within(dialog).getByLabelText("后续事件"), {
     target: { value: "evt_follow_up" },
@@ -539,6 +646,8 @@ test("saves advanced template and option fields through section panels", async (
     required_karma_min: 5,
   });
   expect(savedOption).toMatchObject({
+    time_cost_months: 3,
+    resolution_mode: "combat",
     requires_statuses: ["injured"],
     success_rate_formula: "base_success_rate + 0.1",
     next_event_id: "evt_follow_up",

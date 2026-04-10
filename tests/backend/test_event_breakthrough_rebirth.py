@@ -3,6 +3,7 @@ from shutil import rmtree
 from uuid import uuid4
 
 from app.admin.repositories.event_config_repository import EventConfigRepository
+from app.core_loop.seeds import get_realm_configs
 from app.core_loop.services.run_service import RunService
 
 
@@ -178,7 +179,12 @@ def test_resolve_event_keeps_run_progressing_under_random_selection() -> None:
     for _ in range(5):
         advanced = service.advance_time(run.run_id)
         option_id = next(
-            option.option_id for option in advanced.current_event.options if option.is_default
+            (
+                option.option_id
+                for option in advanced.current_event.options
+                if option.is_default
+            ),
+            advanced.current_event.options[0].option_id,
         )
         result = service.resolve_event(run.run_id, option_id=option_id)
         assert result.current_event is None
@@ -193,9 +199,12 @@ def test_random_event_pool_excludes_evil_cultist_event() -> None:
         advanced = service.advance_time(run.run_id)
         seen_event_ids.add(advanced.current_event.event_id)
         default_option = next(
-            option.option_id
-            for option in advanced.current_event.options
-            if option.is_default
+            (
+                option.option_id
+                for option in advanced.current_event.options
+                if option.is_default
+            ),
+            advanced.current_event.options[0].option_id,
         )
         service.resolve_event(run.run_id, option_id=default_option)
 
@@ -214,6 +223,7 @@ def test_breakthrough_uses_realm_config_cost_and_small_stage_chain() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")
     before_lifespan_max = run.character.lifespan_max
+    target_realm = get_realm_configs()[1]
     run.character.cultivation_exp = 100
     run.resources.spirit_stone = 20
 
@@ -222,8 +232,156 @@ def test_breakthrough_uses_realm_config_cost_and_small_stage_chain() -> None:
     assert result.success is True
     assert result.previous_realm == "qi_refining_early"
     assert result.new_realm == "qi_refining_mid"
-    assert result.character.lifespan_max > before_lifespan_max
-    assert result.resources.spirit_stone == 20
+    assert result.character.lifespan_max == before_lifespan_max + target_realm.lifespan_bonus
+    assert result.resources.spirit_stone == 20 - target_realm.required_spirit_stone
+
+
+def test_breakthrough_requirements_use_cumulative_cultivation_exp() -> None:
+    from app.admin.repositories.realm_config_repository import RealmConfigRepository
+
+    base_path = _make_test_base_path("run-service-breakthrough-cumulative")
+    RealmConfigRepository(base_path=base_path).save(
+        {
+            "realms": [
+                {
+                    "key": "qi_refining_early",
+                    "display_name": "炼气初期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 1,
+                    "order_index": 1,
+                    "base_success_rate": 0,
+                    "required_cultivation_exp": 0,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 0,
+                    "failure_penalty": {},
+                    "is_enabled": True,
+                },
+                {
+                    "key": "qi_refining_mid",
+                    "display_name": "炼气中期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 2,
+                    "order_index": 2,
+                    "base_success_rate": 1,
+                    "required_cultivation_exp": 60,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 6,
+                    "failure_penalty": {},
+                    "is_enabled": True,
+                },
+                {
+                    "key": "qi_refining_late",
+                    "display_name": "炼气后期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 3,
+                    "order_index": 3,
+                    "base_success_rate": 1,
+                    "required_cultivation_exp": 90,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 6,
+                    "failure_penalty": {},
+                    "is_enabled": True,
+                },
+            ]
+        }
+    )
+
+    try:
+        service = RunService(event_config_base_path=str(base_path))
+        run = service.create_run(player_id="p1")
+        run.character.cultivation_exp = 60
+
+        result = service.breakthrough(run.run_id)
+
+        assert result.success is True
+        assert result.new_realm == "qi_refining_mid"
+        assert result.breakthrough_requirements is not None
+        assert result.breakthrough_requirements.required_cultivation_exp == 150
+    finally:
+        rmtree(base_path)
+
+
+def test_event_rewards_do_not_raise_cultivation_above_breakthrough_cap() -> None:
+    from app.admin.repositories.realm_config_repository import RealmConfigRepository
+
+    base_path = _make_test_base_path("run-service-cultivation-cap")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_cap_reward",
+                    "event_name": "Cap Reward",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "safe",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "single_outcome",
+                    "title_text": "Cap Reward",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_cap_reward"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_cap_reward",
+                    "event_id": "evt_cap_reward",
+                    "option_text": "Take reward",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "resolution_mode": "direct",
+                    "result_on_success": {"character": {"cultivation_exp": 20}},
+                    "log_text_success": "reward granted",
+                }
+            ],
+        }
+    )
+    RealmConfigRepository(base_path=base_path).save(
+        {
+            "realms": [
+                {
+                    "key": "qi_refining_early",
+                    "display_name": "炼气初期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 1,
+                    "order_index": 1,
+                    "base_success_rate": 0,
+                    "required_cultivation_exp": 0,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 0,
+                    "failure_penalty": {},
+                    "is_enabled": True,
+                },
+                {
+                    "key": "qi_refining_mid",
+                    "display_name": "炼气中期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 2,
+                    "order_index": 2,
+                    "base_success_rate": 1,
+                    "required_cultivation_exp": 60,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 6,
+                    "failure_penalty": {},
+                    "is_enabled": True,
+                },
+            ]
+        }
+    )
+
+    try:
+        service = RunService(event_config_base_path=str(base_path))
+        run = service.create_run(player_id="p1")
+        run.character.cultivation_exp = 55
+        advanced = service.advance_time(run.run_id)
+        option_id = advanced.current_event.options[0].option_id
+
+        resolved = service.resolve_event(run.run_id, option_id=option_id)
+
+        assert resolved.character.cultivation_exp == 60
+    finally:
+        rmtree(base_path)
 
 
 def test_rebirth_creates_new_run_with_permanent_bonus() -> None:

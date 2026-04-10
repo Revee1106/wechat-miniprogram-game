@@ -4,7 +4,7 @@ from app.core_loop.types import CharacterState, ResourceState, RunState
 
 
 MONTHS_PER_YEAR = 12
-INITIAL_LIFESPAN_YEARS = 20
+INITIAL_LIFESPAN_YEARS = 60
 
 
 def build_initial_run(

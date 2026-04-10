@@ -51,3 +51,64 @@ test("requirements section starts with only add button when event has no precond
   expect(screen.getByText("当前还没有资源前置。")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "新增资源" })).toBeInTheDocument();
 });
+
+test("trigger section uses realm dropdowns for min and max realm", () => {
+  render(
+    <EventTemplateForm
+      isNew
+      onChange={vi.fn()}
+      realmOptions={[
+        { value: "qi_refining_early", label: "炼气初期" },
+        { value: "qi_refining_mid", label: "炼气中期" },
+      ]}
+      sections={["trigger"]}
+      template={{
+        event_id: "evt_trigger",
+        event_name: "Trigger Event",
+        event_type: "cultivation",
+        outcome_type: "cultivation",
+        risk_level: "normal",
+        trigger_sources: ["global"],
+        choice_pattern: "binary_choice",
+        title_text: "",
+        body_text: "",
+        weight: 1,
+        is_repeatable: true,
+        option_ids: [],
+        realm_min: "qi_refining_early",
+        realm_max: "qi_refining_mid",
+      }}
+    />
+  );
+
+  expect(screen.getByLabelText("最低境界")).toHaveDisplayValue("炼气初期");
+  expect(screen.getByLabelText("最高境界")).toHaveDisplayValue("炼气中期");
+  expect(screen.getAllByRole("option", { name: "无限制" })).toHaveLength(2);
+});
+
+test("identity section shows a disabled event id field", () => {
+  render(
+    <EventTemplateForm
+      isNew
+      onChange={vi.fn()}
+      sections={["identity"]}
+      template={{
+        event_id: "evt_cultivation_2",
+        event_name: "Auto Event",
+        event_type: "cultivation",
+        outcome_type: "cultivation",
+        risk_level: "normal",
+        trigger_sources: ["global"],
+        choice_pattern: "binary_choice",
+        title_text: "",
+        body_text: "",
+        weight: 1,
+        is_repeatable: true,
+        option_ids: [],
+      }}
+    />
+  );
+
+  expect(screen.getByLabelText("事件编号")).toBeDisabled();
+  expect(screen.getByDisplayValue("evt_cultivation_2")).toBeDisabled();
+});

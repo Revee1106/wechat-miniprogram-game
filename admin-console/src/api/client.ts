@@ -1,3 +1,5 @@
+import { buildAdminErrorMessage, localizeValidationResponse } from "../utils/displayText";
+
 export type EventListItem = {
   event_id: string;
   event_name: string;
@@ -52,6 +54,8 @@ export type EventOptionInput = {
   option_text: string;
   sort_order: number;
   is_default: boolean;
+  time_cost_months?: number;
+  resolution_mode?: string;
   requires_resources?: Record<string, number>;
   requires_statuses?: string[];
   requires_techniques?: string[];
@@ -86,14 +90,23 @@ export type RealmConfig = {
   major_realm: string;
   stage_index: number;
   order_index: number;
+  base_cultivation_gain_per_advance: number;
+  base_spirit_stone_cost_per_advance: number;
   base_success_rate: number;
   required_cultivation_exp: number;
   required_spirit_stone: number;
   lifespan_bonus: number;
+  failure_penalty?: RealmFailurePenalty;
   is_enabled: boolean;
 };
 
 export type RealmInput = RealmConfig;
+
+export type RealmFailurePenalty = {
+  character?: {
+    cultivation_exp?: number;
+  };
+};
 
 export type RealmListResponse = {
   items: RealmConfig[];
@@ -165,7 +178,7 @@ export async function fetchEvents(filters?: {
   const query = params.toString();
   const response = await fetch(`/admin/api/events${query ? `?${query}` : ""}`);
   if (!response.ok) {
-    throw new Error("Failed to load events");
+    throw new Error(await buildErrorMessage(response, "加载事件列表失败"));
   }
   return response.json();
 }
@@ -173,7 +186,7 @@ export async function fetchEvents(filters?: {
 export async function fetchEventDetail(eventId: string): Promise<EventDetailResponse> {
   const response = await fetch(`/admin/api/events/${eventId}`);
   if (!response.ok) {
-    throw new Error("Failed to load event detail");
+    throw new Error(await buildErrorMessage(response, "加载事件详情失败"));
   }
   return response.json();
 }
@@ -181,7 +194,7 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetailResp
 export async function fetchRealms(): Promise<RealmListResponse> {
   const response = await fetch("/admin/api/realms");
   if (!response.ok) {
-    throw new Error("Failed to load realms");
+    throw new Error(await buildErrorMessage(response, "加载境界列表失败"));
   }
   return response.json();
 }
@@ -189,7 +202,7 @@ export async function fetchRealms(): Promise<RealmListResponse> {
 export async function fetchRealmDetail(realmKey: string): Promise<RealmDetailResponse> {
   const response = await fetch(`/admin/api/realms/${realmKey}`);
   if (!response.ok) {
-    throw new Error("Failed to load realm detail");
+    throw new Error(await buildErrorMessage(response, "加载境界详情失败"));
   }
   return response.json();
 }
@@ -197,7 +210,7 @@ export async function fetchRealmDetail(realmKey: string): Promise<RealmDetailRes
 export async function fetchDwellingFacilities(): Promise<DwellingFacilityListResponse> {
   const response = await fetch("/admin/api/dwelling/facilities");
   if (!response.ok) {
-    throw new Error("Failed to load dwelling facilities");
+    throw new Error(await buildErrorMessage(response, "加载洞府设施列表失败"));
   }
   return response.json();
 }
@@ -207,7 +220,7 @@ export async function fetchDwellingFacilityDetail(
 ): Promise<DwellingFacilityInput> {
   const response = await fetch(`/admin/api/dwelling/facilities/${facilityId}`);
   if (!response.ok) {
-    throw new Error("Failed to load dwelling facility detail");
+    throw new Error(await buildErrorMessage(response, "加载洞府设施详情失败"));
   }
   return response.json();
 }
@@ -295,21 +308,24 @@ export async function deleteOption(optionId: string): Promise<void> {
 }
 
 export async function validateEvents(): Promise<ValidationResponse> {
-  return sendJson("/admin/api/events/validate", {
+  const response = await sendJson<ValidationResponse>("/admin/api/events/validate", {
     method: "POST",
   });
+  return localizeValidationResponse(response);
 }
 
 export async function validateRealms(): Promise<ValidationResponse> {
-  return sendJson("/admin/api/realms/validate", {
+  const response = await sendJson<ValidationResponse>("/admin/api/realms/validate", {
     method: "POST",
   });
+  return localizeValidationResponse(response);
 }
 
 export async function validateDwelling(): Promise<ValidationResponse> {
-  return sendJson("/admin/api/dwelling/validate", {
+  const response = await sendJson<ValidationResponse>("/admin/api/dwelling/validate", {
     method: "POST",
   });
+  return localizeValidationResponse(response);
 }
 
 export async function reloadEvents(): Promise<{
@@ -347,7 +363,7 @@ export async function fetchAdminSession(): Promise<AdminSession | null> {
     return null;
   }
   if (!response.ok) {
-    throw new Error("Failed to load admin session");
+    throw new Error(await buildErrorMessage(response, "加载管理会话失败"));
   }
   return response.json();
 }
@@ -376,19 +392,16 @@ async function sendJson<T>(input: string, init: RequestInit): Promise<T> {
     ...init,
   });
   if (!response.ok) {
-    throw new Error(await buildErrorMessage(response));
+    throw new Error(await buildErrorMessage(response, "请求失败"));
   }
   return response.json();
 }
 
-async function buildErrorMessage(response: Response): Promise<string> {
+async function buildErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
   try {
     const payload = await response.json();
-    if (typeof payload?.detail === "string" && payload.detail) {
-      return payload.detail;
-    }
+    return buildAdminErrorMessage(payload, fallbackMessage);
   } catch {
-    return "Request failed";
+    return fallbackMessage;
   }
-  return "Request failed";
 }

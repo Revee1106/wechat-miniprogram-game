@@ -425,7 +425,7 @@ function getRealmPanelDescription(panel: RealmPanel): string {
     case "identity":
       return "编辑名称、所属大境界、层级与启用状态。";
     case "breakthrough":
-      return "编辑突破所需修为、灵石与基础成功率。";
+      return "编辑突破到当前境界时的消耗、成功率与失败惩罚。";
   }
 }
 
@@ -440,6 +440,7 @@ function createEmptyRealm(majorRealm: string): RealmInput {
     required_cultivation_exp: 100,
     required_spirit_stone: 20,
     lifespan_bonus: 6,
+    failure_penalty: {},
     is_enabled: true,
   };
 }
@@ -457,6 +458,21 @@ function normalizeRealm(realm: RealmInput): RealmInput {
     required_cultivation_exp: Number(realm.required_cultivation_exp ?? 0) || 0,
     required_spirit_stone: Number(realm.required_spirit_stone ?? 0) || 0,
     lifespan_bonus: Number(realm.lifespan_bonus ?? 0) || 0,
+    failure_penalty: normalizeFailurePenalty(realm.failure_penalty),
     is_enabled: realm.is_enabled === true,
+  };
+}
+
+function normalizeFailurePenalty(
+  penalty: RealmInput["failure_penalty"]
+): RealmInput["failure_penalty"] {
+  const cultivationExp = Number(penalty?.character?.cultivation_exp ?? 0) || 0;
+  if (cultivationExp >= 0) {
+    return {};
+  }
+  return {
+    character: {
+      cultivation_exp: cultivationExp,
+    },
   };
 }

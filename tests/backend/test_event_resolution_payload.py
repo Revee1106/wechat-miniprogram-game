@@ -89,6 +89,41 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
     assert resolved.result_summary == "success log"
 
 
+def test_direct_resolution_mode_always_uses_single_result_without_formula() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_direct": EventTemplateConfig(
+                event_id="evt_direct",
+                event_name="Direct Event",
+                event_type="cultivation",
+                option_ids=["opt_direct"],
+            )
+        },
+        options={
+            "opt_direct": EventOptionConfig(
+                option_id="opt_direct",
+                event_id="evt_direct",
+                option_text="Take the direct path",
+                is_default=True,
+                resolution_mode="direct",
+                success_rate_formula="0.0",
+                result_on_success=EventResultPayload(character={"cultivation_exp": 6}),
+                result_on_failure=EventResultPayload(character={"lifespan_delta": -999}, death=True),
+                log_text_success="direct log",
+                log_text_failure="failure log",
+            )
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_direct")
+
+    assert resolved.character.cultivation_exp == 6
+    assert resolved.character.is_dead is False
+    assert resolved.result_summary == "direct log"
+
+
 def test_resolve_event_applies_failure_death_payload() -> None:
     registry = EventRegistry(
         templates={
@@ -209,3 +244,38 @@ def test_resolve_event_applies_failure_payload_status_cleanup_and_cooldown_track
     assert resolved.character.equipment_tags == ["wood_amulet"]
     assert resolved.event_trigger_counts["evt_payload"] == 1
     assert resolved.event_cooldowns["evt_payload"] == 3
+
+
+def test_resolve_event_applies_time_cost_months_as_extra_lifespan_loss_only() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_time_cost": EventTemplateConfig(
+                event_id="evt_time_cost",
+                event_name="Time Cost Event",
+                event_type="cultivation",
+                option_ids=["opt_time_cost"],
+            )
+        },
+        options={
+            "opt_time_cost": EventOptionConfig(
+                option_id="opt_time_cost",
+                event_id="evt_time_cost",
+                option_text="Spend extra time",
+                is_default=True,
+                resolution_mode="direct",
+                time_cost_months=3,
+                result_on_success=EventResultPayload(character={"cultivation_exp": 2}),
+                log_text_success="time cost log",
+            )
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+    before_round_index = run.round_index
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_time_cost")
+
+    assert resolved.character.cultivation_exp == 2
+    assert resolved.character.lifespan_current == 117
+    assert resolved.round_index == before_round_index
+    assert resolved.result_summary == "time cost log（额外耗时3个月）"

@@ -27,14 +27,24 @@ class ResourceSaleService:
 
     def sell(self, run: RunState, resource_key: str, amount: int) -> None:
         if amount <= 0:
-            raise ConflictError("sale amount must be a positive integer")
+            raise ConflictError(
+                "sale amount must be a positive integer",
+                code="core.resource_sale.invalid_amount",
+            )
 
         rule = self._rules.get(resource_key)
         if rule is None:
-            raise ConflictError(f"resource '{resource_key}' cannot be sold")
+            raise ConflictError(
+                f"resource '{resource_key}' cannot be sold",
+                code="core.resource_sale.resource_cannot_be_sold",
+                params={"resource_key": resource_key},
+            )
 
         if self._get_resource_amount(run, resource_key, rule) < amount:
-            raise ConflictError("not enough resources to sell")
+            raise ConflictError(
+                "not enough resources to sell",
+                code="core.resource_sale.not_enough_resources",
+            )
 
         self._consume_resource(run, resource_key, amount, rule)
         self._resource_service.add(run, "spirit_stone", rule.price * amount)

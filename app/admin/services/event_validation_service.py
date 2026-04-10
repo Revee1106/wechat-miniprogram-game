@@ -43,6 +43,7 @@ ALLOWED_TRIGGER_SOURCES = {
     "rebirth_based",
     "global",
 }
+ALLOWED_RESOLUTION_MODES = {"direct", "combat"}
 
 
 def validate_event_config(
@@ -101,6 +102,11 @@ def validate_event_config(
             errors.append(f"option '{option_id}' references missing event_id '{event_id}'")
         if int(option.get("sort_order", 1) or 0) < 1:
             errors.append(f"option '{option_id}' must have sort_order >= 1")
+        if int(option.get("time_cost_months", 0) or 0) < 0:
+            errors.append(f"option '{option_id}' must have time_cost_months >= 0")
+        resolution_mode = str(option.get("resolution_mode", "direct") or "direct")
+        if resolution_mode not in ALLOWED_RESOLUTION_MODES:
+            errors.append(f"option '{option_id}' has invalid resolution_mode")
         next_event_id = option.get("next_event_id")
         if next_event_id is not None and str(next_event_id) not in template_map:
             errors.append(

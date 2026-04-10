@@ -64,3 +64,25 @@ def test_validation_collects_errors_for_non_numeric_string_fields() -> None:
     assert any("required_cultivation_exp" in error for error in result.errors)
     assert any("required_spirit_stone" in error for error in result.errors)
     assert any("lifespan_bonus" in error for error in result.errors)
+
+
+def test_validation_rejects_invalid_failure_penalty_shape() -> None:
+    result = validate_realm_config(
+        realms=[
+            {
+                "key": "qi_refining_mid",
+                "display_name": "炼气中期",
+                "major_realm": "qi_refining",
+                "stage_index": 2,
+                "order_index": 2,
+                "base_success_rate": 0.85,
+                "required_cultivation_exp": 100,
+                "required_spirit_stone": 20,
+                "lifespan_bonus": 6,
+                "failure_penalty": {"character": {"cultivation_exp": 20}},
+            }
+        ]
+    )
+
+    assert result.is_valid is False
+    assert any("failure_penalty" in error for error in result.errors)

@@ -100,6 +100,7 @@ def test_runtime_loader_maps_config_fields_to_realm_config() -> None:
                     "required_cultivation_exp": 200,
                     "required_spirit_stone": 30,
                     "lifespan_bonus": 6,
+                    "failure_penalty": {"character": {"cultivation_exp": -30}},
                     "is_enabled": True,
                 }
             ]
@@ -119,6 +120,7 @@ def test_runtime_loader_maps_config_fields_to_realm_config() -> None:
     assert realm.required_spirit_stone == 30
     assert realm.lifespan_bonus == 6
     assert realm.base_success_rate == 0.9
+    assert realm.failure_penalty == {"character": {"cultivation_exp": -30}}
     assert realm.is_enabled is True
     rmtree(base_path)
 

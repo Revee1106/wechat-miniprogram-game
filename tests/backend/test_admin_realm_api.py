@@ -138,6 +138,9 @@ def test_admin_realm_crud_and_reload_flow(monkeypatch) -> None:
             "required_cultivation_exp": 100,
             "required_spirit_stone": 20,
             "lifespan_bonus": 6,
+            "base_cultivation_gain_per_advance": 3,
+            "base_spirit_stone_cost_per_advance": 1,
+            "failure_penalty": {},
             "is_enabled": True,
         },
     )
@@ -153,6 +156,9 @@ def test_admin_realm_crud_and_reload_flow(monkeypatch) -> None:
             "required_cultivation_exp": 120,
             "required_spirit_stone": 25,
             "lifespan_bonus": 8,
+            "base_cultivation_gain_per_advance": 4,
+            "base_spirit_stone_cost_per_advance": 2,
+            "failure_penalty": {"character": {"cultivation_exp": -50}},
             "is_enabled": True,
         },
     )
@@ -161,6 +167,9 @@ def test_admin_realm_crud_and_reload_flow(monkeypatch) -> None:
 
     assert create_response.status_code == 200
     assert update_response.status_code == 200
+    assert update_response.json()["base_cultivation_gain_per_advance"] == 4
+    assert update_response.json()["base_spirit_stone_cost_per_advance"] == 2
+    assert update_response.json()["failure_penalty"] == {"character": {"cultivation_exp": -50}}
     assert delete_response.status_code == 200
     assert reload_response.status_code == 200
     assert reload_response.json()["realm_count"] == 0

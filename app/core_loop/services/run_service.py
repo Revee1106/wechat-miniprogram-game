@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
+from app.core_loop.seeds import get_realm_configs
 from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.event_config import load_event_registry
 from app.core_loop.services.alchemy_service import AlchemyService
@@ -41,7 +44,7 @@ class RunService:
         self._resource_conversion_service = ResourceConversionService(
             base_path=event_config_base_path
         )
-        self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
+        self._realm_configs = self._load_runtime_realm_configs()
         self._progression_service = ProgressionService(
             self._dwelling_service,
             realm_configs=self._realm_configs,
@@ -81,8 +84,10 @@ class RunService:
     def resolve_event(self, run_id: str, option_id: str) -> RunState:
         run = self._repo.get(run_id)
         run = self._sync_pending_event(run)
+        before_resolution = deepcopy(run)
         updated = self._event_resolution_service.resolve(run, option_id)
         self._hydrate_runtime_metadata(updated)
+        self._hydrate_event_resolution_log(before_resolution, updated)
         return self._repo.save(updated)
 
     def breakthrough(self, run_id: str):
@@ -146,7 +151,11 @@ class RunService:
 
     def convert_spirit_stone_to_cultivation(self, run_id: str, amount: int) -> RunState:
         run = self._repo.get(run_id)
-        self._resource_conversion_service.convert_spirit_stone_to_cultivation(run, amount)
+        self._resource_conversion_service.convert_spirit_stone_to_cultivation(
+            run,
+            amount,
+            cultivation_cap=self._get_breakthrough_cultivation_cap(run),
+        )
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
@@ -159,7 +168,7 @@ class RunService:
     def reload_realm_config(self, realm_config_base_path: str | None = None) -> None:
         if realm_config_base_path is not None:
             self._realm_config_base_path = realm_config_base_path
-        self._realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
+        self._realm_configs = self._load_runtime_realm_configs()
         self._rebuild_runtime_services()
 
     def reload_dwelling_config(self, dwelling_config_base_path: str | None = None) -> None:
@@ -186,7 +195,12 @@ class RunService:
             self._event_service,
             self._dwelling_service,
             self._alchemy_service,
+            realm_configs=self._realm_configs,
         )
+
+    def _load_runtime_realm_configs(self):
+        realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
+        return realm_configs or get_realm_configs()
 
     def _sync_pending_event(self, run: RunState) -> RunState:
         if run.current_event is None:
@@ -198,15 +212,7 @@ class RunService:
     def _hydrate_runtime_metadata(self, run: RunState) -> None:
         self._dwelling_service.hydrate_run(run)
         self._alchemy_service.hydrate_run(run)
-        current_realm_key = resolve_realm_key(run.character.realm, self._realm_configs)
-        current_index = next(
-            (
-                index
-                for index, config in enumerate(self._realm_configs)
-                if config.key == current_realm_key
-            ),
-            None,
-        )
+        current_index = self._get_current_realm_index(run)
         if current_index is None:
             run.character.realm_display_name = run.character.realm
             run.breakthrough_requirements = None
@@ -214,6 +220,12 @@ class RunService:
 
         current_realm = self._realm_configs[current_index]
         run.character.realm_display_name = current_realm.display_name or current_realm.key
+        cultivation_cap = self._get_breakthrough_cultivation_cap(run, current_index=current_index)
+        if cultivation_cap is not None:
+            run.character.cultivation_exp = min(
+                max(0, int(run.character.cultivation_exp)),
+                cultivation_cap,
+            )
 
         if current_index >= len(self._realm_configs) - 1:
             run.breakthrough_requirements = None
@@ -223,6 +235,50 @@ class RunService:
         run.breakthrough_requirements = BreakthroughRequirements(
             target_realm_key=next_realm.key,
             target_realm_display_name=next_realm.display_name or next_realm.key,
-            required_cultivation_exp=current_realm.required_exp,
-            required_spirit_stone=current_realm.required_spirit_stone,
+            required_cultivation_exp=self._get_cumulative_required_exp(current_index + 1),
+            required_spirit_stone=next_realm.required_spirit_stone,
+        )
+
+    def _hydrate_event_resolution_log(self, before_run: RunState, after_run: RunState) -> None:
+        if after_run.last_event_resolution is None:
+            return
+
+        intended_cultivation = int(
+            after_run.last_event_resolution.intended_character.get("cultivation_exp", 0)
+        )
+        actual_cultivation = int(after_run.character.cultivation_exp) - int(
+            before_run.character.cultivation_exp
+        )
+        after_run.last_event_resolution.actual_character["cultivation_exp"] = actual_cultivation
+
+        capped_cultivation = max(0, intended_cultivation - actual_cultivation)
+        if capped_cultivation > 0:
+            after_run.last_event_resolution.capped_character["cultivation_exp"] = capped_cultivation
+
+    def _get_current_realm_index(self, run: RunState) -> int | None:
+        current_realm_key = resolve_realm_key(run.character.realm, self._realm_configs)
+        return next(
+            (
+                index
+                for index, config in enumerate(self._realm_configs)
+                if config.key == current_realm_key
+            ),
+            None,
+        )
+
+    def _get_breakthrough_cultivation_cap(
+        self,
+        run: RunState,
+        *,
+        current_index: int | None = None,
+    ) -> int | None:
+        resolved_index = current_index if current_index is not None else self._get_current_realm_index(run)
+        if resolved_index is None or resolved_index >= len(self._realm_configs) - 1:
+            return None
+        return self._get_cumulative_required_exp(resolved_index + 1)
+
+    def _get_cumulative_required_exp(self, target_index: int) -> int:
+        return sum(
+            max(0, int(config.required_exp))
+            for config in self._realm_configs[: target_index + 1]
         )

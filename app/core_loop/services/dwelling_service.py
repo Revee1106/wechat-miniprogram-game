@@ -85,7 +85,11 @@ class DwellingService:
         self.hydrate_run(run)
         facility, spec = self._get_facility(run, facility_id)
         if facility.level > 0:
-            raise ConflictError(f"facility '{facility_id}' is already built")
+            raise ConflictError(
+                f"facility '{facility_id}' is already built",
+                code="core.dwelling.facility_already_built",
+                params={"facility_id": facility_id},
+            )
 
         self._spend_cost(run, spec.build_cost)
         facility.level = 1
@@ -97,9 +101,17 @@ class DwellingService:
         self.hydrate_run(run)
         facility, spec = self._get_facility(run, facility_id)
         if facility.level == 0:
-            raise ConflictError(f"facility '{facility_id}' is not built")
+            raise ConflictError(
+                f"facility '{facility_id}' is not built",
+                code="core.dwelling.facility_not_built",
+                params={"facility_id": facility_id},
+            )
         if facility.level >= spec.max_level:
-            raise ConflictError(f"facility '{facility_id}' is already at max level")
+            raise ConflictError(
+                f"facility '{facility_id}' is already at max level",
+                code="core.dwelling.facility_already_at_max_level",
+                params={"facility_id": facility_id},
+            )
 
         next_level_spec = spec.levels[facility.level + 1]
         self._spend_cost(run, next_level_spec.entry_cost)
@@ -200,7 +212,11 @@ class DwellingService:
         )
         spec = self._specs_by_id.get(facility_id)
         if facility is None or spec is None:
-            raise ConflictError(f"unknown dwelling facility '{facility_id}'")
+            raise ConflictError(
+                f"unknown dwelling facility '{facility_id}'",
+                code="core.dwelling.unknown_facility",
+                params={"facility_id": facility_id},
+            )
         return facility, spec
 
     def _hydrate_facility_state(
@@ -243,7 +259,10 @@ class DwellingService:
 
     def _spend_cost(self, run: RunState, cost: dict[str, int]) -> None:
         if not self._can_afford(run, cost):
-            raise ConflictError("not enough resources for dwelling action")
+            raise ConflictError(
+                "not enough resources for dwelling action",
+                code="core.dwelling.not_enough_resources",
+            )
         for resource_key, amount in cost.items():
             self._resource_service.add(run, resource_key, -amount)
 
@@ -402,4 +421,3 @@ def _coerce_float_map(value: object) -> dict[str, float]:
         except (TypeError, ValueError):
             continue
     return result
-

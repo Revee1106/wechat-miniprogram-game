@@ -36,7 +36,7 @@ export function EventOptionEditor({
     return (
       <SectionCard
         title="选项编排"
-        description="先写玩家看到的选项文案，再补充成功率、前置条件和结果结算。"
+        description="先写玩家看到的选项文案，再补充结算模式、前置条件和结果结算。"
         actions={
           <button className="button-primary" type="button" onClick={onAddOption}>
             新增选项
@@ -71,7 +71,6 @@ export function EventOptionEditor({
           </button>
           {options.map((option, index) => {
             const isActive = index === activeIndex;
-            const summaryText = option.option_text.trim() || `选项 ${index + 1}`;
             return (
               <button
                 key={`${option.option_id || "new"}-${index}`}
@@ -84,7 +83,7 @@ export function EventOptionEditor({
                 type="button"
                 onClick={() => onSelectOption?.(index)}
               >
-                <span>{summaryText}</span>
+                <span>{`选项 ${index + 1}`}</span>
               </button>
             );
           })}
@@ -131,9 +130,9 @@ function OptionDetailCard({
   compact?: boolean;
   eventOptions: Array<{ value: string; label: string }>;
 }) {
-  const isExisting = existingOptionIds.includes(option.option_id);
   const shellClassName = compact ? "section-grid" : "option-card__body";
   const optionTitle = option.option_text.trim() || `选项 ${index + 1}`;
+  const resolutionMode = option.resolution_mode === "combat" ? "combat" : "direct";
 
   const requirementFields = [
     {
@@ -225,10 +224,10 @@ function OptionDetailCard({
             <span className="field__label">选项编号</span>
             <input
               aria-label="选项编号"
-              disabled={isExisting}
+              disabled
               placeholder="例如 opt_absorb"
               value={option.option_id}
-              onChange={(event) => onChangeOption(index, "option_id", event.target.value)}
+              readOnly
             />
           </label>
 
@@ -273,19 +272,35 @@ function OptionDetailCard({
           <RequirementFieldGroup fields={requirementFields} />
         </SectionCard>
 
-        <SectionCard title="判定与后续" description="编辑成功率判定和后续事件跳转。">
+        <SectionCard title="判定与后续" description="编辑结算模式和后续事件跳转。">
           <div className="field-grid">
             <label className="field">
-              <span className="field__label">成功率公式</span>
-              <input
-                aria-label="成功率公式"
-                placeholder="例如 base_success_rate + 0.1"
-                value={option.success_rate_formula ?? ""}
+              <span className="field__label">结算模式</span>
+              <select
+                aria-label="结算模式"
+                value={resolutionMode}
                 onChange={(event) =>
-                  onChangeOption(index, "success_rate_formula", event.target.value)
+                  onChangeOption(index, "resolution_mode", event.target.value)
                 }
-              />
+              >
+                <option value="direct">直接结算</option>
+                <option value="combat">战斗结算</option>
+              </select>
             </label>
+
+            {resolutionMode === "combat" ? (
+              <label className="field">
+                <span className="field__label">成功率公式</span>
+                <input
+                  aria-label="成功率公式"
+                  placeholder="例如 base_success_rate + 0.1"
+                  value={option.success_rate_formula ?? ""}
+                  onChange={(event) =>
+                    onChangeOption(index, "success_rate_formula", event.target.value)
+                  }
+                />
+              </label>
+            ) : null}
 
             {eventOptions.length > 0 ? (
               <label className="field">
@@ -321,14 +336,82 @@ function OptionDetailCard({
           </div>
         </SectionCard>
 
-        <div className="section-grid section-grid--two">
-          <SectionCard title="成功结果" description="填写该选项成功后带来的资源、属性与状态变化。">
+        <SectionCard
+          title="事件耗时（月）"
+          description="表示执行该选项额外消耗的时间，会单独扣减寿元，不等同于结果中的寿元变化。"
+        >
+          <div className="field-grid">
+            <label className="field">
+              <span className="field__label">事件耗时（月）</span>
+              <input
+                aria-label="事件耗时（月）"
+                min={0}
+                type="number"
+                value={option.time_cost_months ?? 0}
+                onChange={(event) =>
+                  onChangeOption(
+                    index,
+                    "time_cost_months",
+                    Math.max(0, Number(event.target.value) || 0)
+                  )
+                }
+              />
+            </label>
+          </div>
+        </SectionCard>
+
+        {resolutionMode === "combat" ? (
+          <div className="section-grid section-grid--two">
+            <SectionCard title="成功结果" description="填写该选项成功后带来的资源、属性与状态变化。">
+              <div className="field-grid">
+                <label className="field field--full">
+                  <span className="field__label">成功日志</span>
+                  <textarea
+                    aria-label="成功日志"
+                    placeholder="成功分支的战报文案"
+                    value={option.log_text_success ?? ""}
+                    onChange={(event) =>
+                      onChangeOption(index, "log_text_success", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <ResultPayloadEditor
+                labelPrefix="成功"
+                onChange={(value) => onChangeOption(index, "result_on_success", value)}
+                payload={option.result_on_success}
+              />
+            </SectionCard>
+
+            <SectionCard title="失败结果" description="填写该选项失败后的代价、损失或状态变化。">
+              <div className="field-grid">
+                <label className="field field--full">
+                  <span className="field__label">失败日志</span>
+                  <textarea
+                    aria-label="失败日志"
+                    placeholder="失败分支的战报文案"
+                    value={option.log_text_failure ?? ""}
+                    onChange={(event) =>
+                      onChangeOption(index, "log_text_failure", event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <ResultPayloadEditor
+                labelPrefix="失败"
+                onChange={(value) => onChangeOption(index, "result_on_failure", value)}
+                payload={option.result_on_failure}
+              />
+            </SectionCard>
+          </div>
+        ) : (
+          <SectionCard title="结果" description="直接结算时只维护一个结果和结果日志。">
             <div className="field-grid">
               <label className="field field--full">
-                <span className="field__label">成功日志</span>
+                <span className="field__label">结果日志</span>
                 <textarea
-                  aria-label="成功日志"
-                  placeholder="成功分支的战报文案"
+                  aria-label="结果日志"
+                  placeholder="结算后展示的文案"
                   value={option.log_text_success ?? ""}
                   onChange={(event) =>
                     onChangeOption(index, "log_text_success", event.target.value)
@@ -337,33 +420,12 @@ function OptionDetailCard({
               </label>
             </div>
             <ResultPayloadEditor
-              labelPrefix="成功"
+              labelPrefix="结果"
               onChange={(value) => onChangeOption(index, "result_on_success", value)}
               payload={option.result_on_success}
             />
           </SectionCard>
-
-          <SectionCard title="失败结果" description="填写该选项失败后的代价、损失或状态变化。">
-            <div className="field-grid">
-              <label className="field field--full">
-                <span className="field__label">失败日志</span>
-                <textarea
-                  aria-label="失败日志"
-                  placeholder="失败分支的战报文案"
-                  value={option.log_text_failure ?? ""}
-                  onChange={(event) =>
-                    onChangeOption(index, "log_text_failure", event.target.value)
-                  }
-                />
-              </label>
-            </div>
-            <ResultPayloadEditor
-              labelPrefix="失败"
-              onChange={(value) => onChangeOption(index, "result_on_failure", value)}
-              payload={option.result_on_failure}
-            />
-          </SectionCard>
-        </div>
+        )}
       </div>
     </SectionCard>
   );

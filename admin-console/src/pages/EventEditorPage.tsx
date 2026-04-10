@@ -47,13 +47,15 @@ const PANEL_TITLES: Record<Exclude<EditorPanel, null>, string> = {
 
 const SINGLE_OUTCOME_TEXT = "完成事件";
 
+const INITIAL_EVENT_ID = buildNextEventId("cultivation", []);
+
 export function EventEditorPage({
   eventId,
   onBack,
   onSaved,
 }: EventEditorPageProps) {
-  const [template, setTemplate] = useState<EventTemplateInput>(createEmptyTemplate());
-  const [options, setOptions] = useState<EventOptionInput[]>([createEmptyOption(1)]);
+  const [template, setTemplate] = useState<EventTemplateInput>(createEmptyTemplate(INITIAL_EVENT_ID, "cultivation"));
+  const [options, setOptions] = useState<EventOptionInput[]>(createDefaultOptions(INITIAL_EVENT_ID));
   const [existingOptionIds, setExistingOptionIds] = useState<string[]>([]);
   const [removedOptionIds, setRemovedOptionIds] = useState<string[]>([]);
   const [eventLibrary, setEventLibrary] = useState<EventListItem[]>([]);
@@ -76,8 +78,9 @@ export function EventEditorPage({
         if (!isMounted) {
           return;
         }
-        setTemplate(createEmptyTemplate());
-        setOptions([createEmptyOption(1)]);
+        const nextTemplate = createEmptyTemplate(buildNextEventId("cultivation", library.items ?? []), "cultivation");
+        setTemplate(nextTemplate);
+        setOptions(createDefaultOptions(nextTemplate.event_id));
         setExistingOptionIds([]);
         setRemovedOptionIds([]);
         setEventLibrary(library.items ?? []);
@@ -101,7 +104,7 @@ export function EventEditorPage({
         setOptions(
           detail.options.length > 0
             ? detail.options.map(normalizeOption)
-            : [createEmptyOption(1)]
+            : createDefaultOptions(detail.template.event_id)
         );
         setExistingOptionIds(detail.options.map((option) => option.option_id));
         setRemovedOptionIds([]);
@@ -267,23 +270,29 @@ export function EventEditorPage({
     value: EventTemplateInput[K]
   ) {
     setTemplate((current) => {
+      const nextTemplate = {
+        ...current,
+        [field]: value,
+      };
+
+      if (!eventId && field === "event_type") {
+        nextTemplate.event_id = buildNextEventId(String(value), eventLibrary);
+      }
+
       if (field === "choice_pattern") {
         const nextPattern = String(value);
         if (nextPattern === "single_outcome" && current.choice_pattern !== "single_outcome") {
           setOptions((currentOptions) => [
             createCleanSingleOutcomeOption(
               currentOptions[0],
-              current.event_id || "event",
+              nextTemplate.event_id || "event",
               current.event_name
             ),
           ]);
         }
       }
 
-      return {
-        ...current,
-        [field]: value,
-      };
+      return nextTemplate;
     });
   }
 
@@ -316,7 +325,10 @@ export function EventEditorPage({
   }
 
   function handleAddOption() {
-    setOptions((current) => [...current, createEmptyOption(current.length + 1)]);
+    setOptions((current) => [
+      ...current,
+      createEmptyOption(current.length + 1, buildNextOptionId(template.event_id, current)),
+    ]);
   }
 
   function handleRemoveOption(index: number) {
@@ -330,7 +342,7 @@ export function EventEditorPage({
         );
       }
       const next = current.filter((_, optionIndex) => optionIndex !== index);
-      return next.length > 0 ? next : [createEmptyOption(1)];
+      return next.length > 0 ? next : createDefaultOptions(template.event_id || "event");
     });
   }
 
@@ -560,6 +572,7 @@ function buildPreparedOptions({
         option_text: SINGLE_OUTCOME_TEXT,
         sort_order: 1,
         is_default: true,
+        time_cost_months: Math.max(0, Number(base.time_cost_months) || 0),
         success_rate_formula: "",
         requires_resources: {},
         requires_statuses: [],
@@ -573,7 +586,7 @@ function buildPreparedOptions({
     ];
   }
 
-  return options
+  const preparedOptions = options
     .filter((option) => option.option_id.trim() || option.option_text.trim())
     .map((option, index) => ({
       ...option,
@@ -581,7 +594,10 @@ function buildPreparedOptions({
       option_id: option.option_id.trim(),
       option_text: option.option_text.trim(),
       sort_order: index + 1,
+      time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
     }));
+
+  return assignMissingOptionIds(eventIdValue, preparedOptions);
 }
 
 function normalizeSingleOutcomeOption(
@@ -656,12 +672,12 @@ function collectOptionIdsToDelete({
   return [...ids];
 }
 
-function createEmptyTemplate(): EventTemplateInput {
+function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemplateInput {
   return {
-    event_id: "",
+    event_id: eventId,
     event_name: "",
-    event_type: "cultivation",
-    outcome_type: "cultivation",
+    event_type: eventType,
+    outcome_type: eventType,
     risk_level: "normal",
     trigger_sources: ["global"],
     choice_pattern: "binary_choice",
@@ -687,12 +703,13 @@ function createEmptyTemplate(): EventTemplateInput {
   };
 }
 
-function createEmptyOption(sortOrder: number): EventOptionInput {
+function createEmptyOption(sortOrder: number, optionId = ""): EventOptionInput {
   return {
-    option_id: "",
+    option_id: optionId,
     option_text: "",
     sort_order: sortOrder,
     is_default: sortOrder === 1,
+    time_cost_months: 0,
     requires_resources: {},
     requires_statuses: [],
     requires_techniques: [],
@@ -704,6 +721,50 @@ function createEmptyOption(sortOrder: number): EventOptionInput {
     log_text_success: "",
     log_text_failure: "",
   };
+}
+
+function buildNextEventId(eventType: string, events: EventListItem[]): string {
+  const usedIds = new Set(events.map((item) => item.event_id));
+  let sequence = 1;
+
+  while (usedIds.has(`evt_${eventType}_${sequence}`)) {
+    sequence += 1;
+  }
+
+  return `evt_${eventType}_${sequence}`;
+}
+
+function buildNextOptionId(eventIdValue: string, options: EventOptionInput[]): string {
+  const prefix = eventIdValue.trim() || "event";
+  const usedIds = new Set(options.map((option) => option.option_id.trim()).filter(Boolean));
+  let sequence = options.length + 1;
+
+  while (usedIds.has(`${prefix}_option_${sequence}`)) {
+    sequence += 1;
+  }
+
+  return `${prefix}_option_${sequence}`;
+}
+
+function createDefaultOptions(eventIdValue: string): EventOptionInput[] {
+  return [createEmptyOption(1, buildNextOptionId(eventIdValue, []))];
+}
+
+function assignMissingOptionIds(
+  eventIdValue: string,
+  options: EventOptionInput[]
+): EventOptionInput[] {
+  const assigned: EventOptionInput[] = [];
+
+  for (const option of options) {
+    const optionId = option.option_id.trim() || buildNextOptionId(eventIdValue, assigned);
+    assigned.push({
+      ...option,
+      option_id: optionId,
+    });
+  }
+
+  return assigned;
 }
 
 function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
@@ -724,6 +785,7 @@ function normalizeOption(option: EventOptionInput): EventOptionInput {
   return {
     ...createEmptyOption(option.sort_order || 1),
     ...option,
+    time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
     requires_resources: option.requires_resources ?? {},
     requires_statuses: option.requires_statuses ?? [],
     requires_techniques: option.requires_techniques ?? [],

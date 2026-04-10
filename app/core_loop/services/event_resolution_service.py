@@ -8,6 +8,7 @@ from app.core_loop.types import (
     CoreLoopError,
     CurrentEventOption,
     EventOptionConfig,
+    EventResolutionLog,
     EventResultPayload,
     RealmConfig,
     RunState,
@@ -65,6 +66,7 @@ class EventResolutionService:
         )
 
         self._apply_payload(run, payload)
+        self._apply_time_cost(run, option_config.time_cost_months)
         run.event_trigger_counts[template.event_id] = (
             run.event_trigger_counts.get(template.event_id, 0) + 1
         )
@@ -77,9 +79,20 @@ class EventResolutionService:
             run.character.hp_current = 0
             run.character.is_dead = True
 
-        run.result_summary = log_text or self._build_fallback_summary(
+        base_summary = log_text or self._build_fallback_summary(
             run.current_event.event_name,
             option_config.option_text,
+        )
+        run.result_summary = self._build_result_summary(
+            base_summary,
+            option_config.time_cost_months,
+        )
+        run.last_event_resolution = EventResolutionLog(
+            event_id=template.event_id,
+            option_id=option_config.option_id,
+            intended_resources=dict(payload.resources),
+            intended_character=dict(payload.character),
+            time_cost_months=option_config.time_cost_months,
         )
         run.current_event = None
         return run
@@ -106,6 +119,8 @@ class EventResolutionService:
         )
 
     def _determine_success(self, run: RunState, option_config: EventOptionConfig) -> bool:
+        if option_config.resolution_mode == "direct":
+            return True
         success_rate = self._evaluate_success_rate(run, option_config.success_rate_formula)
         return success_rate >= 0.5
 
@@ -269,6 +284,19 @@ class EventResolutionService:
         if payload.death:
             run.character.is_dead = True
             run.character.lifespan_current = 0
+
+    def _apply_time_cost(self, run: RunState, time_cost_months: int) -> None:
+        if time_cost_months <= 0:
+            return
+        run.character.lifespan_current = max(
+            0,
+            run.character.lifespan_current - int(time_cost_months),
+        )
+
+    def _build_result_summary(self, base_summary: str, time_cost_months: int) -> str:
+        if time_cost_months <= 0:
+            return base_summary
+        return f"{base_summary}（额外耗时{time_cost_months}个月）"
 
     def _merge_tags(
         self,

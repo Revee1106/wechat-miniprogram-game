@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+
 import {
   buildPayloadFromEditorState,
   formatLineList,
@@ -152,6 +154,15 @@ export function ResultPayloadEditor({
   const addableChangeOptions = changeCatalog.filter((item) => !usedChangeIds.includes(item.id));
   const activeExtraFields = extraFieldDefinitions.filter((field) => isExtraFieldActive(state, field));
   const addableExtraFields = extraFieldDefinitions.filter((field) => !isExtraFieldActive(state, field));
+  const [draftAmounts, setDraftAmounts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setDraftAmounts(
+      Object.fromEntries(
+        changeEntries.map((entry, index) => [buildEntryKey(entry, index), String(entry.amount)])
+      )
+    );
+  }, [payload, changeEntries.length, changeEntries.map((entry) => `${entry.id}:${entry.amount}`).join("|")]);
 
   function update(partial: Partial<PayloadEditorState>) {
     onChange(
@@ -201,10 +212,38 @@ export function ResultPayloadEditor({
   }
 
   function handleChangeAmount(index: number, nextAmount: string) {
-    const nextEntries = changeEntries.map((entry, entryIndex) =>
-      entryIndex === index ? { ...entry, amount: parseNumberInput(nextAmount, 0) } : entry
+    const entry = changeEntries[index];
+    if (!entry) {
+      return;
+    }
+    const entryKey = buildEntryKey(entry, index);
+    setDraftAmounts((current) => ({
+      ...current,
+      [entryKey]: nextAmount,
+    }));
+
+    if (!/^-?\d+$/.test(nextAmount.trim())) {
+      return;
+    }
+
+    const nextEntries = changeEntries.map((currentEntry, entryIndex) =>
+      entryIndex === index
+        ? { ...currentEntry, amount: parseNumberInput(nextAmount, 0) }
+        : currentEntry
     );
     updateChangeEntries(nextEntries);
+  }
+
+  function handleAmountBlur(index: number) {
+    const entry = changeEntries[index];
+    if (!entry) {
+      return;
+    }
+    const entryKey = buildEntryKey(entry, index);
+    setDraftAmounts((current) => ({
+      ...current,
+      [entryKey]: String(entry.amount),
+    }));
   }
 
   function handleRemoveChange(index: number) {
@@ -282,8 +321,9 @@ export function ResultPayloadEditor({
           {changeEntries.length > 0 ? (
             changeEntries.map((entry, index) => {
               const currentItem = changeCatalogById[entry.id];
+              const entryKey = buildEntryKey(entry, index);
               return (
-                <div key={`${entry.id}-${index}`} className="result-payload-editor__resource-row">
+                <div key={entryKey} className="result-payload-editor__resource-row">
                   <label className="field">
                     <span className="field__hint">变化类型</span>
                     <select
@@ -295,11 +335,7 @@ export function ResultPayloadEditor({
                         const isTakenByAnother =
                           usedChangeIds.includes(item.id) && item.id !== currentItem?.id;
                         return (
-                          <option
-                            key={item.id}
-                            disabled={isTakenByAnother}
-                            value={item.id}
-                          >
+                          <option key={item.id} disabled={isTakenByAnother} value={item.id}>
                             {item.label}
                           </option>
                         );
@@ -311,8 +347,10 @@ export function ResultPayloadEditor({
                     <span className="field__hint">变动数值</span>
                     <input
                       aria-label={`${labelPrefix}变化数值-${index + 1}`}
-                      type="number"
-                      value={entry.amount}
+                      inputMode="numeric"
+                      type="text"
+                      value={draftAmounts[entryKey] ?? String(entry.amount)}
+                      onBlur={() => handleAmountBlur(index)}
                       onChange={(event) => handleChangeAmount(index, event.target.value)}
                     />
                   </label>
@@ -348,7 +386,10 @@ export function ResultPayloadEditor({
                 return (
                   <div key={field.key} className="requirement-field">
                     <div className="requirement-field__toolbar">
-                      <span className="requirement-field__label">{labelPrefix}{field.label}</span>
+                      <span className="requirement-field__label">
+                        {labelPrefix}
+                        {field.label}
+                      </span>
                       <button
                         className="button-secondary"
                         type="button"
@@ -359,7 +400,10 @@ export function ResultPayloadEditor({
                     </div>
                     <label className="switch-field field--full">
                       <span>
-                        <strong>{labelPrefix}{field.label}</strong>
+                        <strong>
+                          {labelPrefix}
+                          {field.label}
+                        </strong>
                         <span className="field__hint">{field.hint}</span>
                       </span>
                       <input
@@ -376,7 +420,10 @@ export function ResultPayloadEditor({
               return (
                 <div key={field.key} className="requirement-field">
                   <div className="requirement-field__toolbar">
-                    <span className="requirement-field__label">{labelPrefix}{field.label}</span>
+                    <span className="requirement-field__label">
+                      {labelPrefix}
+                      {field.label}
+                    </span>
                     <button
                       className="button-secondary"
                       type="button"
@@ -391,7 +438,9 @@ export function ResultPayloadEditor({
                     placeholder={field.placeholder}
                     value={formatLineList(state[field.key])}
                     onChange={(event) =>
-                      update({ [field.key]: parseLineList(event.target.value) } as Partial<PayloadEditorState>)
+                      update({
+                        [field.key]: parseLineList(event.target.value),
+                      } as Partial<PayloadEditorState>)
                     }
                   />
                 </div>
@@ -427,4 +476,8 @@ function isExtraFieldActive(state: PayloadEditorState, field: ExtraFieldDefiniti
     return state.death;
   }
   return state[field.key].length > 0;
+}
+
+function buildEntryKey(entry: ChangeEntry, index: number): string {
+  return `${entry.id}-${index}`;
 }

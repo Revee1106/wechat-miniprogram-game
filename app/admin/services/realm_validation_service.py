@@ -29,6 +29,12 @@ def validate_realm_config(*, realms: list[dict[str, object]]) -> ConfigValidatio
         required_spirit_stone, spirit_stone_valid = _coerce_int(
             realm.get("required_spirit_stone")
         )
+        base_cultivation_gain_per_advance, base_cultivation_gain_valid = _coerce_int(
+            realm.get("base_cultivation_gain_per_advance", 0)
+        )
+        base_spirit_stone_cost_per_advance, base_spirit_stone_cost_valid = _coerce_int(
+            realm.get("base_spirit_stone_cost_per_advance", 0)
+        )
         lifespan_bonus, lifespan_bonus_valid = _coerce_int(realm.get("lifespan_bonus"))
 
         if not display_name.strip():
@@ -43,8 +49,21 @@ def validate_realm_config(*, realms: list[dict[str, object]]) -> ConfigValidatio
             errors.append(f"realm '{key}' has invalid required_cultivation_exp")
         if not spirit_stone_valid or required_spirit_stone < 0:
             errors.append(f"realm '{key}' has invalid required_spirit_stone")
+        if (
+            not base_cultivation_gain_valid
+            or base_cultivation_gain_per_advance < 0
+        ):
+            errors.append(f"realm '{key}' has invalid base_cultivation_gain_per_advance")
+        if (
+            not base_spirit_stone_cost_valid
+            or base_spirit_stone_cost_per_advance < 0
+        ):
+            errors.append(f"realm '{key}' has invalid base_spirit_stone_cost_per_advance")
         if not lifespan_bonus_valid or lifespan_bonus < 0:
             errors.append(f"realm '{key}' has invalid lifespan_bonus")
+        failure_penalty_error = _validate_failure_penalty(key, realm.get("failure_penalty"))
+        if failure_penalty_error is not None:
+            errors.append(failure_penalty_error)
 
     return ConfigValidationResult(is_valid=not errors, errors=errors, warnings=[])
 
@@ -78,3 +97,23 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _validate_failure_penalty(realm_key: str, value: object) -> str | None:
+    if value in (None, {}):
+        return None
+    if not isinstance(value, dict):
+        return f"realm '{realm_key}' has invalid failure_penalty"
+    if set(value) - {"character"}:
+        return f"realm '{realm_key}' has invalid failure_penalty"
+
+    character_payload = value.get("character", {})
+    if not isinstance(character_payload, dict):
+        return f"realm '{realm_key}' has invalid failure_penalty"
+    if set(character_payload) - {"cultivation_exp"}:
+        return f"realm '{realm_key}' has invalid failure_penalty"
+
+    cultivation_exp_penalty, is_valid = _coerce_int(character_payload.get("cultivation_exp", 0))
+    if not is_valid or cultivation_exp_penalty > 0:
+        return f"realm '{realm_key}' has invalid failure_penalty"
+    return None

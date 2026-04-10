@@ -146,6 +146,7 @@ class EventService:
             option_text=option.option_text,
             sort_order=option.sort_order,
             is_default=option.is_default,
+            time_cost_months=option.time_cost_months,
             requires_resources=dict(option.requires_resources),
             requires_statuses=list(option.requires_statuses),
             requires_techniques=list(option.requires_techniques),

@@ -20,6 +20,12 @@ def load_realm_configs(base_path: Path | str | None = None) -> list[RealmConfig]
             major_realm=str(realm.get("major_realm", "")),
             stage_index=_coerce_int(realm.get("stage_index", 0)),
             order_index=_coerce_int(realm.get("order_index", 0)),
+            base_cultivation_gain_per_advance=_coerce_int(
+                realm.get("base_cultivation_gain_per_advance", 0)
+            ),
+            base_spirit_stone_cost_per_advance=_coerce_int(
+                realm.get("base_spirit_stone_cost_per_advance", 0)
+            ),
             lifespan_bonus=_coerce_int(realm.get("lifespan_bonus", 0)),
             base_success_rate=_coerce_float(realm.get("base_success_rate", 0)),
             required_exp=_coerce_int(realm.get("required_cultivation_exp", 0)),
@@ -28,6 +34,7 @@ def load_realm_configs(base_path: Path | str | None = None) -> list[RealmConfig]
                 str(key): _coerce_int(value)
                 for key, value in dict(realm.get("required_materials", {})).items()
             },
+            failure_penalty=_coerce_failure_penalty(realm.get("failure_penalty")),
             is_enabled=_coerce_bool(realm.get("is_enabled", True)),
         )
         for realm in realms
@@ -70,3 +77,16 @@ def _coerce_float(value: object) -> float:
 
 def _coerce_bool(value: object) -> bool:
     return value is True
+
+
+def _coerce_failure_penalty(value: object) -> dict[str, dict[str, int]]:
+    if not isinstance(value, dict):
+        return {}
+    character_payload = value.get("character")
+    if not isinstance(character_payload, dict):
+        return {}
+    normalized = {
+        str(key): _coerce_int(amount)
+        for key, amount in character_payload.items()
+    }
+    return {"character": normalized} if normalized else {}

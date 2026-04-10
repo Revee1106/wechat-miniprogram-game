@@ -26,6 +26,7 @@ type EventTemplateFormProps = {
   template: EventTemplateInput;
   isNew: boolean;
   sections?: EventTemplateSection[];
+  realmOptions?: Array<{ value: string; label: string }>;
   onChange: <K extends keyof EventTemplateInput>(
     field: K,
     value: EventTemplateInput[K]
@@ -36,6 +37,7 @@ export function EventTemplateForm({
   template,
   isNew,
   sections,
+  realmOptions = [],
   onChange,
 }: EventTemplateFormProps) {
   const visibleSections = sections ?? ["identity", "trigger", "requirements", "summary"];
@@ -216,10 +218,10 @@ export function EventTemplateForm({
               <span className="field__label">事件编号</span>
               <input
                 aria-label="事件编号"
-                disabled={!isNew}
+                disabled
                 placeholder="例如 evt_mountain_tide"
                 value={template.event_id}
-                onChange={(event) => onChange("event_id", event.target.value)}
+                readOnly
               />
               <span className="field__hint">技术标识，创建后不建议再改。</span>
             </label>
@@ -369,22 +371,34 @@ export function EventTemplateForm({
 
             <label className="field">
               <span className="field__label">最低境界</span>
-              <input
+              <select
                 aria-label="最低境界"
-                placeholder="填写境界标识"
                 value={template.realm_min ?? ""}
                 onChange={(event) => onChange("realm_min", event.target.value || null)}
-              />
+              >
+                <option value="">无限制</option>
+                {realmOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="field">
               <span className="field__label">最高境界</span>
-              <input
+              <select
                 aria-label="最高境界"
-                placeholder="填写境界标识"
                 value={template.realm_max ?? ""}
                 onChange={(event) => onChange("realm_max", event.target.value || null)}
-              />
+              >
+                <option value="">无限制</option>
+                {realmOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
             </label>
 
             <label className="field">

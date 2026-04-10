@@ -21,13 +21,21 @@ router = APIRouter(tags=["core-loop"])
 run_service = RunService()
 
 
+def _build_error_detail(error: CoreLoopError) -> dict[str, object]:
+    return {
+        "code": error.code,
+        "message": error.message,
+        "params": error.params,
+    }
+
+
 def _raise_http_error(error: Exception) -> None:
     if isinstance(error, NotFoundError):
-        raise HTTPException(status_code=404, detail=str(error)) from error
+        raise HTTPException(status_code=404, detail=_build_error_detail(error)) from error
     if isinstance(error, ConflictError):
-        raise HTTPException(status_code=409, detail=str(error)) from error
+        raise HTTPException(status_code=409, detail=_build_error_detail(error)) from error
     if isinstance(error, CoreLoopError):
-        raise HTTPException(status_code=400, detail=str(error)) from error
+        raise HTTPException(status_code=400, detail=_build_error_detail(error)) from error
     raise error
 
 

@@ -81,6 +81,9 @@ def test_service_creates_updates_and_deletes_realms() -> None:
             "required_cultivation_exp": 100,
             "required_spirit_stone": 20,
             "lifespan_bonus": 6,
+            "base_cultivation_gain_per_advance": 3,
+            "base_spirit_stone_cost_per_advance": 1,
+            "failure_penalty": {},
             "is_enabled": True,
         }
     )
@@ -96,6 +99,9 @@ def test_service_creates_updates_and_deletes_realms() -> None:
             "required_cultivation_exp": 120,
             "required_spirit_stone": 25,
             "lifespan_bonus": 8,
+            "base_cultivation_gain_per_advance": 4,
+            "base_spirit_stone_cost_per_advance": 2,
+            "failure_penalty": {"character": {"cultivation_exp": -50}},
             "is_enabled": True,
         },
     )
@@ -103,6 +109,9 @@ def test_service_creates_updates_and_deletes_realms() -> None:
 
     assert created["key"] == "qi_refining_early"
     assert updated["display_name"] == "鐐兼皵鍒濇湡锛堟洿鏂帮級"
+    assert updated["base_cultivation_gain_per_advance"] == 4
+    assert updated["base_spirit_stone_cost_per_advance"] == 2
+    assert updated["failure_penalty"] == {"character": {"cultivation_exp": -50}}
     assert deleted is True
     rmtree(base_path)
 

@@ -7,13 +7,16 @@ import {
   deleteOption,
   fetchEventDetail,
   fetchEvents,
+  fetchRealms,
   reloadEvents,
   updateEvent,
   updateOption,
   type EventListItem,
   type EventOptionInput,
+  type RealmConfig,
   type EventTemplateInput,
 } from "../api/client";
+import { formatRealmDisplayName } from "../utils/displayText";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
 import { EventOptionEditor } from "../components/EventOptionEditor";
 import {
@@ -47,6 +50,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
   const [options, setOptions] = useState<EventOptionInput[]>([]);
   const [existingOptionIds, setExistingOptionIds] = useState<string[]>([]);
   const [removedOptionIds, setRemovedOptionIds] = useState<string[]>([]);
+  const [realmOptions, setRealmOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [drawerPanel, setDrawerPanel] = useState<EventPanel | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -70,12 +74,13 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     async function loadLibrary() {
       setIsLoading(true);
       try {
-        const [filteredResponse, fullResponse] = await Promise.all([
+        const [filteredResponse, fullResponse, realmsResponse] = await Promise.all([
           fetchEvents({
             eventType: eventTypeFilter,
             riskLevel: riskLevelFilter,
           }),
           fetchEvents(),
+          fetchRealms(),
         ]);
         if (!isMounted) {
           return;
@@ -84,6 +89,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         const nextAllItems = fullResponse.items ?? [];
         setItems(nextItems);
         setAllItems(nextAllItems);
+        setRealmOptions(mapRealmOptions(realmsResponse.items ?? []));
         setSelectedEventId((current) => {
           if (current === DRAFT_EVENT_ID && template) {
             return current;
@@ -125,7 +131,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         }
         setTemplate(normalizeTemplate(detail.template));
         setOptions(
-          detail.options.length > 0 ? detail.options.map(normalizeOption) : [createEmptyOption(1)]
+          detail.options.length > 0 ? detail.options.map(normalizeOption) : createDefaultOptions(detail.template.event_id)
         );
         setExistingOptionIds(detail.options.map((option) => option.option_id));
         setRemovedOptionIds([]);
@@ -149,8 +155,9 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
 
   function handleCreateDraft(eventType = "cultivation") {
     setSelectedEventId(DRAFT_EVENT_ID);
-    setTemplate(createEmptyTemplate(eventType));
-    setOptions([createEmptyOption(1)]);
+    const nextTemplate = createEmptyTemplate(buildNextEventId(eventType, allItems), eventType);
+    setTemplate(nextTemplate);
+    setOptions(createDefaultOptions(nextTemplate.event_id));
     setExistingOptionIds([]);
     setRemovedOptionIds([]);
     setDrawerPanel("identity");
@@ -186,6 +193,9 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         ...(current ?? createEmptyTemplate()),
         [field]: value,
       };
+      if (isDraft && field === "event_type") {
+        nextTemplate.event_id = buildNextEventId(String(value), allItems);
+      }
       if (field === "choice_pattern" && String(value) === "single_outcome") {
         setOptions((currentOptions) => [
           createCleanSingleOutcomeOption(
@@ -224,7 +234,13 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
 
   function handleAddOption() {
     setOptions((current) => {
-      const next = [...current, createEmptyOption(current.length + 1)];
+      const next = [
+        ...current,
+        createEmptyOption(
+          current.length + 1,
+          buildNextOptionId(template?.event_id ?? "", current)
+        ),
+      ];
       setActiveOptionIndex(next.length - 1);
       return next;
     });
@@ -240,7 +256,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
       }
       const next = current.filter((_, optionIndex) => optionIndex !== index);
       setActiveOptionIndex(Math.max(0, Math.min(index, next.length - 1)));
-      return next.length > 0 ? next : [createEmptyOption(1)];
+      return next.length > 0 ? next : createDefaultOptions(template?.event_id ?? "event");
     });
   }
 
@@ -552,6 +568,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               onChange={handleTemplateChange}
+              realmOptions={realmOptions}
               sections={["identity"]}
               template={template}
             />
@@ -559,6 +576,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               onChange={handleTemplateChange}
+              realmOptions={realmOptions}
               sections={["trigger"]}
               template={template}
             />
@@ -566,6 +584,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               onChange={handleTemplateChange}
+              realmOptions={realmOptions}
               sections={["requirements"]}
               template={template}
             />
@@ -749,6 +768,8 @@ function buildPreparedOptions({
         option_text: SINGLE_OUTCOME_TEXT,
         sort_order: 1,
         is_default: true,
+        time_cost_months: Math.max(0, Number(base.time_cost_months) || 0),
+        resolution_mode: "direct",
         success_rate_formula: "",
         requires_resources: {},
         requires_statuses: [],
@@ -762,15 +783,19 @@ function buildPreparedOptions({
     ];
   }
 
-  return options
+  const preparedOptions = options
     .filter((option) => option.option_id.trim() || option.option_text.trim())
-    .map((option, index) => ({
-      ...option,
-      event_id: eventIdValue,
-      option_id: option.option_id.trim(),
-      option_text: option.option_text.trim(),
-      sort_order: index + 1,
-    }));
+    .map((option, index) =>
+      sanitizeOptionForSave({
+        ...option,
+        event_id: eventIdValue,
+        option_id: option.option_id.trim(),
+        option_text: option.option_text.trim(),
+        sort_order: index + 1,
+      })
+    );
+
+  return assignMissingOptionIds(eventIdValue, preparedOptions);
 }
 
 function normalizeSingleOutcomeOption(
@@ -784,6 +809,7 @@ function normalizeSingleOutcomeOption(
     option_text: SINGLE_OUTCOME_TEXT,
     sort_order: 1,
     is_default: true,
+    resolution_mode: "direct",
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -807,6 +833,7 @@ function createCleanSingleOutcomeOption(
     option_text: SINGLE_OUTCOME_TEXT,
     sort_order: 1,
     is_default: true,
+    resolution_mode: "direct",
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -845,9 +872,9 @@ function collectOptionIdsToDelete({
   return [...ids];
 }
 
-function createEmptyTemplate(eventType = "cultivation"): EventTemplateInput {
+function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemplateInput {
   return {
-    event_id: "",
+    event_id: eventId,
     event_name: "",
     event_type: eventType,
     outcome_type: eventType,
@@ -876,12 +903,25 @@ function createEmptyTemplate(eventType = "cultivation"): EventTemplateInput {
   };
 }
 
-function createEmptyOption(sortOrder: number): EventOptionInput {
+function buildNextEventId(eventType: string, events: EventListItem[]): string {
+  const usedIds = new Set(events.map((item) => item.event_id));
+  let sequence = 1;
+
+  while (usedIds.has(`evt_${eventType}_${sequence}`)) {
+    sequence += 1;
+  }
+
+  return `evt_${eventType}_${sequence}`;
+}
+
+function createEmptyOption(sortOrder: number, optionId = ""): EventOptionInput {
   return {
-    option_id: "",
+    option_id: optionId,
     option_text: "",
     sort_order: sortOrder,
     is_default: sortOrder === 1,
+    time_cost_months: 0,
+    resolution_mode: "direct",
     requires_resources: {},
     requires_statuses: [],
     requires_techniques: [],
@@ -893,6 +933,39 @@ function createEmptyOption(sortOrder: number): EventOptionInput {
     log_text_success: "",
     log_text_failure: "",
   };
+}
+
+function buildNextOptionId(eventIdValue: string, options: EventOptionInput[]): string {
+  const prefix = eventIdValue.trim() || "event";
+  const usedIds = new Set(options.map((option) => option.option_id.trim()).filter(Boolean));
+  let sequence = options.length + 1;
+
+  while (usedIds.has(`${prefix}_option_${sequence}`)) {
+    sequence += 1;
+  }
+
+  return `${prefix}_option_${sequence}`;
+}
+
+function createDefaultOptions(eventIdValue: string): EventOptionInput[] {
+  return [createEmptyOption(1, buildNextOptionId(eventIdValue, []))];
+}
+
+function assignMissingOptionIds(
+  eventIdValue: string,
+  options: EventOptionInput[]
+): EventOptionInput[] {
+  const assigned: EventOptionInput[] = [];
+
+  for (const option of options) {
+    const optionId = option.option_id.trim() || buildNextOptionId(eventIdValue, assigned);
+    assigned.push({
+      ...option,
+      option_id: optionId,
+    });
+  }
+
+  return assigned;
 }
 
 function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
@@ -910,9 +983,12 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
 }
 
 function normalizeOption(option: EventOptionInput): EventOptionInput {
+  const resolutionMode = inferResolutionMode(option);
   return {
     ...createEmptyOption(option.sort_order || 1),
     ...option,
+    time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+    resolution_mode: resolutionMode,
     requires_resources: option.requires_resources ?? {},
     requires_statuses: option.requires_statuses ?? [],
     requires_techniques: option.requires_techniques ?? [],
@@ -925,6 +1001,55 @@ function normalizeOption(option: EventOptionInput): EventOptionInput {
     result_on_failure: option.result_on_failure ?? {},
   };
 }
+
+function inferResolutionMode(option: EventOptionInput): string {
+  if (option.resolution_mode === "direct" || option.resolution_mode === "combat") {
+    return option.resolution_mode;
+  }
+  if (
+    Boolean(option.success_rate_formula?.trim()) ||
+    Boolean(option.log_text_failure?.trim()) ||
+    hasPayloadContent(option.result_on_failure)
+  ) {
+    return "combat";
+  }
+  return "direct";
+}
+
+function hasPayloadContent(payload: EventOptionInput["result_on_failure"]): boolean {
+  if (!payload) {
+    return false;
+  }
+  if (typeof payload === "string") {
+    return payload.trim().length > 0;
+  }
+  return Object.keys(payload).length > 0;
+}
+
+function sanitizeOptionForSave(option: EventOptionInput): EventOptionInput {
+  const normalizedOption = {
+    ...option,
+    time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+  };
+  if (option.resolution_mode === "combat") {
+    return normalizedOption;
+  }
+  return {
+    ...normalizedOption,
+    resolution_mode: "direct",
+    success_rate_formula: "",
+    result_on_failure: {},
+    log_text_failure: "",
+  };
+}
+
+function mapRealmOptions(realms: RealmConfig[]): Array<{ value: string; label: string }> {
+  return realms.map((realm) => ({
+    value: realm.key,
+    label: formatRealmDisplayName(realm.display_name, realm.key),
+  }));
+}
+
 
 
 

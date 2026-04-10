@@ -6,6 +6,18 @@ from dataclasses import dataclass, field
 class CoreLoopError(Exception):
     """Base domain error."""
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str = "core.unknown",
+        params: dict[str, object] | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.params = dict(params or {})
+
 
 class NotFoundError(CoreLoopError):
     """Raised when an entity cannot be found."""
@@ -26,7 +38,10 @@ class RealmConfig:
     base_success_rate: float
     required_exp: int
     required_spirit_stone: int
+    base_cultivation_gain_per_advance: int = 0
+    base_spirit_stone_cost_per_advance: int = 0
     required_materials: dict[str, int] = field(default_factory=dict)
+    failure_penalty: dict[str, dict[str, int]] = field(default_factory=dict)
     is_enabled: bool = True
 
 
@@ -98,6 +113,8 @@ class EventOptionConfig:
     option_text: str
     sort_order: int = 1
     is_default: bool = False
+    time_cost_months: int = 0
+    resolution_mode: str = ""
     requires_resources: dict[str, int] = field(default_factory=dict)
     requires_statuses: list[str] = field(default_factory=list)
     requires_techniques: list[str] = field(default_factory=list)
@@ -130,6 +147,7 @@ class CurrentEventOption:
     option_text: str
     sort_order: int
     is_default: bool
+    time_cost_months: int = 0
     requires_resources: dict[str, int] = field(default_factory=dict)
     requires_statuses: list[str] = field(default_factory=list)
     requires_techniques: list[str] = field(default_factory=list)
@@ -152,6 +170,17 @@ class CurrentEvent:
     region: str
     status: str
     options: list[CurrentEventOption]
+
+
+@dataclass
+class EventResolutionLog:
+    event_id: str
+    option_id: str
+    intended_resources: dict[str, int] = field(default_factory=dict)
+    intended_character: dict[str, int] = field(default_factory=dict)
+    actual_character: dict[str, int] = field(default_factory=dict)
+    capped_character: dict[str, int] = field(default_factory=dict)
+    time_cost_months: int = 0
 
 
 @dataclass
@@ -312,6 +341,7 @@ class RunState:
     dwelling_level: int = 1
     dwelling_facilities: list[DwellingFacilityState] = field(default_factory=list)
     dwelling_last_settlement: DwellingSettlement | None = None
+    last_event_resolution: EventResolutionLog | None = None
     result_summary: str | None = None
     event_trigger_counts: dict[str, int] = field(default_factory=dict)
     event_cooldowns: dict[str, int] = field(default_factory=dict)

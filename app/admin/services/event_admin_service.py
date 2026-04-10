@@ -92,13 +92,39 @@ class EventAdminService:
 
     def create_option(self, event_id: str, option_payload: dict[str, object]) -> dict[str, object]:
         payload = self._repository.load()
-        if not any(template.get("event_id") == event_id for template in payload["templates"]):
+        template = next(
+            (item for item in payload["templates"] if item.get("event_id") == event_id),
+            None,
+        )
+        if template is None:
             raise NotFoundError(f"event '{event_id}' not found")
-        if any(item.get("option_id") == option_payload.get("option_id") for item in payload["options"]):
-            raise ValueError(f"option '{option_payload.get('option_id')}' already exists")
         normalized_option = dict(option_payload)
         normalized_option["event_id"] = event_id
-        payload["options"].append(normalized_option)
+        option_id = str(normalized_option.get("option_id", "")).strip()
+        if not option_id:
+            option_id = self._build_next_option_id(
+                event_id=event_id,
+                options=payload["options"],
+                sort_order=int(normalized_option.get("sort_order", 1) or 1),
+            )
+            normalized_option["option_id"] = option_id
+        if any(item.get("option_id") == option_id for item in payload["options"]):
+            raise ValueError(f"option '{option_id}' already exists")
+
+        self._repair_blank_option_ref(
+            template=template,
+            option_id=option_id,
+            sort_order=int(normalized_option.get("sort_order", 1) or 1),
+        )
+        repaired = self._repair_blank_option_record(
+            payload=payload,
+            template=template,
+            event_id=event_id,
+            normalized_option=normalized_option,
+        )
+        if not repaired:
+            payload["options"].append(normalized_option)
+
         self._repository.save(payload)
         return normalized_option
 
@@ -178,3 +204,78 @@ class EventAdminService:
             if keyword.lower() not in haystack:
                 return False
         return True
+
+    def _repair_blank_option_record(
+        self,
+        *,
+        payload: dict[str, list[dict[str, object]]],
+        template: dict[str, object],
+        event_id: str,
+        normalized_option: dict[str, object],
+    ) -> bool:
+        target_sort_order = int(normalized_option.get("sort_order", 1) or 1)
+
+        for index, option in enumerate(payload["options"]):
+            if option.get("event_id") != event_id:
+                continue
+            if str(option.get("option_id", "")).strip():
+                continue
+            if int(option.get("sort_order", 1) or 1) != target_sort_order:
+                continue
+
+            payload["options"][index] = normalized_option
+            option_refs = list(template.get("option_ids", []))
+            replaced = False
+            for ref_index, option_ref in enumerate(option_refs):
+                if not str(option_ref).strip():
+                    option_refs[ref_index] = str(normalized_option["option_id"])
+                    replaced = True
+                    break
+            if not replaced and str(normalized_option["option_id"]) not in option_refs:
+                option_refs.append(str(normalized_option["option_id"]))
+            template["option_ids"] = option_refs
+            return True
+
+        return False
+
+    def _repair_blank_option_ref(
+        self,
+        *,
+        template: dict[str, object],
+        option_id: str,
+        sort_order: int,
+    ) -> None:
+        option_refs = list(template.get("option_ids", []))
+        if not option_refs or "" not in option_refs:
+            return
+
+        target_index = max(0, sort_order - 1)
+        if target_index < len(option_refs) and not str(option_refs[target_index]).strip():
+            option_refs[target_index] = option_id
+            template["option_ids"] = option_refs
+            return
+
+        for index, option_ref in enumerate(option_refs):
+            if not str(option_ref).strip():
+                option_refs[index] = option_id
+                template["option_ids"] = option_refs
+                return
+
+    def _build_next_option_id(
+        self,
+        *,
+        event_id: str,
+        options: list[dict[str, object]],
+        sort_order: int,
+    ) -> str:
+        used_ids = {
+            str(option.get("option_id", "")).strip()
+            for option in options
+            if str(option.get("event_id", "")) == event_id and str(option.get("option_id", "")).strip()
+        }
+        sequence = max(1, sort_order)
+
+        while f"{event_id}_option_{sequence}" in used_ids:
+            sequence += 1
+
+        return f"{event_id}_option_{sequence}"
