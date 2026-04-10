@@ -3,6 +3,28 @@ import { expect, test, vi } from "vitest";
 
 import { EventOptionEditor } from "./EventOptionEditor";
 
+function createCombatOption() {
+  return {
+    option_id: "opt_battle",
+    option_text: "遭遇山匪",
+    sort_order: 1,
+    is_default: true,
+    resolution_mode: "combat",
+    requires_resources: {},
+    requires_statuses: [],
+    requires_techniques: [],
+    requires_equipment_tags: [],
+    success_rate_formula: "base_success_rate + 0.1",
+    result_on_success: {
+      resources: { spirit_stone: 2 },
+    },
+    result_on_failure: {},
+    next_event_id: null,
+    log_text_success: "",
+    log_text_failure: "",
+  };
+}
+
 test("option requirement section starts collapsed until a precondition is added", () => {
   const onChangeOption = vi.fn();
 

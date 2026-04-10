@@ -61,6 +61,10 @@ def load_event_registry(base_path: str | None = None) -> EventRegistry:
             template,
             options,
         )
+        normalized_template = replace(
+            normalized_template,
+            region=_normalize_region(normalized_template.region),
+        )
         normalized_templates.append(normalized_template)
         ignored_option_ids.update(ignored_option_ids_for_template)
         templates[template.event_id] = normalized_template
@@ -269,3 +273,8 @@ def _normalize_resource_key(resource_name: str) -> str:
         "iron_essence": "ore",
     }
     return aliases.get(resource_name, resource_name)
+
+
+def _normalize_region(region: str) -> str:
+    normalized_region = region.strip()
+    return normalized_region or "unknown"

@@ -68,6 +68,22 @@ export type EventOptionInput = {
   log_text_failure?: string;
 };
 
+export type BattleConfigInput = {
+  enemy_name: string;
+  enemy_realm_label: string;
+  enemy_hp: number;
+  enemy_attack: number;
+  enemy_defense: number;
+  enemy_speed: number;
+  allow_flee: boolean;
+  flee_base_rate: number;
+  pill_heal_amount: number;
+  victory_log?: string;
+  defeat_log?: string;
+  flee_success_log?: string;
+  flee_failure_log?: string;
+};
+
 export type EventDetailResponse = {
   template: EventTemplateInput;
   options: EventOptionInput[];

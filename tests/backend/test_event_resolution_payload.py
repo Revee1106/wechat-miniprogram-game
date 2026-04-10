@@ -3,6 +3,7 @@ from app.core_loop.services.event_resolution_service import EventResolutionServi
 from app.core_loop.services.event_service import EventService
 from app.core_loop.types import (
     CharacterState,
+    AlchemyInventoryItem,
     EventOptionConfig,
     EventResultPayload,
     EventTemplateConfig,
@@ -279,3 +280,70 @@ def test_resolve_event_applies_time_cost_months_as_extra_lifespan_loss_only() ->
     assert resolved.character.lifespan_current == 117
     assert resolved.round_index == before_round_index
     assert resolved.result_summary == "time cost log（额外耗时3个月）"
+
+
+def test_resolve_combat_event_enters_active_battle_without_applying_payload() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_combat": EventTemplateConfig(
+                event_id="evt_combat",
+                event_name="Combat Event",
+                event_type="encounter",
+                option_ids=["opt_combat"],
+            )
+        },
+        options={
+            "opt_combat": EventOptionConfig(
+                option_id="opt_combat",
+                event_id="evt_combat",
+                option_text="Fight",
+                is_default=True,
+                resolution_mode="combat",
+                time_cost_months=2,
+                result_on_success=EventResultPayload(
+                    resources={"spirit_stone": 7},
+                    character={"cultivation_exp": 5},
+                    battle={
+                        "enemy_name": "山匪",
+                        "enemy_realm_label": "炼气初期",
+                        "enemy_hp": 1,
+                        "enemy_attack": 1,
+                        "enemy_defense": 0,
+                        "enemy_speed": 1,
+                        "allow_flee": True,
+                        "flee_base_rate": 0.35,
+                        "pill_heal_amount": 12,
+                    },
+                ),
+                result_on_failure=EventResultPayload(),
+                log_text_success="victory log",
+                log_text_failure="defeat log",
+            )
+        },
+    )
+    run = _build_run()
+    run.resources.spirit_stone = 17
+    run.resources.pill = 1
+    run.alchemy_state.inventory = [
+        AlchemyInventoryItem(
+            item_id="yang_qi_dan",
+            display_name="养气丹",
+            quality="low",
+            amount=1,
+            effect_summary="恢复修为",
+        )
+    ]
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_combat")
+
+    assert resolved.current_event is not None
+    assert resolved.active_battle is not None
+    assert resolved.active_battle.source_event_id == "evt_combat"
+    assert resolved.active_battle.source_option_id == "opt_combat"
+    assert resolved.active_battle.is_finished is False
+    assert resolved.active_battle.result is None
+    assert resolved.active_battle.pill_count == 1
+    assert resolved.character.cultivation_exp == 0
+    assert resolved.resources.spirit_stone == 17
+    assert resolved.resources.pill == 1

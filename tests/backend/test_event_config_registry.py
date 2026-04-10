@@ -337,6 +337,46 @@ def test_runtime_registry_loads_from_repository_files() -> None:
     rmtree(base_path)
 
 
+def test_runtime_registry_normalizes_blank_region_to_default_value() -> None:
+    base_path = _make_test_base_path("registry-region-normalize")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_blank_region",
+                    "event_name": "Blank Region",
+                    "event_type": "cultivation",
+                    "outcome_type": "cultivation",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Blank Region",
+                    "body_text": "Body",
+                    "region": "",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_blank_region"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_blank_region",
+                    "event_id": "evt_blank_region",
+                    "option_text": "Accept",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {"character": {"cultivation_exp": 1}},
+                }
+            ],
+        }
+    )
+
+    registry = load_event_registry(base_path=base_path)
+
+    assert registry.templates["evt_blank_region"].region == "unknown"
+    rmtree(base_path)
+
+
 def test_runtime_registry_prefers_repository_payload_when_base_path_is_omitted(
     monkeypatch,
 ) -> None:

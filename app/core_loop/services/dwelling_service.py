@@ -174,6 +174,26 @@ class DwellingService:
         self.hydrate_run(run)
         return settlement
 
+    def refresh_operational_status(self, run: RunState) -> None:
+        self.hydrate_run(run)
+
+        for facility in run.dwelling_facilities:
+            if facility.level == 0:
+                continue
+
+            spec = self._specs_by_id.get(facility.facility_id)
+            if spec is None:
+                continue
+
+            level_spec = spec.levels.get(facility.level)
+            if level_spec is None:
+                continue
+
+            if self._can_afford(run, level_spec.maintenance_cost):
+                facility.status = self._active_status_for_level(facility.level, spec.max_level)
+            else:
+                facility.status = "stalled"
+
     def get_breakthrough_bonus(self, run: RunState) -> float:
         return self._get_array_special_effect(run, "breakthrough_bonus_rate")
 

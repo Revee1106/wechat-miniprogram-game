@@ -52,15 +52,40 @@ def resolve_realm_key(
     if exact_match is not None:
         return exact_match
 
-    matching_keys = [
-        config.key for config in realm_configs if config.major_realm == realm_key
-    ]
+    matching_keys = _get_matching_major_realm_keys(realm_key, realm_configs)
     if not matching_keys:
         return realm_key
 
     if boundary == "max":
         return matching_keys[-1]
     return matching_keys[0]
+
+
+def _get_matching_major_realm_keys(
+    realm_key: str,
+    realm_configs: Sequence[RealmConfig],
+) -> list[str]:
+    matching_keys = [
+        config.key for config in realm_configs if config.major_realm == realm_key
+    ]
+    if matching_keys:
+        return matching_keys
+
+    inferred_major_realm = _infer_major_realm_key(realm_key)
+    if inferred_major_realm is None:
+        return []
+
+    return [
+        config.key for config in realm_configs if config.major_realm == inferred_major_realm
+    ]
+
+
+def _infer_major_realm_key(realm_key: str) -> str | None:
+    known_stage_suffixes = {"early", "mid", "late", "peak"}
+    major_realm, _, stage_suffix = realm_key.rpartition("_")
+    if not major_realm or stage_suffix not in known_stage_suffixes:
+        return None
+    return major_realm
 
 
 def _coerce_int(value: object) -> int:

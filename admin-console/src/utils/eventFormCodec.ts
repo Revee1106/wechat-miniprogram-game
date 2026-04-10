@@ -91,6 +91,87 @@ export type PayloadEditorState = {
   death: boolean;
 };
 
+export type BattleConfigState = {
+  enemy_name: string;
+  enemy_realm_label: string;
+  enemy_hp: number;
+  enemy_attack: number;
+  enemy_defense: number;
+  enemy_speed: number;
+  allow_flee: boolean;
+  flee_base_rate: number;
+  pill_heal_amount: number;
+  victory_log: string;
+  defeat_log: string;
+  flee_success_log: string;
+  flee_failure_log: string;
+};
+
+export function parseBattleConfig(
+  value: Record<string, unknown> | string | undefined
+): BattleConfigState {
+  const payload =
+    typeof value === "string" ? parseLegacyPayload(value) : (value ?? {});
+  const battle =
+    typeof payload.battle === "object" && payload.battle
+      ? (payload.battle as Record<string, unknown>)
+      : {};
+
+  return {
+    enemy_name: String(battle.enemy_name ?? ""),
+    enemy_realm_label: String(battle.enemy_realm_label ?? ""),
+    enemy_hp: Number(battle.enemy_hp ?? 0),
+    enemy_attack: Number(battle.enemy_attack ?? 0),
+    enemy_defense: Number(battle.enemy_defense ?? 0),
+    enemy_speed: Number(battle.enemy_speed ?? 0),
+    allow_flee: Boolean(battle.allow_flee),
+    flee_base_rate: Number(battle.flee_base_rate ?? 0.35),
+    pill_heal_amount: Number(battle.pill_heal_amount ?? 30),
+    victory_log: String(battle.victory_log ?? ""),
+    defeat_log: String(battle.defeat_log ?? ""),
+    flee_success_log: String(battle.flee_success_log ?? ""),
+    flee_failure_log: String(battle.flee_failure_log ?? ""),
+  };
+}
+
+export function buildPayloadWithBattleConfig(
+  value: Record<string, unknown> | string | undefined,
+  battle: BattleConfigState
+): Record<string, unknown> {
+  const payload =
+    typeof value === "string" ? parseLegacyPayload(value) : { ...(value ?? {}) };
+
+  const nextBattle: Record<string, unknown> = {
+    enemy_name: battle.enemy_name,
+    enemy_realm_label: battle.enemy_realm_label,
+    enemy_hp: battle.enemy_hp,
+    enemy_attack: battle.enemy_attack,
+    enemy_defense: battle.enemy_defense,
+    enemy_speed: battle.enemy_speed,
+    allow_flee: battle.allow_flee,
+    flee_base_rate: battle.flee_base_rate,
+    pill_heal_amount: battle.pill_heal_amount,
+  };
+
+  if (battle.victory_log.trim()) {
+    nextBattle.victory_log = battle.victory_log.trim();
+  }
+  if (battle.defeat_log.trim()) {
+    nextBattle.defeat_log = battle.defeat_log.trim();
+  }
+  if (battle.flee_success_log.trim()) {
+    nextBattle.flee_success_log = battle.flee_success_log.trim();
+  }
+  if (battle.flee_failure_log.trim()) {
+    nextBattle.flee_failure_log = battle.flee_failure_log.trim();
+  }
+
+  return {
+    ...payload,
+    battle: nextBattle,
+  };
+}
+
 export function parsePayloadEditorState(
   value: Record<string, unknown> | string | undefined
 ): PayloadEditorState {

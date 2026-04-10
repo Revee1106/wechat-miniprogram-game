@@ -2,7 +2,9 @@ import { expect, test } from "vitest";
 
 import {
   buildPayloadFromEditorState,
+  buildPayloadWithBattleConfig,
   parsePayloadEditorState,
+  parseBattleConfig,
 } from "./eventFormCodec";
 
 test("parses legacy payload strings into editor state", () => {
@@ -61,5 +63,77 @@ test("normalizes structured resource payload aliases into canonical editor keys"
     spirit_stone: 1,
     herb: 2,
     ore: 4,
+  });
+});
+
+test("parses battle config from structured payloads", () => {
+  const battle = parseBattleConfig({
+    resources: { spirit_stone: 2 },
+    battle: {
+      enemy_name: "山匪",
+      enemy_realm_label: "炼气初期",
+      enemy_hp: 36,
+      enemy_attack: 8,
+      enemy_defense: 4,
+      enemy_speed: 6,
+      allow_flee: true,
+      flee_base_rate: 0.35,
+      pill_heal_amount: 30,
+    },
+  });
+
+  expect(battle).toEqual({
+    enemy_name: "山匪",
+    enemy_realm_label: "炼气初期",
+    enemy_hp: 36,
+    enemy_attack: 8,
+    enemy_defense: 4,
+    enemy_speed: 6,
+    allow_flee: true,
+    flee_base_rate: 0.35,
+    pill_heal_amount: 30,
+    victory_log: "",
+    defeat_log: "",
+    flee_success_log: "",
+    flee_failure_log: "",
+  });
+});
+
+test("merges battle config into structured payloads", () => {
+  const payload = buildPayloadWithBattleConfig(
+    {
+      resources: { spirit_stone: 2 },
+    },
+    {
+      enemy_name: "山匪",
+      enemy_realm_label: "炼气初期",
+      enemy_hp: 36,
+      enemy_attack: 8,
+      enemy_defense: 4,
+      enemy_speed: 6,
+      allow_flee: false,
+      flee_base_rate: 0.2,
+      pill_heal_amount: 24,
+      victory_log: "你将山匪逼退。",
+      defeat_log: "",
+      flee_success_log: "",
+      flee_failure_log: "",
+    }
+  );
+
+  expect(payload).toEqual({
+    resources: { spirit_stone: 2 },
+    battle: {
+      enemy_name: "山匪",
+      enemy_realm_label: "炼气初期",
+      enemy_hp: 36,
+      enemy_attack: 8,
+      enemy_defense: 4,
+      enemy_speed: 6,
+      allow_flee: false,
+      flee_base_rate: 0.2,
+      pill_heal_amount: 24,
+      victory_log: "你将山匪逼退。",
+    },
   });
 });

@@ -4,6 +4,8 @@ from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.event_config import EventRegistry, load_event_registry
 from app.core_loop.seeds import get_realm_configs
 from app.core_loop.types import (
+    ActiveBattleState,
+    CombatActorState,
     ConflictError,
     CoreLoopError,
     CurrentEventOption,
@@ -13,6 +15,8 @@ from app.core_loop.types import (
     RealmConfig,
     RunState,
 )
+from app.core_loop.services.combat_service import CombatService
+from app.core_loop.services.combat_stat_service import CombatStatService
 from app.economy.services.run_resource_service import RunResourceService
 
 
@@ -27,11 +31,24 @@ class EventResolutionService:
         self._realm_configs = {
             config.key: config for config in (realm_configs or get_realm_configs())
         }
+        self._combat_service = CombatService()
+        self._combat_stat_service = CombatStatService(
+            realm_configs=list(self._realm_configs.values())
+        )
         self._run_resource_service = RunResourceService(base_path=economy_base_path)
 
-    def resolve(self, run: RunState, option_id: str) -> RunState:
+    def resolve(
+        self,
+        run: RunState,
+        option_id: str,
+        *,
+        combat_service: CombatService | None = None,
+        combat_stat_service: CombatStatService | None = None,
+    ) -> RunState:
         if run.current_event is None:
             raise ConflictError("there is no pending event to resolve")
+        if run.active_battle is not None:
+            raise ConflictError("battle is already in progress")
 
         runtime_option = next(
             (
@@ -52,6 +69,18 @@ class EventResolutionService:
         template = self._registry.templates.get(option_config.event_id)
         if template is None:
             raise ConflictError(f"event '{option_config.event_id}' is not registered")
+
+        if option_config.resolution_mode == "combat":
+            self._start_combat_event(
+                run,
+                option_config=option_config,
+                template=template,
+                combat_service=combat_service or self._combat_service,
+                combat_stat_service=combat_stat_service or self._combat_stat_service,
+            )
+            run.result_summary = None
+            run.last_event_resolution = None
+            return run
 
         success = self._determine_success(run, option_config)
         payload = self._parse_payload(
@@ -96,6 +125,35 @@ class EventResolutionService:
         )
         run.current_event = None
         return run
+
+    def perform_battle_action(
+        self,
+        run: RunState,
+        action: str,
+        *,
+        combat_service: CombatService | None = None,
+        combat_stat_service: CombatStatService | None = None,
+    ) -> RunState:
+        if run.active_battle is None:
+            raise ConflictError("there is no active battle")
+
+        service = combat_service or self._combat_service
+        before_pill_count = int(run.active_battle.pill_count)
+        battle = service.perform_action(run.active_battle, action)
+        if self._did_use_pill(action, before_pill_count, battle.pill_count):
+            self._consume_battle_pill(run, before_pill_count - battle.pill_count)
+            self._run_resource_service.add(run, "pill", -1)
+            # Keep the aggregated pill counter aligned with inventory.
+            run.resources.pill = sum(item.amount for item in run.alchemy_state.inventory)
+
+        if not battle.is_finished:
+            return run
+
+        return self._finalize_battle(
+            run,
+            battle,
+            combat_stat_service=combat_stat_service or self._combat_stat_service,
+        )
 
     def _is_option_available(
         self,
@@ -292,6 +350,199 @@ class EventResolutionService:
             0,
             run.character.lifespan_current - int(time_cost_months),
         )
+
+    def _start_combat_event(
+        self,
+        run: RunState,
+        *,
+        option_config: EventOptionConfig,
+        template: RealmConfig | object,
+        combat_service: CombatService,
+        combat_stat_service: CombatStatService,
+    ) -> None:
+        success_payload = self._parse_payload(option_config.result_on_success)
+        failure_payload = self._parse_payload(option_config.result_on_failure)
+        battle_payload = success_payload.battle or failure_payload.battle
+        if not battle_payload:
+            raise ConflictError("combat option is missing battle configuration")
+
+        player_state = combat_stat_service.build_player_state(run)
+        enemy_state = self._build_combat_enemy_state(battle_payload)
+        run.active_battle = combat_service.start_battle(
+            source_event_id=option_config.event_id,
+            source_option_id=option_config.option_id,
+            player=player_state,
+            enemy=enemy_state,
+            allow_flee=bool(battle_payload.get("allow_flee", True)),
+            flee_base_rate=float(battle_payload.get("flee_base_rate", 0.35)),
+            pill_heal_amount=int(battle_payload.get("pill_heal_amount", 0)),
+            pill_count=max(0, int(getattr(run.resources, "pill", 0))),
+        )
+
+    def _finalize_battle(
+        self,
+        run: RunState,
+        battle: ActiveBattleState,
+        *,
+        combat_stat_service: CombatStatService,
+    ) -> RunState:
+        if not battle.is_finished:
+            return run
+
+        option_config = self._registry.options.get(battle.source_option_id)
+        if option_config is None:
+            raise ConflictError(f"option '{battle.source_option_id}' is not registered")
+        template = self._registry.templates.get(option_config.event_id)
+        if template is None:
+            raise ConflictError(f"event '{option_config.event_id}' is not registered")
+
+        outcome = battle.result
+        if outcome == "victory":
+            payload = self._parse_payload(option_config.result_on_success)
+            base_summary = self._resolve_combat_summary(
+                template.event_name,
+                option_config,
+                payload,
+                "victory",
+            )
+        elif outcome == "defeat":
+            payload = self._parse_payload(option_config.result_on_failure)
+            base_summary = self._resolve_combat_summary(
+                template.event_name,
+                option_config,
+                payload,
+                "defeat",
+            )
+        elif outcome == "flee_success":
+            battle_payload = self._get_combat_battle_payload(option_config)
+            payload = EventResultPayload(battle=battle_payload)
+            base_summary = self._resolve_combat_summary(
+                template.event_name,
+                option_config,
+                payload,
+                "flee_success",
+            )
+        else:
+            raise ConflictError("battle is not finished")
+
+        run.character.hp_current = min(
+            run.character.hp_max,
+            max(0, int(battle.player.hp_current)),
+        )
+        self._apply_payload(run, payload)
+        self._apply_time_cost(run, option_config.time_cost_months)
+        run.event_trigger_counts[template.event_id] = (
+            run.event_trigger_counts.get(template.event_id, 0) + 1
+        )
+        if template.cooldown_rounds > 0:
+            run.event_cooldowns[template.event_id] = template.cooldown_rounds
+        if run.character.lifespan_current <= 0:
+            run.character.lifespan_current = 0
+            run.character.is_dead = True
+        if run.character.hp_current <= 0:
+            run.character.hp_current = 0
+            run.character.is_dead = True
+
+        run.result_summary = (
+            base_summary
+            if outcome == "flee_success"
+            else self._build_result_summary(base_summary, option_config.time_cost_months)
+        )
+        run.last_event_resolution = EventResolutionLog(
+            event_id=template.event_id,
+            option_id=option_config.option_id,
+            intended_resources=dict(payload.resources),
+            intended_character=dict(payload.character),
+            time_cost_months=option_config.time_cost_months,
+        )
+        run.current_event = None
+        run.active_battle = None
+        return run
+
+    def _build_combat_enemy_state(self, battle_payload: dict[str, object]) -> CombatActorState:
+        return CombatActorState(
+            name=str(battle_payload.get("enemy_name", "enemy")),
+            realm_label=str(battle_payload.get("enemy_realm_label", "enemy")),
+            hp_current=max(1, int(battle_payload.get("enemy_hp", 1))),
+            hp_max=max(1, int(battle_payload.get("enemy_hp", 1))),
+            attack=max(0, int(battle_payload.get("enemy_attack", 0))),
+            defense=max(0, int(battle_payload.get("enemy_defense", 0))),
+            speed=max(0, int(battle_payload.get("enemy_speed", 0))),
+        )
+
+    def _get_combat_battle_payload(
+        self,
+        option_config: EventOptionConfig,
+    ) -> dict[str, object]:
+        for payload_source in (
+            option_config.result_on_success,
+            option_config.result_on_failure,
+        ):
+            payload = self._parse_payload(payload_source)
+            if payload.battle:
+                return dict(payload.battle)
+        return {}
+
+    def _resolve_combat_summary(
+        self,
+        event_name: str,
+        option_config: EventOptionConfig,
+        payload: EventResultPayload,
+        outcome: str,
+    ) -> str:
+        battle_payload = payload.battle or {}
+        if outcome == "victory":
+            candidates = [
+                str(battle_payload.get("victory_log", "")).strip(),
+                option_config.log_text_success.strip(),
+                option_config.log_text_failure.strip(),
+            ]
+        elif outcome == "defeat":
+            candidates = [
+                str(battle_payload.get("defeat_log", "")).strip(),
+                option_config.log_text_failure.strip(),
+                option_config.log_text_success.strip(),
+            ]
+        else:
+            candidates = [
+                str(battle_payload.get("flee_success_log", "")).strip(),
+                option_config.log_text_success.strip(),
+                option_config.log_text_failure.strip(),
+            ]
+
+        for candidate in candidates:
+            if candidate:
+                return candidate
+        return self._build_fallback_summary(event_name, option_config.option_text)
+
+    def _did_use_pill(
+        self,
+        action: str,
+        before_pill_count: int,
+        after_pill_count: int,
+    ) -> bool:
+        return (
+            action.strip().lower() == "use_pill"
+            and before_pill_count > after_pill_count
+        )
+
+    def _consume_battle_pill(self, run: RunState, amount: int) -> None:
+        if amount <= 0:
+            return
+
+        remaining = amount
+        for item in list(run.alchemy_state.inventory):
+            if remaining <= 0:
+                break
+            if item.amount <= 0:
+                continue
+            consumed = min(item.amount, remaining)
+            item.amount -= consumed
+            remaining -= consumed
+
+        run.alchemy_state.inventory = [
+            item for item in run.alchemy_state.inventory if item.amount > 0
+        ]
 
     def _build_result_summary(self, base_summary: str, time_cost_months: int) -> str:
         if time_cost_months <= 0:

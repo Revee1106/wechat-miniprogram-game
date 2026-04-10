@@ -44,6 +44,17 @@ ALLOWED_TRIGGER_SOURCES = {
     "global",
 }
 ALLOWED_RESOLUTION_MODES = {"direct", "combat"}
+REQUIRED_BATTLE_FIELDS = {
+    "enemy_name": str,
+    "enemy_realm_label": str,
+    "enemy_hp": int,
+    "enemy_attack": int,
+    "enemy_defense": int,
+    "enemy_speed": int,
+    "allow_flee": bool,
+    "flee_base_rate": (int, float),
+    "pill_heal_amount": int,
+}
 
 
 def validate_event_config(
@@ -107,6 +118,8 @@ def validate_event_config(
         resolution_mode = str(option.get("resolution_mode", "direct") or "direct")
         if resolution_mode not in ALLOWED_RESOLUTION_MODES:
             errors.append(f"option '{option_id}' has invalid resolution_mode")
+        if resolution_mode == "combat":
+            _validate_battle_config(option_id, option.get("result_on_success"), errors)
         next_event_id = option.get("next_event_id")
         if next_event_id is not None and str(next_event_id) not in template_map:
             errors.append(
@@ -137,3 +150,26 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _validate_battle_config(
+    option_id: str,
+    payload: object,
+    errors: list[str],
+) -> None:
+    if not isinstance(payload, dict):
+        errors.append(f"option '{option_id}' requires battle config in result_on_success")
+        return
+
+    battle = payload.get("battle")
+    if not isinstance(battle, dict):
+        errors.append(f"option '{option_id}' requires battle config in result_on_success")
+        return
+
+    for field_name, field_type in REQUIRED_BATTLE_FIELDS.items():
+        value = battle.get(field_name)
+        if value is None:
+            errors.append(f"option '{option_id}' battle is missing '{field_name}'")
+            continue
+        if not isinstance(value, field_type):
+            errors.append(f"option '{option_id}' battle field '{field_name}' has invalid type")

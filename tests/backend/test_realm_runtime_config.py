@@ -3,7 +3,7 @@ from shutil import rmtree
 from uuid import uuid4
 
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
-from app.core_loop.realm_config import load_realm_configs
+from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.seeds import get_realm_configs
 
 
@@ -161,6 +161,46 @@ def test_seed_realms_starts_with_qi_refining_chain() -> None:
         "qi_refining_late",
         "qi_refining_peak",
     ]
+
+
+def test_resolve_realm_key_boundary_falls_back_to_available_major_realm_stage() -> None:
+    base_path = _make_test_base_path("realm-loader-boundary-fallback")
+    RealmConfigRepository(base_path=base_path).save(
+        {
+            "realms": [
+                {
+                    "key": "qi_refining_early",
+                    "display_name": "炼气初期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 1,
+                    "order_index": 1,
+                    "base_success_rate": 0.6,
+                    "required_cultivation_exp": 10,
+                    "required_spirit_stone": 5,
+                    "lifespan_bonus": 6,
+                    "is_enabled": True,
+                },
+                {
+                    "key": "qi_refining_mid",
+                    "display_name": "炼气中期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 2,
+                    "order_index": 2,
+                    "base_success_rate": 0.5,
+                    "required_cultivation_exp": 20,
+                    "required_spirit_stone": 10,
+                    "lifespan_bonus": 6,
+                    "is_enabled": True,
+                },
+            ]
+        }
+    )
+
+    realms = load_realm_configs(base_path=base_path)
+
+    assert resolve_realm_key("qi_refining_peak", realms, boundary="max") == "qi_refining_mid"
+    assert resolve_realm_key("qi_refining_peak", realms, boundary="min") == "qi_refining_early"
+    rmtree(base_path)
 
 
 def _make_test_base_path(label: str) -> Path:

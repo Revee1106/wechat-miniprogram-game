@@ -3,8 +3,18 @@ from shutil import rmtree
 from uuid import uuid4
 
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
+from app.core_loop.event_config import EventRegistry
+from app.core_loop.services.combat_service import CombatService
 from app.core_loop.services.run_service import RunService
-from app.core_loop.types import ConflictError, CurrentEvent, CurrentEventOption
+from app.core_loop.types import (
+    AlchemyInventoryItem,
+    ConflictError,
+    CurrentEvent,
+    CurrentEventOption,
+    EventOptionConfig,
+    EventResultPayload,
+    EventTemplateConfig,
+)
 
 
 def test_advance_time_creates_spec_shaped_pending_event() -> None:
@@ -312,6 +322,317 @@ def test_advance_time_base_gain_still_respects_breakthrough_cultivation_cap() ->
         assert result.character.cultivation_exp == 60
     finally:
         rmtree(base_path)
+
+
+def test_sell_resource_reactivates_stalled_dwelling_when_maintenance_becomes_affordable() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+
+    mine_cave = next(
+        facility for facility in run.dwelling_facilities if facility.facility_id == "mine_cave"
+    )
+    mine_cave.level = 1
+    mine_cave.status = "stalled"
+    mine_cave.maintenance_cost = {"spirit_stone": 5}
+    mine_cave.next_upgrade_cost = {"spirit_stone": 40}
+    run.dwelling_last_settlement = None
+    run.resources.spirit_stone = 4
+    run.resources.herbs = 3
+
+    updated = service.sell_resource(run.run_id, "herb", 1)
+
+    refreshed_mine_cave = next(
+        facility for facility in updated.dwelling_facilities if facility.facility_id == "mine_cave"
+    )
+
+    assert updated.resources.spirit_stone == 6
+    assert refreshed_mine_cave.status == "active"
+
+
+def test_get_run_marks_all_unaffordable_dwelling_facilities_as_stalled() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 200
+
+    service.build_dwelling_facility(run.run_id, "spirit_field")
+    service.build_dwelling_facility(run.run_id, "mine_cave")
+
+    run.resources.spirit_stone = 0
+
+    refreshed = service.get_run(run.run_id)
+
+    spirit_field = next(
+        facility for facility in refreshed.dwelling_facilities if facility.facility_id == "spirit_field"
+    )
+    mine_cave = next(
+        facility for facility in refreshed.dwelling_facilities if facility.facility_id == "mine_cave"
+    )
+
+    assert spirit_field.status == "stalled"
+    assert mine_cave.status == "stalled"
+
+
+def test_combat_victory_applies_success_payload_and_clears_event() -> None:
+    service = RunService()
+    _attach_combat_registry(service)
+    service._combat_service = CombatService()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 5
+    run.alchemy_state.inventory = [
+        AlchemyInventoryItem(
+            item_id="yang_qi_dan",
+            display_name="养气丹",
+            quality="low",
+            amount=1,
+            effect_summary="恢复修为",
+        )
+    ]
+    run.current_event = CurrentEvent(
+        event_id="evt_bandit",
+        event_name="山匪拦路",
+        event_type="encounter",
+        outcome_type="mixed",
+        risk_level="risky",
+        trigger_sources=[],
+        choice_pattern="binary_choice",
+        title_text="山匪拦路",
+        body_text="前路有山匪盘踞。",
+        region="mountain",
+        status="pending",
+        options=[
+            CurrentEventOption(
+                option_id="opt_fight",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+            )
+        ],
+    )
+
+    resolved = service.resolve_event(run.run_id, "opt_fight")
+    assert resolved.active_battle is not None
+    resolved.active_battle.enemy.hp_current = 1
+
+    finished = service.perform_battle_action(run.run_id, "attack")
+
+    assert finished.current_event is None
+    assert finished.active_battle is None
+    assert finished.resources.spirit_stone == 12
+    assert finished.character.cultivation_exp == 5
+    assert finished.character.lifespan_current == 718
+    assert finished.result_summary == "victory log（额外耗时2个月）"
+    assert finished.last_event_resolution is not None
+    assert finished.last_event_resolution.time_cost_months == 2
+
+
+def test_combat_flee_success_ends_event_without_applying_payload() -> None:
+    service = RunService()
+    _attach_combat_registry(service)
+    service._combat_service = CombatService(rng=lambda: 0.0)
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 5
+    run.alchemy_state.inventory = [
+        AlchemyInventoryItem(
+            item_id="yang_qi_dan",
+            display_name="养气丹",
+            quality="low",
+            amount=1,
+            effect_summary="恢复修为",
+        )
+    ]
+    run.current_event = CurrentEvent(
+        event_id="evt_bandit",
+        event_name="山匪拦路",
+        event_type="encounter",
+        outcome_type="mixed",
+        risk_level="risky",
+        trigger_sources=[],
+        choice_pattern="binary_choice",
+        title_text="山匪拦路",
+        body_text="前路有山匪盘踞。",
+        region="mountain",
+        status="pending",
+        options=[
+            CurrentEventOption(
+                option_id="opt_fight",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+            )
+        ],
+    )
+
+    resolved = service.resolve_event(run.run_id, "opt_fight")
+    assert resolved.active_battle is not None
+
+    finished = service.perform_battle_action(run.run_id, "flee")
+
+    assert finished.current_event is None
+    assert finished.active_battle is None
+    assert finished.resources.spirit_stone == 5
+    assert finished.character.cultivation_exp == 0
+    assert finished.result_summary == "脱身成功"
+
+
+def test_combat_finalization_syncs_remaining_hp_back_to_character_state() -> None:
+    service = RunService()
+    _attach_combat_registry(service)
+    service._combat_service = CombatService()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 5
+    run.current_event = CurrentEvent(
+        event_id="evt_bandit",
+        event_name="山匪拦路",
+        event_type="encounter",
+        outcome_type="mixed",
+        risk_level="risky",
+        trigger_sources=[],
+        choice_pattern="binary_choice",
+        title_text="山匪拦路",
+        body_text="前路有山匪盘踞。",
+        region="mountain",
+        status="pending",
+        options=[
+            CurrentEventOption(
+                option_id="opt_fight",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+            )
+        ],
+    )
+
+    resolved = service.resolve_event(run.run_id, "opt_fight")
+    assert resolved.active_battle is not None
+    resolved.active_battle.player.hp_current = 18
+    resolved.active_battle.enemy.hp_current = 1
+
+    finished = service.perform_battle_action(run.run_id, "attack")
+
+    assert finished.active_battle is None
+    assert finished.character.hp_current == 18
+
+
+def test_combat_use_pill_consumes_pill_and_persists_after_refresh() -> None:
+    service = RunService()
+    _attach_combat_registry(service)
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 5
+    run.resources.pill = 1
+    run.alchemy_state.inventory = [
+        AlchemyInventoryItem(
+            item_id="yang_qi_dan",
+            display_name="养气丹",
+            quality="low",
+            amount=1,
+            effect_summary="恢复修为",
+        )
+    ]
+    run.current_event = CurrentEvent(
+        event_id="evt_bandit",
+        event_name="山匪拦路",
+        event_type="encounter",
+        outcome_type="mixed",
+        risk_level="risky",
+        trigger_sources=[],
+        choice_pattern="binary_choice",
+        title_text="山匪拦路",
+        body_text="前路有山匪盘踞。",
+        region="mountain",
+        status="pending",
+        options=[
+            CurrentEventOption(
+                option_id="opt_fight",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+            )
+        ],
+    )
+
+    resolved = service.resolve_event(run.run_id, "opt_fight")
+    assert resolved.active_battle is not None
+
+    updated = service.perform_battle_action(run.run_id, "use_pill")
+    refreshed = service.get_run(run.run_id)
+
+    assert updated.active_battle is not None
+    assert updated.active_battle.pill_count == 0
+    assert updated.resources.pill == 0
+    assert updated.alchemy_state.inventory == []
+    assert refreshed.resources.pill == 0
+
+
+def _attach_combat_registry(service: RunService) -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_bandit": EventTemplateConfig(
+                event_id="evt_bandit",
+                event_name="山匪拦路",
+                event_type="encounter",
+                outcome_type="mixed",
+                risk_level="risky",
+                trigger_sources=["global"],
+                choice_pattern="binary_choice",
+                title_text="山匪拦路",
+                body_text="前路有山匪盘踞。",
+                weight=1,
+                is_repeatable=True,
+                option_ids=["opt_fight"],
+            )
+        },
+        options={
+            "opt_fight": EventOptionConfig(
+                option_id="opt_fight",
+                event_id="evt_bandit",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+                resolution_mode="combat",
+                time_cost_months=2,
+                result_on_success=EventResultPayload(
+                    resources={"spirit_stone": 7},
+                    character={"cultivation_exp": 5},
+                    battle={
+                        "enemy_name": "山匪",
+                        "enemy_realm_label": "炼气初期",
+                        "enemy_hp": 1,
+                        "enemy_attack": 1,
+                        "enemy_defense": 0,
+                        "enemy_speed": 1,
+                        "allow_flee": True,
+                        "flee_base_rate": 0.35,
+                        "pill_heal_amount": 12,
+                        "victory_log": "victory log",
+                        "defeat_log": "defeat log",
+                        "flee_success_log": "脱身成功",
+                        "flee_failure_log": "逃跑失败",
+                    },
+                ),
+                result_on_failure=EventResultPayload(
+                    resources={"spirit_stone": -3},
+                    character={"lifespan_delta": -2},
+                    battle={
+                        "enemy_name": "山匪",
+                        "enemy_realm_label": "炼气初期",
+                        "enemy_hp": 1,
+                        "enemy_attack": 1,
+                        "enemy_defense": 0,
+                        "enemy_speed": 1,
+                        "allow_flee": True,
+                        "flee_base_rate": 0.35,
+                        "pill_heal_amount": 12,
+                        "victory_log": "victory log",
+                        "defeat_log": "defeat log",
+                        "flee_success_log": "脱身成功",
+                        "flee_failure_log": "逃跑失败",
+                    },
+                ),
+            )
+        },
+    )
+    service._event_registry = registry
+    service._rebuild_runtime_services()
 
 
 def _make_test_base_path(label: str) -> Path:

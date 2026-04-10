@@ -2,6 +2,15 @@ from fastapi.testclient import TestClient
 
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
 from app.api.core_loop import run_service
+from app.core_loop.event_config import EventRegistry
+from app.core_loop.services.combat_service import CombatService
+from app.core_loop.types import (
+    CurrentEvent,
+    CurrentEventOption,
+    EventOptionConfig,
+    EventResultPayload,
+    EventTemplateConfig,
+)
 from app.main import app
 
 
@@ -165,6 +174,64 @@ def test_convert_spirit_stone_to_cultivation_round_trip() -> None:
     assert convert_response.json()["character"]["cultivation_exp"] == 29
 
 
+def test_battle_action_round_trip() -> None:
+    create_response = client.post("/api/run/create", json={"player_id": "p1"})
+    run_id = create_response.json()["run_id"]
+    _attach_combat_registry()
+    run_service._combat_service = CombatService()
+    run = run_service.get_run(run_id)
+    run.current_event = CurrentEvent(
+        event_id="evt_bandit",
+        event_name="山匪拦路",
+        event_type="encounter",
+        outcome_type="mixed",
+        risk_level="risky",
+        trigger_sources=[],
+        choice_pattern="binary_choice",
+        title_text="山匪拦路",
+        body_text="前路有山匪盘踞。",
+        region="mountain",
+        status="pending",
+        options=[
+            CurrentEventOption(
+                option_id="opt_fight",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+            )
+        ],
+    )
+
+    resolve_response = client.post(
+        "/api/run/resolve",
+        json={"run_id": run_id, "option_id": "opt_fight"},
+    )
+    assert resolve_response.status_code == 200
+    assert resolve_response.json()["active_battle"] is not None
+
+    battle_response = client.post(
+        "/api/run/battle/action",
+        json={"run_id": run_id, "action": "attack"},
+    )
+
+    assert battle_response.status_code == 200
+    assert battle_response.json()["active_battle"] is None
+    assert battle_response.json()["current_event"] is None
+    assert battle_response.json()["resources"]["spirit_stone"] == 107
+    assert battle_response.json()["character"]["cultivation_exp"] == 5
+
+
+def test_battle_action_returns_conflict_without_active_battle() -> None:
+    run_id = client.post("/api/run/create", json={"player_id": "p1"}).json()["run_id"]
+
+    response = client.post(
+        "/api/run/battle/action",
+        json={"run_id": run_id, "action": "attack"},
+    )
+
+    assert response.status_code == 409
+
+
 def test_advance_round_trip_uses_current_realm_base_gain_and_cost() -> None:
     from pathlib import Path
     from shutil import rmtree
@@ -219,3 +286,75 @@ def test_health_endpoint_returns_ok() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def _attach_combat_registry() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_bandit": EventTemplateConfig(
+                event_id="evt_bandit",
+                event_name="山匪拦路",
+                event_type="encounter",
+                outcome_type="mixed",
+                risk_level="risky",
+                trigger_sources=["global"],
+                choice_pattern="binary_choice",
+                title_text="山匪拦路",
+                body_text="前路有山匪盘踞。",
+                weight=1,
+                is_repeatable=True,
+                option_ids=["opt_fight"],
+            )
+        },
+        options={
+            "opt_fight": EventOptionConfig(
+                option_id="opt_fight",
+                event_id="evt_bandit",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+                resolution_mode="combat",
+                time_cost_months=2,
+                result_on_success=EventResultPayload(
+                    resources={"spirit_stone": 7},
+                    character={"cultivation_exp": 5},
+                    battle={
+                        "enemy_name": "山匪",
+                        "enemy_realm_label": "炼气初期",
+                        "enemy_hp": 1,
+                        "enemy_attack": 1,
+                        "enemy_defense": 0,
+                        "enemy_speed": 1,
+                        "allow_flee": True,
+                        "flee_base_rate": 0.35,
+                        "pill_heal_amount": 12,
+                        "victory_log": "victory log",
+                        "defeat_log": "defeat log",
+                        "flee_success_log": "脱身成功",
+                        "flee_failure_log": "逃跑失败",
+                    },
+                ),
+                result_on_failure=EventResultPayload(
+                    resources={"spirit_stone": -3},
+                    character={"lifespan_delta": -2},
+                    battle={
+                        "enemy_name": "山匪",
+                        "enemy_realm_label": "炼气初期",
+                        "enemy_hp": 1,
+                        "enemy_attack": 1,
+                        "enemy_defense": 0,
+                        "enemy_speed": 1,
+                        "allow_flee": True,
+                        "flee_base_rate": 0.35,
+                        "pill_heal_amount": 12,
+                        "victory_log": "victory log",
+                        "defeat_log": "defeat log",
+                        "flee_success_log": "脱身成功",
+                        "flee_failure_log": "逃跑失败",
+                    },
+                ),
+            )
+        },
+    )
+    run_service._event_registry = registry
+    run_service._rebuild_runtime_services()

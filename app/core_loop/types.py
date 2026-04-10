@@ -184,6 +184,33 @@ class EventResolutionLog:
 
 
 @dataclass
+class CombatActorState:
+    name: str
+    realm_label: str
+    hp_current: int
+    hp_max: int
+    attack: int
+    defense: int
+    speed: int
+
+
+@dataclass
+class ActiveBattleState:
+    source_event_id: str
+    source_option_id: str
+    round_index: int
+    allow_flee: bool
+    flee_base_rate: float
+    player: CombatActorState
+    enemy: CombatActorState
+    pill_heal_amount: int = 0
+    pill_count: int = 0
+    log_lines: list[str] = field(default_factory=list)
+    is_finished: bool = False
+    result: str | None = None
+
+
+@dataclass
 class ResourceState:
     spirit_stone: int = 100
     herbs: int = 3
@@ -338,6 +365,7 @@ class RunState:
     alchemy_state: AlchemyState = field(default_factory=AlchemyState)
     breakthrough_requirements: BreakthroughRequirements | None = None
     current_event: CurrentEvent | None = None
+    active_battle: ActiveBattleState | None = None
     dwelling_level: int = 1
     dwelling_facilities: list[DwellingFacilityState] = field(default_factory=list)
     dwelling_last_settlement: DwellingSettlement | None = None

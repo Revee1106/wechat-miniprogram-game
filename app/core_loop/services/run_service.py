@@ -6,6 +6,7 @@ from app.core_loop.seeds import get_realm_configs
 from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.event_config import load_event_registry
 from app.core_loop.services.alchemy_service import AlchemyService
+from app.core_loop.services.combat_service import CombatService
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
 from app.core_loop.services.event_service import EventService
@@ -44,6 +45,7 @@ class RunService:
         self._resource_conversion_service = ResourceConversionService(
             base_path=event_config_base_path
         )
+        self._combat_service = CombatService()
         self._realm_configs = self._load_runtime_realm_configs()
         self._progression_service = ProgressionService(
             self._dwelling_service,
@@ -88,6 +90,18 @@ class RunService:
         updated = self._event_resolution_service.resolve(run, option_id)
         self._hydrate_runtime_metadata(updated)
         self._hydrate_event_resolution_log(before_resolution, updated)
+        return self._repo.save(updated)
+
+    def perform_battle_action(self, run_id: str, action: str) -> RunState:
+        run = self._repo.get(run_id)
+        before_action = deepcopy(run)
+        updated = self._event_resolution_service.perform_battle_action(
+            run,
+            action,
+            combat_service=self._combat_service,
+        )
+        self._hydrate_runtime_metadata(updated)
+        self._hydrate_event_resolution_log(before_action, updated)
         return self._repo.save(updated)
 
     def breakthrough(self, run_id: str):
@@ -146,6 +160,7 @@ class RunService:
     def sell_resource(self, run_id: str, resource_key: str, amount: int) -> RunState:
         run = self._repo.get(run_id)
         self._resource_sale_service.sell(run, resource_key, amount)
+        self._dwelling_service.refresh_operational_status(run)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
@@ -156,6 +171,7 @@ class RunService:
             amount,
             cultivation_cap=self._get_breakthrough_cultivation_cap(run),
         )
+        self._dwelling_service.refresh_operational_status(run)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
@@ -210,7 +226,7 @@ class RunService:
         return self._repo.save(run)
 
     def _hydrate_runtime_metadata(self, run: RunState) -> None:
-        self._dwelling_service.hydrate_run(run)
+        self._dwelling_service.refresh_operational_status(run)
         self._alchemy_service.hydrate_run(run)
         current_index = self._get_current_realm_index(run)
         if current_index is None:

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
+    BattleActionRequest,
     ResourceConversionRequest,
     ConsumeAlchemyItemRequest,
     CreateRunRequest,
@@ -73,6 +74,17 @@ def resolve_event(payload: ResolveEventRequest) -> dict[str, object]:
     try:
         return serialize_run_state(
             run_service.resolve_event(payload.run_id, payload.resolved_option_id)
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/battle/action")
+def perform_battle_action(payload: BattleActionRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.perform_battle_action(payload.run_id, payload.action)
         )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)
