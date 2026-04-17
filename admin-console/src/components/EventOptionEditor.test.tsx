@@ -25,6 +25,38 @@ function createCombatOption() {
   };
 }
 
+test("combat option uses enemy template select instead of inline enemy battle fields", () => {
+  const onChangeOption = vi.fn();
+
+  render(
+    <EventOptionEditor
+      eventOptions={[]}
+      enemyTemplateOptions={[
+        { value: "enemy_bandit_qi_early", label: "山匪 / enemy_bandit_qi_early" },
+      ]}
+      existingOptionIds={[]}
+      onAddOption={() => {}}
+      onChangeOption={onChangeOption}
+      onRemoveOption={() => {}}
+      options={[
+        {
+          ...createCombatOption(),
+          enemy_template_id: "enemy_bandit_qi_early",
+        },
+      ]}
+    />
+  );
+
+  expect(screen.getByLabelText("敌人模板")).toHaveValue("enemy_bandit_qi_early");
+  expect(screen.queryByLabelText("敌人名称")).toBeNull();
+
+  fireEvent.change(screen.getByLabelText("敌人模板"), {
+    target: { value: "enemy_bandit_qi_early" },
+  });
+
+  expect(onChangeOption).toHaveBeenCalledWith(0, "enemy_template_id", "enemy_bandit_qi_early");
+});
+
 test("option requirement section starts collapsed until a precondition is added", () => {
   const onChangeOption = vi.fn();
 

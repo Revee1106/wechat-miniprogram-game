@@ -115,6 +115,7 @@ class EventOptionConfig:
     is_default: bool = False
     time_cost_months: int = 0
     resolution_mode: str = ""
+    enemy_template_id: str | None = None
     requires_resources: dict[str, int] = field(default_factory=dict)
     requires_statuses: list[str] = field(default_factory=list)
     requires_techniques: list[str] = field(default_factory=list)

@@ -61,8 +61,10 @@ def validate_event_config(
     *,
     templates: list[dict[str, object]],
     options: list[dict[str, object]],
+    enemy_ids: set[str] | None = None,
 ) -> ConfigValidationResult:
     errors: list[str] = []
+    known_enemy_ids = set(enemy_ids or set())
 
     template_ids = [str(template.get("event_id", "")) for template in templates]
     option_ids = [str(option.get("option_id", "")) for option in options]
@@ -119,7 +121,12 @@ def validate_event_config(
         if resolution_mode not in ALLOWED_RESOLUTION_MODES:
             errors.append(f"option '{option_id}' has invalid resolution_mode")
         if resolution_mode == "combat":
-            _validate_battle_config(option_id, option.get("result_on_success"), errors)
+            _validate_combat_config(
+                option_id,
+                option=option,
+                known_enemy_ids=known_enemy_ids,
+                errors=errors,
+            )
         next_event_id = option.get("next_event_id")
         if next_event_id is not None and str(next_event_id) not in template_map:
             errors.append(
@@ -173,3 +180,21 @@ def _validate_battle_config(
             continue
         if not isinstance(value, field_type):
             errors.append(f"option '{option_id}' battle field '{field_name}' has invalid type")
+
+
+def _validate_combat_config(
+    option_id: str,
+    *,
+    option: dict[str, object],
+    known_enemy_ids: set[str],
+    errors: list[str],
+) -> None:
+    enemy_template_id = str(option.get("enemy_template_id", "")).strip()
+    if enemy_template_id:
+        if enemy_template_id not in known_enemy_ids:
+            errors.append(
+                f"option '{option_id}' references unknown enemy_template_id '{enemy_template_id}'"
+            )
+        return
+
+    _validate_battle_config(option_id, option.get("result_on_success"), errors)

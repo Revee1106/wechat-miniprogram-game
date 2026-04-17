@@ -21,15 +21,23 @@ from app.economy.services.run_resource_service import RunResourceService
 
 
 class EventResolutionService:
+    _DEFAULT_FLEE_BASE_RATE = 0.35
+    _DEFAULT_PILL_HEAL_AMOUNT = 30
+
     def __init__(
         self,
         registry: EventRegistry | None = None,
         realm_configs: list[RealmConfig] | None = None,
         economy_base_path: str | None = None,
+        enemy_templates: dict[str, dict[str, object]] | None = None,
     ) -> None:
         self._registry = registry or load_event_registry()
         self._realm_configs = {
             config.key: config for config in (realm_configs or get_realm_configs())
+        }
+        self._enemy_templates = {
+            enemy_id: dict(template)
+            for enemy_id, template in (enemy_templates or {}).items()
         }
         self._combat_service = CombatService()
         self._combat_stat_service = CombatStatService(
@@ -70,7 +78,7 @@ class EventResolutionService:
         if template is None:
             raise ConflictError(f"event '{option_config.event_id}' is not registered")
 
-        if option_config.resolution_mode == "combat":
+        if option_config.resolution_mode == "combat" and self._should_start_battle(option_config):
             self._start_combat_event(
                 run,
                 option_config=option_config,
@@ -125,6 +133,20 @@ class EventResolutionService:
         )
         run.current_event = None
         return run
+
+    def _should_start_battle(self, option_config: EventOptionConfig) -> bool:
+        if self._resolve_enemy_template(option_config) is not None:
+            return True
+
+        for payload_source in (
+            option_config.result_on_success,
+            option_config.result_on_failure,
+        ):
+            payload = self._parse_payload(payload_source)
+            if payload.battle:
+                return True
+
+        return False
 
     def perform_battle_action(
         self,
@@ -362,20 +384,36 @@ class EventResolutionService:
     ) -> None:
         success_payload = self._parse_payload(option_config.result_on_success)
         failure_payload = self._parse_payload(option_config.result_on_failure)
+        enemy_template = self._resolve_enemy_template(option_config)
         battle_payload = success_payload.battle or failure_payload.battle
-        if not battle_payload:
+        if enemy_template is None and not battle_payload:
             raise ConflictError("combat option is missing battle configuration")
 
         player_state = combat_stat_service.build_player_state(run)
-        enemy_state = self._build_combat_enemy_state(battle_payload)
+        enemy_state = self._build_combat_enemy_state(enemy_template or battle_payload or {})
+        allow_flee = (
+            bool(enemy_template.get("allow_flee"))
+            if enemy_template is not None
+            else bool((battle_payload or {}).get("allow_flee", True))
+        )
+        flee_base_rate = (
+            self._DEFAULT_FLEE_BASE_RATE
+            if enemy_template is not None
+            else float((battle_payload or {}).get("flee_base_rate", self._DEFAULT_FLEE_BASE_RATE))
+        )
+        pill_heal_amount = (
+            self._DEFAULT_PILL_HEAL_AMOUNT
+            if enemy_template is not None
+            else int((battle_payload or {}).get("pill_heal_amount", self._DEFAULT_PILL_HEAL_AMOUNT))
+        )
         run.active_battle = combat_service.start_battle(
             source_event_id=option_config.event_id,
             source_option_id=option_config.option_id,
             player=player_state,
             enemy=enemy_state,
-            allow_flee=bool(battle_payload.get("allow_flee", True)),
-            flee_base_rate=float(battle_payload.get("flee_base_rate", 0.35)),
-            pill_heal_amount=int(battle_payload.get("pill_heal_amount", 0)),
+            allow_flee=allow_flee,
+            flee_base_rate=flee_base_rate,
+            pill_heal_amount=pill_heal_amount,
             pill_count=max(0, int(getattr(run.resources, "pill", 0))),
         )
 
@@ -398,7 +436,7 @@ class EventResolutionService:
 
         outcome = battle.result
         if outcome == "victory":
-            payload = self._parse_payload(option_config.result_on_success)
+            payload = self._resolve_combat_victory_payload(option_config)
             base_summary = self._resolve_combat_summary(
                 template.event_name,
                 option_config,
@@ -470,10 +508,39 @@ class EventResolutionService:
             speed=max(0, int(battle_payload.get("enemy_speed", 0))),
         )
 
+    def _resolve_combat_victory_payload(self, option_config: EventOptionConfig) -> EventResultPayload:
+        enemy_template = self._resolve_enemy_template(option_config)
+        if enemy_template is not None:
+            return self._parse_payload(enemy_template.get("rewards", {}))
+        return self._parse_payload(option_config.result_on_success)
+
+    def _resolve_enemy_template(
+        self,
+        option_config: EventOptionConfig,
+    ) -> dict[str, object] | None:
+        enemy_template_id = (option_config.enemy_template_id or "").strip()
+        if not enemy_template_id:
+            return None
+        enemy_template = self._enemy_templates.get(enemy_template_id)
+        if enemy_template is None:
+            raise ConflictError(f"enemy template '{enemy_template_id}' is not registered")
+        return enemy_template
+
     def _get_combat_battle_payload(
         self,
         option_config: EventOptionConfig,
     ) -> dict[str, object]:
+        enemy_template = self._resolve_enemy_template(option_config)
+        if enemy_template is not None:
+            return {
+                "enemy_name": enemy_template.get("enemy_name", ""),
+                "enemy_realm_label": enemy_template.get("enemy_realm_label", ""),
+                "enemy_hp": enemy_template.get("enemy_hp", 1),
+                "enemy_attack": enemy_template.get("enemy_attack", 0),
+                "enemy_defense": enemy_template.get("enemy_defense", 0),
+                "enemy_speed": enemy_template.get("enemy_speed", 0),
+                "allow_flee": enemy_template.get("allow_flee", True),
+            }
         for payload_source in (
             option_config.result_on_success,
             option_config.result_on_failure,

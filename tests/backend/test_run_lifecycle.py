@@ -2,6 +2,7 @@ from pathlib import Path
 from shutil import rmtree
 from uuid import uuid4
 
+from app.admin.repositories.enemy_config_repository import EnemyConfigRepository
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
 from app.core_loop.event_config import EventRegistry
 from app.core_loop.services.combat_service import CombatService
@@ -563,6 +564,130 @@ def test_combat_use_pill_consumes_pill_and_persists_after_refresh() -> None:
     assert refreshed.resources.pill == 0
 
 
+def test_combat_option_resolves_enemy_from_enemy_template_id() -> None:
+    base_path = _make_test_base_path("enemy-template-runtime")
+    EnemyConfigRepository(base_path=base_path).save(
+        {
+            "items": [
+                {
+                    "enemy_id": "enemy_bandit_qi_early",
+                    "enemy_name": "山匪",
+                    "enemy_realm_label": "炼气初期",
+                    "enemy_hp": 12,
+                    "enemy_attack": 3,
+                    "enemy_defense": 1,
+                    "enemy_speed": 2,
+                    "allow_flee": True,
+                    "rewards": {
+                        "resources": {"spirit_stone": 9},
+                        "character": {"cultivation_exp": 4},
+                    },
+                }
+            ]
+        }
+    )
+
+    try:
+        service = RunService(event_config_base_path=str(base_path))
+        _attach_combat_registry_with_enemy_template(service)
+        run = service.create_run(player_id="p1")
+        run.current_event = CurrentEvent(
+            event_id="evt_bandit",
+            event_name="山匪拦路",
+            event_type="encounter",
+            outcome_type="mixed",
+            risk_level="risky",
+            trigger_sources=[],
+            choice_pattern="binary_choice",
+            title_text="山匪拦路",
+            body_text="前路有山匪盘踞。",
+            region="mountain",
+            status="pending",
+            options=[
+                CurrentEventOption(
+                    option_id="opt_fight",
+                    option_text="迎战山匪",
+                    sort_order=1,
+                    is_default=True,
+                )
+            ],
+        )
+
+        resolved = service.resolve_event(run.run_id, "opt_fight")
+
+        assert resolved.active_battle is not None
+        assert resolved.active_battle.enemy.name == "山匪"
+        assert resolved.active_battle.enemy.hp_current == 12
+        assert resolved.active_battle.enemy.attack == 3
+    finally:
+        rmtree(base_path)
+
+
+def test_combat_victory_uses_enemy_template_rewards() -> None:
+    base_path = _make_test_base_path("enemy-template-rewards")
+    EnemyConfigRepository(base_path=base_path).save(
+        {
+            "items": [
+                {
+                    "enemy_id": "enemy_bandit_qi_early",
+                    "enemy_name": "山匪",
+                    "enemy_realm_label": "炼气初期",
+                    "enemy_hp": 1,
+                    "enemy_attack": 1,
+                    "enemy_defense": 0,
+                    "enemy_speed": 1,
+                    "allow_flee": True,
+                    "rewards": {
+                        "resources": {"spirit_stone": 9},
+                        "character": {"cultivation_exp": 4},
+                    },
+                }
+            ]
+        }
+    )
+
+    try:
+        service = RunService(event_config_base_path=str(base_path))
+        _attach_combat_registry_with_enemy_template(service)
+        service._combat_service = CombatService()
+        run = service.create_run(player_id="p1")
+        run.resources.spirit_stone = 5
+        run.current_event = CurrentEvent(
+            event_id="evt_bandit",
+            event_name="山匪拦路",
+            event_type="encounter",
+            outcome_type="mixed",
+            risk_level="risky",
+            trigger_sources=[],
+            choice_pattern="binary_choice",
+            title_text="山匪拦路",
+            body_text="前路有山匪盘踞。",
+            region="mountain",
+            status="pending",
+            options=[
+                CurrentEventOption(
+                    option_id="opt_fight",
+                    option_text="迎战山匪",
+                    sort_order=1,
+                    is_default=True,
+                )
+            ],
+        )
+
+        resolved = service.resolve_event(run.run_id, "opt_fight")
+        assert resolved.active_battle is not None
+        resolved.active_battle.enemy.hp_current = 1
+
+        finished = service.perform_battle_action(run.run_id, "attack")
+
+        assert finished.active_battle is None
+        assert finished.current_event is None
+        assert finished.resources.spirit_stone == 14
+        assert finished.character.cultivation_exp == 4
+    finally:
+        rmtree(base_path)
+
+
 def _attach_combat_registry(service: RunService) -> None:
     registry = EventRegistry(
         templates={
@@ -628,6 +753,48 @@ def _attach_combat_registry(service: RunService) -> None:
                         "flee_failure_log": "逃跑失败",
                     },
                 ),
+            )
+        },
+    )
+    service._event_registry = registry
+    service._rebuild_runtime_services()
+
+
+def _attach_combat_registry_with_enemy_template(service: RunService) -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_bandit": EventTemplateConfig(
+                event_id="evt_bandit",
+                event_name="山匪拦路",
+                event_type="encounter",
+                outcome_type="mixed",
+                risk_level="risky",
+                trigger_sources=["global"],
+                choice_pattern="binary_choice",
+                title_text="山匪拦路",
+                body_text="前路有山匪盘踞。",
+                weight=1,
+                is_repeatable=True,
+                option_ids=["opt_fight"],
+            )
+        },
+        options={
+            "opt_fight": EventOptionConfig(
+                option_id="opt_fight",
+                event_id="evt_bandit",
+                option_text="迎战山匪",
+                sort_order=1,
+                is_default=True,
+                resolution_mode="combat",
+                time_cost_months=0,
+                enemy_template_id="enemy_bandit_qi_early",
+                result_on_success=EventResultPayload(),
+                result_on_failure=EventResultPayload(
+                    resources={"spirit_stone": -3},
+                    character={"lifespan_delta": -2},
+                ),
+                log_text_success="victory log",
+                log_text_failure="defeat log",
             )
         },
     )

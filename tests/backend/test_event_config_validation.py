@@ -141,3 +141,74 @@ def test_validation_accepts_combat_option_with_minimal_battle_config() -> None:
     )
 
     assert result.is_valid is True
+
+
+def test_validation_rejects_combat_option_with_missing_enemy_template_id() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_combat",
+                "event_name": "Combat Event",
+                "event_type": "encounter",
+                "outcome_type": "mixed",
+                "risk_level": "risky",
+                "trigger_sources": ["global"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Combat Event",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "option_ids": ["opt_combat"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_combat",
+                "event_id": "evt_combat",
+                "option_text": "Fight",
+                "sort_order": 1,
+                "resolution_mode": "combat",
+                "enemy_template_id": "enemy_missing",
+                "result_on_success": {"resources": {"spirit_stone": 2}},
+            }
+        ],
+        enemy_ids={"enemy_bandit_qi_early"},
+    )
+
+    assert result.is_valid is False
+    assert any("enemy_template_id" in error and "enemy_missing" in error for error in result.errors)
+
+
+def test_validation_accepts_combat_option_with_enemy_template_id() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_combat",
+                "event_name": "Combat Event",
+                "event_type": "encounter",
+                "outcome_type": "mixed",
+                "risk_level": "risky",
+                "trigger_sources": ["global"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Combat Event",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "option_ids": ["opt_combat"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_combat",
+                "event_id": "evt_combat",
+                "option_text": "Fight",
+                "sort_order": 1,
+                "resolution_mode": "combat",
+                "enemy_template_id": "enemy_bandit_qi_early",
+                "result_on_success": {"resources": {"spirit_stone": 2}},
+            }
+        ],
+        enemy_ids={"enemy_bandit_qi_early"},
+    )
+
+    assert result.is_valid is True

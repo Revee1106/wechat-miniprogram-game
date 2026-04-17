@@ -56,6 +56,7 @@ export type EventOptionInput = {
   is_default: boolean;
   time_cost_months?: number;
   resolution_mode?: string;
+  enemy_template_id?: string | null;
   requires_resources?: Record<string, number>;
   requires_statuses?: string[];
   requires_techniques?: string[];
@@ -82,6 +83,27 @@ export type BattleConfigInput = {
   defeat_log?: string;
   flee_success_log?: string;
   flee_failure_log?: string;
+};
+
+export type EnemyTemplateInput = {
+  enemy_id: string;
+  enemy_name: string;
+  enemy_realm_label: string;
+  enemy_hp: number;
+  enemy_attack: number;
+  enemy_defense: number;
+  enemy_speed: number;
+  allow_flee: boolean;
+  rewards: Record<string, unknown>;
+};
+
+export type EnemyTemplateListResponse = {
+  items: EnemyTemplateInput[];
+};
+
+export type EnemyReloadResponse = {
+  reloaded: boolean;
+  enemy_count: number;
 };
 
 export type EventDetailResponse = {
@@ -241,6 +263,22 @@ export async function fetchDwellingFacilityDetail(
   return response.json();
 }
 
+export async function fetchBattleEnemies(): Promise<EnemyTemplateListResponse> {
+  const response = await fetch("/admin/api/battle/enemies");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载敌人模板列表失败"));
+  }
+  return response.json();
+}
+
+export async function fetchBattleEnemyDetail(enemyId: string): Promise<EnemyTemplateInput> {
+  const response = await fetch(`/admin/api/battle/enemies/${enemyId}`);
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载敌人模板详情失败"));
+  }
+  return response.json();
+}
+
 export async function createEvent(payload: EventTemplateInput): Promise<EventTemplateInput> {
   return sendJson("/admin/api/events", {
     method: "POST",
@@ -284,6 +322,31 @@ export async function updateDwellingFacility(
   return sendJson(`/admin/api/dwelling/facilities/${facilityId}`, {
     method: "PUT",
     body: JSON.stringify(payload),
+  });
+}
+
+export async function createBattleEnemy(
+  payload: EnemyTemplateInput
+): Promise<EnemyTemplateInput> {
+  return sendJson("/admin/api/battle/enemies", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateBattleEnemy(
+  enemyId: string,
+  payload: EnemyTemplateInput
+): Promise<EnemyTemplateInput> {
+  return sendJson(`/admin/api/battle/enemies/${enemyId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteBattleEnemy(enemyId: string): Promise<void> {
+  await sendJson(`/admin/api/battle/enemies/${enemyId}`, {
+    method: "DELETE",
   });
 }
 
@@ -344,6 +407,13 @@ export async function validateDwelling(): Promise<ValidationResponse> {
   return localizeValidationResponse(response);
 }
 
+export async function validateBattleEnemies(): Promise<ValidationResponse> {
+  const response = await sendJson<ValidationResponse>("/admin/api/battle/validate", {
+    method: "POST",
+  });
+  return localizeValidationResponse(response);
+}
+
 export async function reloadEvents(): Promise<{
   reloaded: boolean;
   template_count: number;
@@ -362,6 +432,12 @@ export async function reloadRealms(): Promise<RealmReloadResponse> {
 
 export async function reloadDwelling(): Promise<DwellingReloadResponse> {
   return sendJson("/admin/api/dwelling/reload", {
+    method: "POST",
+  });
+}
+
+export async function reloadBattleEnemies(): Promise<EnemyReloadResponse> {
+  return sendJson("/admin/api/battle/reload", {
     method: "POST",
   });
 }

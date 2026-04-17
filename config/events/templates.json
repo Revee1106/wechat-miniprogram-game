@@ -346,5 +346,38 @@
       "evt_material_5_option_2",
       "evt_material_5_option_3"
     ]
+  },
+  {
+    "event_id": "evt_encounter_1",
+    "event_name": "模拟战斗",
+    "event_type": "encounter",
+    "outcome_type": "mixed",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "global"
+    ],
+    "choice_pattern": "binary_choice",
+    "title_text": "模拟战斗",
+    "body_text": "你遇到了一个怪",
+    "realm_min": null,
+    "realm_max": null,
+    "region": "",
+    "weight": 100,
+    "is_repeatable": true,
+    "cooldown_rounds": 5,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "flags": [],
+    "option_ids": [
+      "evt_encounter_1_option_1",
+      "evt_encounter_1_option_2"
+    ]
   }
 ]

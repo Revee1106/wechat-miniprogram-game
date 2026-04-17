@@ -5,6 +5,11 @@ import { ResourceRecordEditor } from "./ResourceRecordEditor";
 import { ResultPayloadEditor } from "./ResultPayloadEditor";
 import { SectionCard } from "./SectionCard";
 
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
 type EventOptionEditorProps = {
   options: EventOptionInput[];
   existingOptionIds: string[];
@@ -18,7 +23,8 @@ type EventOptionEditorProps = {
   compact?: boolean;
   activeIndex?: number;
   onSelectOption?: (index: number) => void;
-  eventOptions?: Array<{ value: string; label: string }>;
+  eventOptions?: SelectOption[];
+  enemyTemplateOptions?: SelectOption[];
 };
 
 export function EventOptionEditor({
@@ -31,12 +37,13 @@ export function EventOptionEditor({
   activeIndex = 0,
   onSelectOption,
   eventOptions = [],
+  enemyTemplateOptions = [],
 }: EventOptionEditorProps) {
   if (!compact) {
     return (
       <SectionCard
         title="选项编排"
-        description="先写玩家看到的选项文案，再补充结算模式、前置条件和结果结算。"
+        description="先写玩家看到的选项文案，再补充前置条件、结算模式和结果。"
         actions={
           <button className="button-primary" type="button" onClick={onAddOption}>
             新增选项
@@ -47,6 +54,7 @@ export function EventOptionEditor({
           {options.map((option, index) => (
             <OptionDetailCard
               key={`${option.option_id || "new"}-${index}`}
+              enemyTemplateOptions={enemyTemplateOptions}
               eventOptions={eventOptions}
               existingOptionIds={existingOptionIds}
               index={index}
@@ -94,6 +102,7 @@ export function EventOptionEditor({
         {currentOption ? (
           <OptionDetailCard
             compact
+            enemyTemplateOptions={enemyTemplateOptions}
             eventOptions={eventOptions}
             existingOptionIds={existingOptionIds}
             index={activeIndex}
@@ -117,6 +126,7 @@ function OptionDetailCard({
   onRemoveOption,
   compact = false,
   eventOptions,
+  enemyTemplateOptions,
 }: {
   option: EventOptionInput;
   index: number;
@@ -128,11 +138,15 @@ function OptionDetailCard({
   ) => void;
   onRemoveOption: (index: number) => void;
   compact?: boolean;
-  eventOptions: Array<{ value: string; label: string }>;
+  eventOptions: SelectOption[];
+  enemyTemplateOptions: SelectOption[];
 }) {
+  void existingOptionIds;
+
   const shellClassName = compact ? "section-grid" : "option-card__body";
   const optionTitle = option.option_text.trim() || `选项 ${index + 1}`;
   const resolutionMode = option.resolution_mode === "combat" ? "combat" : "direct";
+  const hasSelectedEnemyTemplate = Boolean(option.enemy_template_id?.trim());
 
   const requirementFields = [
     {
@@ -201,7 +215,11 @@ function OptionDetailCard({
           placeholder="每行一个装备标签"
           value={formatLineList(option.requires_equipment_tags)}
           onChange={(event) =>
-            onChangeOption(index, "requires_equipment_tags", parseLineList(event.target.value))
+            onChangeOption(
+              index,
+              "requires_equipment_tags",
+              parseLineList(event.target.value)
+            )
           }
         />
       ),
@@ -211,7 +229,7 @@ function OptionDetailCard({
   return (
     <SectionCard
       title={optionTitle}
-      description={compact ? undefined : "当前只编辑一个选项，其他选项通过左侧清单切换。"}
+      description={compact ? undefined : "当前只编辑一个选项，其他选项可通过工具栏切换。"}
       actions={
         <button className="button-danger" type="button" onClick={() => onRemoveOption(index)}>
           删除选项
@@ -226,8 +244,8 @@ function OptionDetailCard({
               aria-label="选项编号"
               disabled
               placeholder="例如 opt_absorb"
-              value={option.option_id}
               readOnly
+              value={option.option_id}
             />
           </label>
 
@@ -289,17 +307,37 @@ function OptionDetailCard({
             </label>
 
             {resolutionMode === "combat" ? (
-              <label className="field">
-                <span className="field__label">成功率公式</span>
-                <input
-                  aria-label="成功率公式"
-                  placeholder="例如 base_success_rate + 0.1"
-                  value={option.success_rate_formula ?? ""}
-                  onChange={(event) =>
-                    onChangeOption(index, "success_rate_formula", event.target.value)
-                  }
-                />
-              </label>
+              <>
+                <label className="field">
+                  <span className="field__label">成功率公式</span>
+                  <input
+                    aria-label="成功率公式"
+                    placeholder="例如 base_success_rate + 0.1"
+                    value={option.success_rate_formula ?? ""}
+                    onChange={(event) =>
+                      onChangeOption(index, "success_rate_formula", event.target.value)
+                    }
+                  />
+                </label>
+
+                <label className="field">
+                  <span className="field__label">敌人模板</span>
+                  <select
+                    aria-label="敌人模板"
+                    value={option.enemy_template_id ?? ""}
+                    onChange={(event) =>
+                      onChangeOption(index, "enemy_template_id", event.target.value || null)
+                    }
+                  >
+                    <option value="">未选择敌人模板</option>
+                    {enemyTemplateOptions.map((item) => (
+                      <option key={item.value} value={item.value}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
             ) : null}
 
             {eventOptions.length > 0 ? (
@@ -362,7 +400,14 @@ function OptionDetailCard({
 
         {resolutionMode === "combat" ? (
           <div className="section-grid section-grid--two">
-            <SectionCard title="成功结果" description="填写该选项成功后带来的资源、属性与状态变化。">
+            <SectionCard
+              title="成功结果"
+              description={
+                hasSelectedEnemyTemplate
+                  ? "选中敌人模板后，胜利奖励由模板统一提供，这里只维护成功日志。"
+                  : "未选择敌人模板时，继续沿用旧事件内嵌战斗奖励。"
+              }
+            >
               <div className="field-grid">
                 <label className="field field--full">
                   <span className="field__label">成功日志</span>
@@ -376,11 +421,18 @@ function OptionDetailCard({
                   />
                 </label>
               </div>
-              <ResultPayloadEditor
-                labelPrefix="成功"
-                onChange={(value) => onChangeOption(index, "result_on_success", value)}
-                payload={option.result_on_success}
-              />
+
+              {hasSelectedEnemyTemplate ? (
+                <div className="resource-editor__empty">
+                  当前战斗胜利奖励由敌人模板结算，事件侧不再重复配置。
+                </div>
+              ) : (
+                <ResultPayloadEditor
+                  labelPrefix="成功"
+                  onChange={(value) => onChangeOption(index, "result_on_success", value)}
+                  payload={option.result_on_success}
+                />
+              )}
             </SectionCard>
 
             <SectionCard title="失败结果" description="填写该选项失败后的代价、损失或状态变化。">

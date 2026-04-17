@@ -6,12 +6,13 @@ import {
   logoutAdmin,
   type AdminSession,
 } from "./api/client";
+import { BattleEnemyListPage } from "./pages/BattleEnemyListPage";
 import { DwellingListPage } from "./pages/DwellingListPage";
 import { EventListPage } from "./pages/EventListPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RealmListPage } from "./pages/RealmListPage";
 
-type ViewMode = "events" | "realms" | "dwelling";
+type ViewMode = "events" | "realms" | "dwelling" | "battle";
 
 export default function App() {
   const [authState, setAuthState] = useState<
@@ -97,13 +98,21 @@ export default function App() {
   }
 
   const pageTitle =
-    view === "dwelling" ? "洞府工坊" : view === "realms" ? "境界谱录" : "事件工坊";
+    view === "dwelling"
+      ? "洞府工坊"
+      : view === "realms"
+        ? "境界谱录"
+        : view === "battle"
+          ? "战斗工坊"
+          : "事件工坊";
   const pageSubtitle =
     view === "dwelling"
-      ? "紧凑式设施清单与等级配置工作台"
+      ? "集中维护设施清单与等级配置"
       : view === "realms"
-        ? "紧凑式境界清单与突破配置工作台"
-        : "紧凑式事件清单与结果编排工作台";
+        ? "集中维护境界清单与突破配置"
+        : view === "battle"
+          ? "集中维护敌人模板与战利品配置"
+          : "集中维护事件清单与结果编排";
 
   return (
     <div className="console-shell">
@@ -138,9 +147,16 @@ export default function App() {
             >
               洞府配置
             </button>
+            <button
+              className={`console-nav__button ${view === "battle" ? "console-nav__button--active" : ""}`}
+              type="button"
+              onClick={() => setView("battle")}
+            >
+              战斗配置
+            </button>
           </nav>
           <div className="console-userbar">
-            <span className="console-userbar__badge">执笔人 {authState.session.username}</span>
+            <span className="console-userbar__badge">当前用户 {authState.session.username}</span>
             <button className="button-ghost" type="button" onClick={() => void handleLogout()}>
               退出登录
             </button>
@@ -152,6 +168,7 @@ export default function App() {
         {view === "events" ? <EventListPage /> : null}
         {view === "realms" ? <RealmListPage /> : null}
         {view === "dwelling" ? <DwellingListPage /> : null}
+        {view === "battle" ? <BattleEnemyListPage /> : null}
       </div>
     </div>
   );

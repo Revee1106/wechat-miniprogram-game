@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from app.admin.repositories.enemy_config_repository import EnemyConfigRepository
 from app.admin.repositories.event_config_repository import EventConfigRepository
 from app.admin.schemas import EventDetailResponse, EventListResponse
 from app.admin.services.event_validation_service import validate_event_config
@@ -14,6 +15,7 @@ class EventAdminService:
             Path(base_path) if base_path is not None else Path(__file__).resolve().parents[3]
         )
         self._repository = EventConfigRepository(base_path=self._base_path)
+        self._enemy_repository = EnemyConfigRepository(base_path=self._base_path)
         self._run_service = run_service
 
     def list_events(
@@ -157,16 +159,28 @@ class EventAdminService:
 
     def validate_current_config(self):
         payload = self._repository.load()
+        enemy_payload = self._enemy_repository.load()
         return validate_event_config(
             templates=payload["templates"],
             options=payload["options"],
+            enemy_ids={
+                str(enemy.get("enemy_id", "")).strip()
+                for enemy in enemy_payload["items"]
+                if str(enemy.get("enemy_id", "")).strip()
+            },
         )
 
     def reload_runtime_config(self) -> dict[str, object]:
         payload = self._repository.load()
+        enemy_payload = self._enemy_repository.load()
         validation_result = validate_event_config(
             templates=payload["templates"],
             options=payload["options"],
+            enemy_ids={
+                str(enemy.get("enemy_id", "")).strip()
+                for enemy in enemy_payload["items"]
+                if str(enemy.get("enemy_id", "")).strip()
+            },
         )
         if not validation_result.is_valid:
             raise ValueError("cannot reload invalid event config")

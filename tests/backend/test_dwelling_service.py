@@ -60,8 +60,8 @@ def test_advance_time_settles_dwelling_outputs_before_event_selection() -> None:
     assert advanced.dwelling_last_settlement.total_cultivation_exp_gain == 6
     assert advanced.resources.herbs == run.resources.herbs
     assert advanced.resources.ore == run.resources.ore
-    assert advanced.character.cultivation_exp == before_exp + 6
-    assert advanced.resources.spirit_stone == before_spirit_stone - 8
+    assert advanced.character.cultivation_exp == before_exp + 12
+    assert advanced.resources.spirit_stone == before_spirit_stone - 10
     assert any(
         stack.resource_key == "basic_herb" and stack.amount == 2
         for stack in advanced.resource_stacks
@@ -82,7 +82,7 @@ def test_dwelling_facility_stalls_when_maintenance_cannot_be_paid() -> None:
     run.resources.spirit_stone = 60
 
     service.build_dwelling_facility(run.run_id, "spirit_field")
-    run.resources.spirit_stone = 0
+    run.resources.spirit_stone = 2
     before_herbs = run.resources.herbs
 
     advanced = service.advance_time(run.run_id)

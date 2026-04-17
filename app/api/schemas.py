@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, model_validator
 
+from app.core_loop.services.combat_stat_service import CombatStatService
 from app.core_loop.types import BreakthroughResult, RebirthResult, RunState
 
 
@@ -75,13 +76,35 @@ def _serialize(value: Any) -> Any:
     return value
 
 
+def _apply_character_combat_stats(serialized_run: dict[str, Any], run: RunState) -> None:
+    player_combat_state = CombatStatService().build_player_state(run)
+    serialized_run["character"]["attack"] = player_combat_state.attack
+    serialized_run["character"]["defense"] = player_combat_state.defense
+    serialized_run["character"]["speed"] = player_combat_state.speed
+
+
 def serialize_run_state(run: RunState) -> dict[str, Any]:
-    return _serialize(run)
+    serialized = _serialize(run)
+    _apply_character_combat_stats(serialized, run)
+    return serialized
 
 
 def serialize_breakthrough_result(result: BreakthroughResult) -> dict[str, Any]:
-    return _serialize(result)
+    serialized = _serialize(result)
+    run = RunState(
+        run_id="",
+        player_id="",
+        round_index=0,
+        character=result.character,
+        resources=result.resources,
+        breakthrough_requirements=result.breakthrough_requirements,
+    )
+    _apply_character_combat_stats({"character": serialized["character"]}, run)
+    return serialized
 
 
 def serialize_rebirth_result(result: RebirthResult) -> dict[str, Any]:
-    return _serialize(result)
+    return {
+        "player_profile": _serialize(result.player_profile),
+        "new_run": serialize_run_state(result.new_run),
+    }

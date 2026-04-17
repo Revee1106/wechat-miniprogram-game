@@ -5,6 +5,7 @@ import {
   createOption,
   deleteEvent,
   deleteOption,
+  fetchBattleEnemies,
   fetchEventDetail,
   fetchEvents,
   fetchRealms,
@@ -51,6 +52,9 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
   const [existingOptionIds, setExistingOptionIds] = useState<string[]>([]);
   const [removedOptionIds, setRemovedOptionIds] = useState<string[]>([]);
   const [realmOptions, setRealmOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [enemyTemplateOptions, setEnemyTemplateOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   const [drawerPanel, setDrawerPanel] = useState<EventPanel | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -74,13 +78,14 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     async function loadLibrary() {
       setIsLoading(true);
       try {
-        const [filteredResponse, fullResponse, realmsResponse] = await Promise.all([
+        const [filteredResponse, fullResponse, realmsResponse, enemyResponse] = await Promise.all([
           fetchEvents({
             eventType: eventTypeFilter,
             riskLevel: riskLevelFilter,
           }),
           fetchEvents(),
           fetchRealms(),
+          fetchBattleEnemies(),
         ]);
         if (!isMounted) {
           return;
@@ -90,6 +95,12 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         setItems(nextItems);
         setAllItems(nextAllItems);
         setRealmOptions(mapRealmOptions(realmsResponse.items ?? []));
+        setEnemyTemplateOptions(
+          (enemyResponse.items ?? []).map((enemy) => ({
+            value: enemy.enemy_id,
+            label: `${enemy.enemy_name || enemy.enemy_id} / ${enemy.enemy_id}`,
+          }))
+        );
         setSelectedEventId((current) => {
           if (current === DRAFT_EVENT_ID && template) {
             return current;
@@ -594,6 +605,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventOptionEditor
               activeIndex={activeOptionIndex}
               compact
+              enemyTemplateOptions={enemyTemplateOptions}
               eventOptions={linkedEventOptions}
               existingOptionIds={existingOptionIds}
               onAddOption={handleAddOption}
@@ -770,6 +782,7 @@ function buildPreparedOptions({
         is_default: true,
         time_cost_months: Math.max(0, Number(base.time_cost_months) || 0),
         resolution_mode: "direct",
+        enemy_template_id: null,
         success_rate_formula: "",
         requires_resources: {},
         requires_statuses: [],
@@ -810,6 +823,7 @@ function normalizeSingleOutcomeOption(
     sort_order: 1,
     is_default: true,
     resolution_mode: "direct",
+    enemy_template_id: null,
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -834,6 +848,7 @@ function createCleanSingleOutcomeOption(
     sort_order: 1,
     is_default: true,
     resolution_mode: "direct",
+    enemy_template_id: null,
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -922,6 +937,7 @@ function createEmptyOption(sortOrder: number, optionId = ""): EventOptionInput {
     is_default: sortOrder === 1,
     time_cost_months: 0,
     resolution_mode: "direct",
+    enemy_template_id: null,
     requires_resources: {},
     requires_statuses: [],
     requires_techniques: [],
@@ -989,6 +1005,7 @@ function normalizeOption(option: EventOptionInput): EventOptionInput {
     ...option,
     time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
     resolution_mode: resolutionMode,
+    enemy_template_id: option.enemy_template_id ?? null,
     requires_resources: option.requires_resources ?? {},
     requires_statuses: option.requires_statuses ?? [],
     requires_techniques: option.requires_techniques ?? [],
@@ -1030,13 +1047,20 @@ function sanitizeOptionForSave(option: EventOptionInput): EventOptionInput {
   const normalizedOption = {
     ...option,
     time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+    enemy_template_id: option.enemy_template_id?.trim() || null,
   };
-  if (option.resolution_mode === "combat") {
-    return normalizedOption;
+  if (normalizedOption.resolution_mode === "combat") {
+    return {
+      ...normalizedOption,
+      result_on_success: normalizedOption.enemy_template_id
+        ? {}
+        : normalizedOption.result_on_success,
+    };
   }
   return {
     ...normalizedOption,
     resolution_mode: "direct",
+    enemy_template_id: null,
     success_rate_formula: "",
     result_on_failure: {},
     log_text_failure: "",

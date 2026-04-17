@@ -1,0 +1,20 @@
+[
+  {
+    "enemy_id": "练气-均衡",
+    "enemy_name": "均衡练气",
+    "enemy_realm_label": "练气初期",
+    "enemy_hp": 100,
+    "enemy_attack": 5,
+    "enemy_defense": 5,
+    "enemy_speed": 5,
+    "allow_flee": true,
+    "rewards": {
+      "resources": {
+        "spirit_stone": 10
+      },
+      "character": {
+        "cultivation_exp": 10
+      }
+    }
+  }
+]

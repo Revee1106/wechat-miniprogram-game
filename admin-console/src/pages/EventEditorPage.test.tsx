@@ -748,4 +748,125 @@ test("shows current event type total weight in the workbench header", async () =
   expect(await screen.findByText("同类总权重 8")).toBeInTheDocument();
 });
 
+test("saves combat option enemy_template_id from enemy template selection", async () => {
+  let savedOption: Record<string, unknown> | null = null;
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/admin/api/events/evt_existing") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            template: {
+              event_id: "evt_existing",
+              event_name: "Existing Event",
+              event_type: "encounter",
+              outcome_type: "mixed",
+              risk_level: "risky",
+              trigger_sources: ["global"],
+              choice_pattern: "binary_choice",
+              title_text: "Existing Event",
+              body_text: "Body",
+              weight: 1,
+              is_repeatable: true,
+              option_ids: ["opt_existing"],
+            },
+            options: [
+              {
+                option_id: "opt_existing",
+                event_id: "evt_existing",
+                option_text: "Fight",
+                sort_order: 1,
+                is_default: true,
+                resolution_mode: "combat",
+                result_on_success: {},
+                result_on_failure: {},
+              },
+            ],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/battle/enemies") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                enemy_id: "enemy_bandit_qi_early",
+                enemy_name: "山匪",
+                enemy_realm_label: "炼气初期",
+                enemy_hp: 36,
+                enemy_attack: 8,
+                enemy_defense: 4,
+                enemy_speed: 6,
+                allow_flee: true,
+                rewards: {},
+              },
+            ],
+          }),
+        };
+      }
+      if (url.includes("/admin/api/events") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({ items: [] }),
+        };
+      }
+      if (url.endsWith("/admin/api/events/evt_existing") && init?.method === "PUT") {
+        return {
+          ok: true,
+          json: async () => JSON.parse(String(init.body)),
+        };
+      }
+      if (url.endsWith("/admin/api/options/opt_existing") && init?.method === "PUT") {
+        savedOption = JSON.parse(String(init.body));
+        return {
+          ok: true,
+          json: async () => savedOption,
+        };
+      }
+      if (url.endsWith("/admin/api/events/reload") && init?.method === "POST") {
+        return {
+          ok: true,
+          json: async () => ({
+            reloaded: true,
+            template_count: 1,
+            option_count: 1,
+          }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({ items: [] }),
+      };
+    })
+  );
+
+  render(
+    <EventEditorPage
+      eventId="evt_existing"
+      onBack={() => {}}
+      onSaved={() => {}}
+    />
+  );
+
+  fireEvent.click(await screen.findByText("编辑选项编排"));
+  const dialog = await screen.findByRole("dialog", { name: "选项编排" });
+  fireEvent.change(within(dialog).getByLabelText("敌人模板"), {
+    target: { value: "enemy_bandit_qi_early" },
+  });
+  fireEvent.click(screen.getByText("保存事件"));
+
+  await waitFor(() => {
+    expect(savedOption).not.toBeNull();
+  });
+
+  expect(savedOption).toMatchObject({
+    resolution_mode: "combat",
+    enemy_template_id: "enemy_bandit_qi_early",
+  });
+});
+
 

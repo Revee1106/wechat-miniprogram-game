@@ -5,6 +5,7 @@ import {
   createOption,
   deleteEvent,
   deleteOption,
+  fetchBattleEnemies,
   fetchEventDetail,
   fetchEvents,
   reloadEvents,
@@ -59,6 +60,9 @@ export function EventEditorPage({
   const [existingOptionIds, setExistingOptionIds] = useState<string[]>([]);
   const [removedOptionIds, setRemovedOptionIds] = useState<string[]>([]);
   const [eventLibrary, setEventLibrary] = useState<EventListItem[]>([]);
+  const [enemyTemplateOptions, setEnemyTemplateOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   const [validation, setValidation] = useState<ValidationResponse | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -74,7 +78,10 @@ export function EventEditorPage({
 
     async function load() {
       if (!eventId) {
-        const library = await fetchEvents();
+        const [library, enemyLibrary] = await Promise.all([
+          fetchEvents(),
+          fetchBattleEnemies(),
+        ]);
         if (!isMounted) {
           return;
         }
@@ -84,6 +91,12 @@ export function EventEditorPage({
         setExistingOptionIds([]);
         setRemovedOptionIds([]);
         setEventLibrary(library.items ?? []);
+        setEnemyTemplateOptions(
+          (enemyLibrary.items ?? []).map((enemy) => ({
+            value: enemy.enemy_id,
+            label: `${enemy.enemy_name || enemy.enemy_id} / ${enemy.enemy_id}`,
+          }))
+        );
         setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
@@ -93,9 +106,10 @@ export function EventEditorPage({
 
       setIsLoading(true);
       try {
-        const [detail, library] = await Promise.all([
+        const [detail, library, enemyLibrary] = await Promise.all([
           fetchEventDetail(eventId),
           fetchEvents(),
+          fetchBattleEnemies(),
         ]);
         if (!isMounted) {
           return;
@@ -109,6 +123,12 @@ export function EventEditorPage({
         setExistingOptionIds(detail.options.map((option) => option.option_id));
         setRemovedOptionIds([]);
         setEventLibrary(library.items ?? []);
+        setEnemyTemplateOptions(
+          (enemyLibrary.items ?? []).map((enemy) => ({
+            value: enemy.enemy_id,
+            label: `${enemy.enemy_name || enemy.enemy_id} / ${enemy.enemy_id}`,
+          }))
+        );
         setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
@@ -499,6 +519,7 @@ export function EventEditorPage({
               ) : null}
               {activePanel === "options" ? (
                 <EventOptionEditor
+                  enemyTemplateOptions={enemyTemplateOptions}
                   existingOptionIds={existingOptionIds}
                   onAddOption={handleAddOption}
                   onChangeOption={handleOptionChange}
@@ -573,6 +594,8 @@ function buildPreparedOptions({
         sort_order: 1,
         is_default: true,
         time_cost_months: Math.max(0, Number(base.time_cost_months) || 0),
+        resolution_mode: "direct",
+        enemy_template_id: null,
         success_rate_formula: "",
         requires_resources: {},
         requires_statuses: [],
@@ -588,14 +611,16 @@ function buildPreparedOptions({
 
   const preparedOptions = options
     .filter((option) => option.option_id.trim() || option.option_text.trim())
-    .map((option, index) => ({
-      ...option,
-      event_id: eventIdValue,
-      option_id: option.option_id.trim(),
-      option_text: option.option_text.trim(),
-      sort_order: index + 1,
-      time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
-    }));
+    .map((option, index) =>
+      sanitizeOptionForSave({
+        ...option,
+        event_id: eventIdValue,
+        option_id: option.option_id.trim(),
+        option_text: option.option_text.trim(),
+        sort_order: index + 1,
+        time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+      })
+    );
 
   return assignMissingOptionIds(eventIdValue, preparedOptions);
 }
@@ -611,6 +636,8 @@ function normalizeSingleOutcomeOption(
     option_text: SINGLE_OUTCOME_TEXT,
     sort_order: 1,
     is_default: true,
+    resolution_mode: "direct",
+    enemy_template_id: null,
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -634,6 +661,8 @@ function createCleanSingleOutcomeOption(
     option_text: SINGLE_OUTCOME_TEXT,
     sort_order: 1,
     is_default: true,
+    resolution_mode: "direct",
+    enemy_template_id: null,
     success_rate_formula: "",
     requires_resources: {},
     requires_statuses: [],
@@ -710,6 +739,8 @@ function createEmptyOption(sortOrder: number, optionId = ""): EventOptionInput {
     sort_order: sortOrder,
     is_default: sortOrder === 1,
     time_cost_months: 0,
+    resolution_mode: "direct",
+    enemy_template_id: null,
     requires_resources: {},
     requires_statuses: [],
     requires_techniques: [],
@@ -782,10 +813,13 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
 }
 
 function normalizeOption(option: EventOptionInput): EventOptionInput {
+  const resolutionMode = inferResolutionMode(option);
   return {
     ...createEmptyOption(option.sort_order || 1),
     ...option,
     time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+    resolution_mode: resolutionMode,
+    enemy_template_id: option.enemy_template_id ?? null,
     requires_resources: option.requires_resources ?? {},
     requires_statuses: option.requires_statuses ?? [],
     requires_techniques: option.requires_techniques ?? [],
@@ -796,5 +830,55 @@ function normalizeOption(option: EventOptionInput): EventOptionInput {
     log_text_failure: option.log_text_failure ?? "",
     result_on_success: option.result_on_success ?? {},
     result_on_failure: option.result_on_failure ?? {},
+  };
+}
+
+function inferResolutionMode(option: EventOptionInput): string {
+  if (option.resolution_mode === "direct" || option.resolution_mode === "combat") {
+    return option.resolution_mode;
+  }
+  if (
+    Boolean(option.success_rate_formula?.trim()) ||
+    Boolean(option.log_text_failure?.trim()) ||
+    hasPayloadContent(option.result_on_failure)
+  ) {
+    return "combat";
+  }
+  return "direct";
+}
+
+function hasPayloadContent(payload: EventOptionInput["result_on_failure"]): boolean {
+  if (!payload) {
+    return false;
+  }
+  if (typeof payload === "string") {
+    return payload.trim().length > 0;
+  }
+  return Object.keys(payload).length > 0;
+}
+
+function sanitizeOptionForSave(option: EventOptionInput): EventOptionInput {
+  const normalizedOption = {
+    ...option,
+    time_cost_months: Math.max(0, Number(option.time_cost_months) || 0),
+    enemy_template_id: option.enemy_template_id?.trim() || null,
+  };
+
+  if (normalizedOption.resolution_mode === "combat") {
+    return {
+      ...normalizedOption,
+      result_on_success: normalizedOption.enemy_template_id
+        ? {}
+        : normalizedOption.result_on_success,
+    };
+  }
+
+  return {
+    ...normalizedOption,
+    resolution_mode: "direct",
+    enemy_template_id: null,
+    success_rate_formula: "",
+    result_on_failure: {},
+    log_text_failure: "",
   };
 }

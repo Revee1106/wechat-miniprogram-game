@@ -11,6 +11,7 @@ from app.admin.auth import (
 )
 from app.admin.schemas import AdminLoginRequest, AdminSessionResponse
 from app.admin.services.dwelling_admin_service import DwellingAdminService
+from app.admin.services.enemy_admin_service import EnemyAdminService
 from app.admin.services.event_admin_service import EventAdminService
 from app.admin.services.realm_admin_service import RealmAdminService
 from app.core_loop.types import NotFoundError
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/admin/api", tags=["admin"])
 event_admin_service = EventAdminService()
 realm_admin_service = RealmAdminService()
 dwelling_admin_service = DwellingAdminService()
+enemy_admin_service = EnemyAdminService()
 
 
 def _raise_http_error(error: Exception) -> None:
@@ -70,6 +72,67 @@ def list_events(
         risk_level=risk_level,
         keyword=keyword,
     )
+
+
+@router.get("/battle/enemies")
+def list_enemies() -> dict[str, object]:
+    return enemy_admin_service.list_enemies()
+
+
+@router.get("/battle/enemies/{enemy_id}")
+def get_enemy(enemy_id: str) -> dict[str, object]:
+    try:
+        return enemy_admin_service.get_enemy(enemy_id)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/battle/enemies")
+def create_enemy(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return enemy_admin_service.create_enemy(payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/battle/enemies/{enemy_id}")
+def update_enemy(enemy_id: str, payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return enemy_admin_service.update_enemy(enemy_id, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.delete("/battle/enemies/{enemy_id}")
+def delete_enemy(enemy_id: str) -> dict[str, object]:
+    try:
+        enemy_admin_service.delete_enemy(enemy_id)
+        return {"deleted": True}
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/battle/validate")
+def validate_enemies() -> dict[str, object]:
+    result = enemy_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/battle/reload")
+def reload_enemies() -> dict[str, object]:
+    try:
+        return enemy_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
 
 
 @router.get("/events/{event_id}")

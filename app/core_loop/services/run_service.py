@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
+from app.admin.repositories.enemy_config_repository import EnemyConfigRepository
 from app.core_loop.seeds import get_realm_configs
 from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.event_config import load_event_registry
@@ -32,6 +33,7 @@ class RunService:
         self._realm_config_base_path = (
             realm_config_base_path if realm_config_base_path is not None else event_config_base_path
         )
+        self._enemy_config_base_path = event_config_base_path
         self._dwelling_config_base_path = (
             dwelling_config_base_path
             if dwelling_config_base_path is not None
@@ -52,6 +54,7 @@ class RunService:
             realm_configs=self._realm_configs,
         )
         self._event_registry = load_event_registry(base_path=event_config_base_path)
+        self._enemy_templates = self._load_runtime_enemy_templates()
         self._rebuild_runtime_services()
 
     def reset(self) -> None:
@@ -187,6 +190,12 @@ class RunService:
         self._realm_configs = self._load_runtime_realm_configs()
         self._rebuild_runtime_services()
 
+    def reload_enemy_config(self, enemy_config_base_path: str | None = None) -> None:
+        if enemy_config_base_path is not None:
+            self._enemy_config_base_path = enemy_config_base_path
+        self._enemy_templates = self._load_runtime_enemy_templates()
+        self._rebuild_runtime_services()
+
     def reload_dwelling_config(self, dwelling_config_base_path: str | None = None) -> None:
         if dwelling_config_base_path is not None:
             self._dwelling_config_base_path = dwelling_config_base_path
@@ -206,6 +215,7 @@ class RunService:
             registry=self._event_registry,
             realm_configs=self._realm_configs,
             economy_base_path=self._event_config_base_path,
+            enemy_templates=self._enemy_templates,
         )
         self._time_advance_service = TimeAdvanceService(
             self._event_service,
@@ -217,6 +227,16 @@ class RunService:
     def _load_runtime_realm_configs(self):
         realm_configs = load_realm_configs(base_path=self._realm_config_base_path)
         return realm_configs or get_realm_configs()
+
+    def _load_runtime_enemy_templates(self) -> dict[str, dict[str, object]]:
+        payload = EnemyConfigRepository(base_path=self._enemy_config_base_path).load()
+        templates: dict[str, dict[str, object]] = {}
+        for item in payload.get("items", []):
+            enemy_id = str(item.get("enemy_id", "")).strip()
+            if not enemy_id:
+                continue
+            templates[enemy_id] = dict(item)
+        return templates
 
     def _sync_pending_event(self, run: RunState) -> RunState:
         if run.current_event is None:
