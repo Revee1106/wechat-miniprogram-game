@@ -173,30 +173,6 @@
         "resource_yields": {},
         "cultivation_exp_gain": 0,
         "special_effects": {}
-      },
-      {
-        "level": 2,
-        "entry_cost": {
-          "spirit_stone": 55
-        },
-        "maintenance_cost": {
-          "spirit_stone": 4
-        },
-        "resource_yields": {},
-        "cultivation_exp_gain": 0,
-        "special_effects": {}
-      },
-      {
-        "level": 3,
-        "entry_cost": {
-          "spirit_stone": 70
-        },
-        "maintenance_cost": {
-          "spirit_stone": 5
-        },
-        "resource_yields": {},
-        "cultivation_exp_gain": 0,
-        "special_effects": {}
       }
     ]
   },

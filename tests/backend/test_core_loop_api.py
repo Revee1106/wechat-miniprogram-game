@@ -10,6 +10,7 @@ from app.core_loop.types import (
     EventOptionConfig,
     EventResultPayload,
     EventTemplateConfig,
+    RunResourceStack,
 )
 from app.main import app
 
@@ -121,6 +122,7 @@ def test_start_and_consume_alchemy_round_trip() -> None:
     run_id = create_response.json()["run_id"]
     run = run_service.get_run(run_id)
     run.resources.spirit_stone = 200
+    run.resource_stacks.append(RunResourceStack(resource_key="basic_herb", amount=3))
     run_service.build_dwelling_facility(run_id, "alchemy_room")
 
     start_response = client.post(
@@ -171,7 +173,7 @@ def test_convert_spirit_stone_to_cultivation_round_trip() -> None:
 
     assert convert_response.status_code == 200
     assert convert_response.json()["resources"]["spirit_stone"] == 8
-    assert convert_response.json()["character"]["cultivation_exp"] == 29
+    assert convert_response.json()["character"]["cultivation_exp"] == 21
 
 
 def test_battle_action_round_trip() -> None:

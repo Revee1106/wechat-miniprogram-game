@@ -61,6 +61,7 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
                     },
                     statuses_add=["focused"],
                     techniques_add=["cloud_step"],
+                    learned_alchemy_recipe_ids=["ju_ling_dan"],
                     equipment_add=["jade_token"],
                     rebirth_progress_delta=2,
                 ),
@@ -86,6 +87,7 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
     assert resolved.character.rebirth_progress == 2
     assert resolved.character.statuses == ["focused"]
     assert resolved.character.techniques == ["cloud_step"]
+    assert resolved.alchemy_state.learned_recipe_ids == ["ju_ling_dan"]
     assert resolved.character.equipment_tags == ["jade_token"]
     assert resolved.result_summary == "success log"
 

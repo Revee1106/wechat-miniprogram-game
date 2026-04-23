@@ -121,6 +121,7 @@ def test_create_run_exposes_dwelling_facilities_and_empty_last_settlement() -> N
     run = service.create_run(player_id="p1")
 
     assert run.resources.spirit_stone == 100
+    assert run.resources.herbs == 0
     assert run.dwelling_level == 1
     assert run.dwelling_last_settlement is None
     assert [facility.facility_id for facility in run.dwelling_facilities] == [
@@ -136,7 +137,10 @@ def test_create_run_exposes_dwelling_facilities_and_empty_last_settlement() -> N
     assert run.alchemy_state.active_job is None
     assert run.alchemy_state.last_result is None
     assert run.alchemy_state.inventory == []
-    assert len(run.alchemy_state.available_recipes) >= 6
+    assert [recipe.recipe_id for recipe in run.alchemy_state.available_recipes] == [
+        "yang_qi_dan",
+        "yang_yuan_dan",
+    ]
 
 
 def test_resolve_event_exposes_capped_cultivation_log_metadata() -> None:

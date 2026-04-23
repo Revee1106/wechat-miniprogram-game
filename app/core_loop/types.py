@@ -135,6 +135,7 @@ class EventResultPayload:
     statuses_add: list[str] = field(default_factory=list)
     statuses_remove: list[str] = field(default_factory=list)
     techniques_add: list[str] = field(default_factory=list)
+    learned_alchemy_recipe_ids: list[str] = field(default_factory=list)
     equipment_add: list[str] = field(default_factory=list)
     equipment_remove: list[str] = field(default_factory=list)
     battle: dict[str, object] | None = None
@@ -214,7 +215,7 @@ class ActiveBattleState:
 @dataclass
 class ResourceState:
     spirit_stone: int = 100
-    herbs: int = 3
+    herbs: int = 0
     iron_essence: int = 0
     ore: int = 0
     beast_material: int = 0
@@ -273,8 +274,10 @@ class AlchemyRecipeState:
     display_name: str
     category: str
     description: str
+    effect_summary: str
+    effect_type: str
+    effect_value: float
     required_alchemy_level: int
-    required_alchemy_room_level: int
     duration_months: int
     base_success_rate: float
     ingredients: dict[str, int] = field(default_factory=dict)
@@ -289,6 +292,8 @@ class AlchemyInventoryItem:
     quality: str
     amount: int
     effect_summary: str
+    effect_type: str = ""
+    effect_value: float = 0.0
 
 
 @dataclass
@@ -317,6 +322,7 @@ class AlchemyState:
     mastery_exp: int = 0
     mastery_level: int = 0
     mastery_title: str = "丹道未入门"
+    learned_recipe_ids: list[str] = field(default_factory=list)
     available_recipes: list[AlchemyRecipeState] = field(default_factory=list)
     inventory: list[AlchemyInventoryItem] = field(default_factory=list)
     active_job: AlchemyJob | None = None

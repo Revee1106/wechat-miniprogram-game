@@ -4,7 +4,9 @@
     "option_text": "顺着雾中灵气缓缓引导",
     "sort_order": 1,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -15,7 +17,7 @@
         "spirit_stone": -4
       },
       "character": {
-        "cultivation_exp": 16
+        "cultivation_exp": 9
       }
     },
     "result_on_failure": {},
@@ -29,7 +31,9 @@
     "option_text": "依平日法门稳步运转周天",
     "sort_order": 2,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -40,7 +44,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 11
+        "cultivation_exp": 5
       }
     },
     "result_on_failure": {},
@@ -54,7 +58,9 @@
     "option_text": "结合自身功法逐句推演",
     "sort_order": 1,
     "is_default": true,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -65,7 +71,7 @@
         "spirit_stone": -4
       },
       "character": {
-        "cultivation_exp": 18
+        "cultivation_exp": 11
       }
     },
     "result_on_failure": {},
@@ -79,7 +85,9 @@
     "option_text": "先收束内息，再尝试接引外气",
     "sort_order": 3,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -90,7 +98,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 11
+        "cultivation_exp": 1
       }
     },
     "result_on_failure": {},
@@ -104,7 +112,9 @@
     "option_text": "按残卷所述先运转一轮",
     "sort_order": 2,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -115,7 +125,7 @@
         "spirit_stone": -4
       },
       "character": {
-        "cultivation_exp": 13
+        "cultivation_exp": 7
       }
     },
     "result_on_failure": {},
@@ -129,7 +139,9 @@
     "option_text": "只记下关键句，回头再慢慢印证",
     "sort_order": 3,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -138,9 +150,6 @@
     "result_on_success": {
       "resources": {
         "spirit_stone": -2
-      },
-      "character": {
-        "cultivation_exp": 5
       }
     },
     "result_on_failure": {},
@@ -156,6 +165,7 @@
     "is_default": true,
     "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -166,7 +176,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 15
+        "cultivation_exp": 10
       }
     },
     "result_on_failure": {},
@@ -182,6 +192,7 @@
     "is_default": false,
     "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -192,7 +203,7 @@
         "spirit_stone": -4
       },
       "character": {
-        "cultivation_exp": 10
+        "cultivation_exp": 6
       }
     },
     "result_on_failure": {},
@@ -208,6 +219,7 @@
     "is_default": false,
     "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -218,7 +230,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 3
+        "cultivation_exp": 1
       }
     },
     "result_on_failure": {},
@@ -232,7 +244,9 @@
     "option_text": "以少量灵石引动泉气",
     "sort_order": 1,
     "is_default": true,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -243,7 +257,7 @@
         "spirit_stone": -4
       },
       "character": {
-        "cultivation_exp": 14
+        "cultivation_exp": 9
       }
     },
     "result_on_failure": {},
@@ -257,7 +271,9 @@
     "option_text": "先借泉气润脉，再行吐纳",
     "sort_order": 2,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -268,7 +284,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 10
+        "cultivation_exp": 5
       }
     },
     "result_on_failure": {},
@@ -282,7 +298,9 @@
     "option_text": "等泉气最盛时再一并纳入",
     "sort_order": 3,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -304,7 +322,9 @@
     "option_text": "借松荫静意缓缓行功",
     "sort_order": 1,
     "is_default": true,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -315,7 +335,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 15
+        "cultivation_exp": 11
       }
     },
     "result_on_failure": {},
@@ -329,7 +349,9 @@
     "option_text": "先沿老松行走数圈，再回身吐纳",
     "sort_order": 2,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],
@@ -340,7 +362,7 @@
         "spirit_stone": -3
       },
       "character": {
-        "cultivation_exp": 10
+        "cultivation_exp": 6
       }
     },
     "result_on_failure": {},
@@ -354,7 +376,9 @@
     "option_text": "折一段松枝置于身前凝神观想",
     "sort_order": 3,
     "is_default": false,
+    "time_cost_months": 0,
     "resolution_mode": "direct",
+    "enemy_template_id": null,
     "requires_resources": {},
     "requires_statuses": [],
     "requires_techniques": [],

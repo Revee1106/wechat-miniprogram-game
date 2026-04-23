@@ -11,7 +11,7 @@
     "lifespan_bonus": 0,
     "failure_penalty": {},
     "is_enabled": true,
-    "base_cultivation_gain_per_advance": 6,
+    "base_cultivation_gain_per_advance": 0,
     "base_spirit_stone_cost_per_advance": 2
   },
   {
@@ -20,14 +20,18 @@
     "major_realm": "qi_refining",
     "stage_index": 2,
     "order_index": 2,
-    "base_success_rate": 1,
-    "required_cultivation_exp": 90,
+    "base_success_rate": 0.8,
+    "required_cultivation_exp": 180,
     "required_spirit_stone": 15,
     "lifespan_bonus": 0,
-    "failure_penalty": {},
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -45
+      }
+    },
     "is_enabled": true,
     "base_spirit_stone_cost_per_advance": 3,
-    "base_cultivation_gain_per_advance": 8
+    "base_cultivation_gain_per_advance": 0
   },
   {
     "key": "qi_refining_late",
@@ -35,13 +39,17 @@
     "major_realm": "qi_refining",
     "stage_index": 3,
     "order_index": 3,
-    "base_success_rate": 1,
-    "required_cultivation_exp": 130,
+    "base_success_rate": 0.8,
+    "required_cultivation_exp": 260,
     "required_spirit_stone": 20,
     "lifespan_bonus": 0,
-    "failure_penalty": {},
+    "failure_penalty": {
+      "character": {
+        "cultivation_exp": -130
+      }
+    },
     "is_enabled": true,
-    "base_cultivation_gain_per_advance": 10,
+    "base_cultivation_gain_per_advance": 0,
     "base_spirit_stone_cost_per_advance": 3
   },
   {
@@ -50,13 +58,13 @@
     "major_realm": "qi_refining",
     "stage_index": 4,
     "order_index": 4,
-    "base_success_rate": 0.9,
-    "required_cultivation_exp": 130,
+    "base_success_rate": 0.7,
+    "required_cultivation_exp": 320,
     "required_spirit_stone": 20,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
-        "cultivation_exp": -20
+        "cultivation_exp": -160
       }
     },
     "is_enabled": true,
@@ -69,13 +77,13 @@
     "major_realm": "foundation",
     "stage_index": 1,
     "order_index": 5,
-    "base_success_rate": 0.75,
-    "required_cultivation_exp": 220,
+    "base_success_rate": 0.6,
+    "required_cultivation_exp": 440,
     "required_spirit_stone": 80,
     "lifespan_bonus": 360,
     "failure_penalty": {
       "character": {
-        "cultivation_exp": -200
+        "cultivation_exp": -330
       }
     },
     "is_enabled": true,

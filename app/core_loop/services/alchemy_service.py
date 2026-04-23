@@ -14,6 +14,9 @@ from app.core_loop.types import (
 from app.economy.services.run_resource_service import RunResourceService
 
 
+BASE_ALCHEMY_RECIPE_IDS = {"yang_qi_dan", "yang_yuan_dan"}
+
+
 @dataclass(frozen=True)
 class AlchemyRecipeSpec:
     recipe_id: str
@@ -21,7 +24,6 @@ class AlchemyRecipeSpec:
     category: str
     description: str
     required_alchemy_level: int
-    required_alchemy_room_level: int
     duration_months: int
     base_success_rate: float
     ingredients: dict[str, int]
@@ -42,7 +44,9 @@ class AlchemyService:
         run.alchemy_state.mastery_level = _resolve_mastery_level(run.alchemy_state.mastery_exp)
         run.alchemy_state.mastery_title = _resolve_mastery_title(run.alchemy_state.mastery_level)
         run.alchemy_state.available_recipes = [
-            self._build_recipe_state(run, spec) for spec in self._recipe_specs
+            self._build_recipe_state(run, spec)
+            for spec in self._recipe_specs
+            if self._is_recipe_known(run, spec)
         ]
         self._sync_pill_counter(run)
 
@@ -81,12 +85,10 @@ class AlchemyService:
             return None
 
         recipe = self._get_recipe(job.recipe_id)
-        room_level = self._get_dwelling_level(run, "alchemy_room")
         mastery_level = run.alchemy_state.mastery_level
         score = (
             recipe.base_success_rate
             + mastery_level * 0.04
-            + max(room_level - 1, 0) * 0.03
             + (0.08 if job.use_spirit_spring else 0.0)
         )
         outcome_rank, outcome, quality = _resolve_outcome(score)
@@ -99,6 +101,8 @@ class AlchemyService:
                 display_name=recipe.display_name,
                 quality=quality,
                 effect_summary=recipe.effect_summary,
+                effect_type=recipe.effect_type,
+                effect_value=recipe.effect_value,
             )
 
         result = AlchemyResult(
@@ -181,10 +185,10 @@ class AlchemyService:
 
         if room_level <= 0:
             disabled_reason = "尚未建成炼丹房。"
-        elif room_level < recipe.required_alchemy_room_level:
-            disabled_reason = f"炼丹房需达到 {recipe.required_alchemy_room_level} 级。"
         elif mastery_level < recipe.required_alchemy_level:
             disabled_reason = f"炼丹术需达到 {recipe.required_alchemy_level} 级。"
+        elif not self._is_recipe_known(run, recipe):
+            disabled_reason = "尚未习得该丹方。"
         elif run.alchemy_state.active_job is not None:
             disabled_reason = "当前已有炼制中的炉次。"
         elif not self._has_resources(run, recipe.ingredients):
@@ -195,8 +199,10 @@ class AlchemyService:
             display_name=recipe.display_name,
             category=recipe.category,
             description=recipe.description,
+            effect_summary=recipe.effect_summary,
+            effect_type=recipe.effect_type,
+            effect_value=recipe.effect_value,
             required_alchemy_level=recipe.required_alchemy_level,
-            required_alchemy_room_level=recipe.required_alchemy_room_level,
             duration_months=recipe.duration_months,
             base_success_rate=recipe.base_success_rate,
             ingredients=dict(recipe.ingredients),
@@ -210,6 +216,11 @@ class AlchemyService:
             None,
         )
         return facility.level if facility is not None else 0
+
+    def _is_recipe_known(self, run: RunState, recipe: AlchemyRecipeSpec) -> bool:
+        if recipe.recipe_id in BASE_ALCHEMY_RECIPE_IDS:
+            return True
+        return recipe.recipe_id in set(run.alchemy_state.learned_recipe_ids)
 
     def _has_resources(self, run: RunState, costs: dict[str, int]) -> bool:
         return all(self._get_resource_amount(run, key) >= value for key, value in costs.items())
@@ -240,6 +251,8 @@ class AlchemyService:
         display_name: str,
         quality: str,
         effect_summary: str,
+        effect_type: str,
+        effect_value: float,
     ) -> None:
         existing = next(
             (
@@ -260,6 +273,8 @@ class AlchemyService:
                 quality=quality,
                 amount=1,
                 effect_summary=effect_summary,
+                effect_type=effect_type,
+                effect_value=effect_value,
             )
         )
 
@@ -311,29 +326,14 @@ def _build_result_summary(recipe_name: str, outcome: str, quality: str) -> str:
 def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
     return [
         AlchemyRecipeSpec(
-            recipe_id="bi_gu_dan",
-            display_name="辟谷丹",
-            category="utility",
-            description="低阶功能丹，用于延缓远行与闭关时的消耗压力。",
-            required_alchemy_level=0,
-            required_alchemy_room_level=1,
-            duration_months=1,
-            base_success_rate=0.90,
-            ingredients={"herb": 1, "spirit_stone": 1},
-            effect_type="lifespan_restore",
-            effect_value=3,
-            effect_summary="恢复少量寿元",
-        ),
-        AlchemyRecipeSpec(
             recipe_id="yang_qi_dan",
             display_name="养气丹",
             category="cultivation",
             description="前期主力修炼丹，服用后可直接增长修为。",
             required_alchemy_level=0,
-            required_alchemy_room_level=1,
             duration_months=1,
             base_success_rate=0.86,
-            ingredients={"herb": 2},
+            ingredients={"basic_herb": 2},
             effect_type="cultivation_exp",
             effect_value=12,
             effect_summary="直接增加修为",
@@ -343,11 +343,10 @@ def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
             display_name="养元丹",
             category="recovery",
             description="恢复气血的基础丹药，用于外出后的调息。",
-            required_alchemy_level=1,
-            required_alchemy_room_level=1,
+            required_alchemy_level=0,
             duration_months=1,
             base_success_rate=0.80,
-            ingredients={"herb": 2, "spirit_stone": 2},
+            ingredients={"basic_herb": 2, "spirit_stone": 2},
             effect_type="hp_restore",
             effect_value=25,
             effect_summary="恢复气血",
@@ -358,10 +357,9 @@ def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
             category="recovery",
             description="安定心神，缓解修炼与事件带来的心神损耗。",
             required_alchemy_level=1,
-            required_alchemy_room_level=1,
             duration_months=1,
             base_success_rate=0.76,
-            ingredients={"herb": 3},
+            ingredients={"basic_herb": 3},
             effect_type="status_penalty_reduce",
             effect_value=0.05,
             effect_summary="降低状态惩罚",
@@ -372,10 +370,9 @@ def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
             category="cultivation",
             description="中期修炼丹，借灵泉与丹室凝聚灵力。",
             required_alchemy_level=2,
-            required_alchemy_room_level=2,
             duration_months=1,
             base_success_rate=0.64,
-            ingredients={"herb": 4, "spirit_stone": 2},
+            ingredients={"basic_herb": 4, "spirit_stone": 2},
             effect_type="cultivation_exp",
             effect_value=24,
             effect_summary="较高幅度增加修为",
@@ -386,10 +383,9 @@ def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
             category="breakthrough",
             description="稳定元气，为破境前的最后准备提供支撑。",
             required_alchemy_level=2,
-            required_alchemy_room_level=2,
             duration_months=1,
             base_success_rate=0.60,
-            ingredients={"herb": 3, "ore": 1, "spirit_stone": 3},
+            ingredients={"basic_herb": 3, "ore": 1, "spirit_stone": 3},
             effect_type="breakthrough_bonus",
             effect_value=6,
             effect_summary="提高突破辅助值",

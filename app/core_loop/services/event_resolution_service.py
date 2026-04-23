@@ -265,6 +265,9 @@ class EventResolutionService:
                 statuses_add=list(payload_config.get("statuses_add", [])),
                 statuses_remove=list(payload_config.get("statuses_remove", [])),
                 techniques_add=list(payload_config.get("techniques_add", [])),
+                learned_alchemy_recipe_ids=list(
+                    payload_config.get("learned_alchemy_recipe_ids", [])
+                ),
                 equipment_add=list(payload_config.get("equipment_add", [])),
                 equipment_remove=list(payload_config.get("equipment_remove", [])),
                 battle=payload_config.get("battle"),
@@ -353,6 +356,11 @@ class EventResolutionService:
         run.character.techniques = self._merge_tags(
             run.character.techniques,
             payload.techniques_add,
+            [],
+        )
+        run.alchemy_state.learned_recipe_ids = self._merge_tags(
+            run.alchemy_state.learned_recipe_ids,
+            payload.learned_alchemy_recipe_ids,
             [],
         )
         run.character.equipment_tags = self._merge_tags(

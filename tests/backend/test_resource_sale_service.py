@@ -71,7 +71,7 @@ def test_convert_spirit_stone_to_cultivation_consumes_stone_and_adds_exp() -> No
     updated = service.convert_spirit_stone_to_cultivation(run.run_id, 3)
 
     assert updated.resources.spirit_stone == 7
-    assert updated.character.cultivation_exp == 22
+    assert updated.character.cultivation_exp == 16
 
 
 def test_convert_spirit_stone_to_cultivation_stops_at_breakthrough_cap() -> None:
@@ -122,9 +122,9 @@ def test_convert_spirit_stone_to_cultivation_stops_at_breakthrough_cap() -> None
         run.resources.spirit_stone = 10
         run.character.cultivation_exp = 50
 
-        updated = service.convert_spirit_stone_to_cultivation(run.run_id, 3)
+        updated = service.convert_spirit_stone_to_cultivation(run.run_id, 4)
 
-        assert updated.resources.spirit_stone == 8
+        assert updated.resources.spirit_stone == 6
         assert updated.character.cultivation_exp == 60
     finally:
         rmtree(base_path)
