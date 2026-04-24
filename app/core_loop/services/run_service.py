@@ -27,6 +27,7 @@ class RunService:
         event_config_base_path: str | None = None,
         realm_config_base_path: str | None = None,
         dwelling_config_base_path: str | None = None,
+        alchemy_config_base_path: str | None = None,
     ) -> None:
         self._repo = InMemoryRunRepository()
         self._event_config_base_path = event_config_base_path
@@ -39,8 +40,13 @@ class RunService:
             if dwelling_config_base_path is not None
             else event_config_base_path
         )
+        self._alchemy_config_base_path = (
+            alchemy_config_base_path
+            if alchemy_config_base_path is not None
+            else event_config_base_path
+        )
         self._dwelling_service = DwellingService(base_path=self._dwelling_config_base_path)
-        self._alchemy_service = AlchemyService(base_path=event_config_base_path)
+        self._alchemy_service = AlchemyService(base_path=self._alchemy_config_base_path)
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
         self._resource_sale_service = ResourceSaleService(base_path=event_config_base_path)
@@ -201,6 +207,12 @@ class RunService:
         if dwelling_config_base_path is not None:
             self._dwelling_config_base_path = dwelling_config_base_path
         self._dwelling_service.reload_config(base_path=self._dwelling_config_base_path)
+        self._rebuild_runtime_services()
+
+    def reload_alchemy_config(self, alchemy_config_base_path: str | None = None) -> None:
+        if alchemy_config_base_path is not None:
+            self._alchemy_config_base_path = alchemy_config_base_path
+        self._alchemy_service.reload_config(base_path=self._alchemy_config_base_path)
         self._rebuild_runtime_services()
 
     def _rebuild_runtime_services(self) -> None:

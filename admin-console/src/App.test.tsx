@@ -87,7 +87,7 @@ test("shows shell and sign out action when session is active", async () => {
   expect(screen.getByText("退出登录")).toBeInTheDocument();
 });
 
-test("switches between event, realm, and dwelling workbenches", async () => {
+test("switches between event, realm, dwelling, and alchemy workbenches", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: string | URL) => {
@@ -188,6 +188,48 @@ test("switches between event, realm, and dwelling workbenches", async () => {
           }),
         };
       }
+      if (url.includes("/admin/api/alchemy/levels")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                level: 0,
+                display_name: "初识丹道",
+                required_mastery_exp: 0,
+              },
+              {
+                level: 1,
+                display_name: "初窥门径",
+                required_mastery_exp: 20,
+              },
+            ],
+          }),
+        };
+      }
+      if (url.includes("/admin/api/alchemy/recipes")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                recipe_id: "yang_qi_dan",
+                display_name: "养气丹",
+                category: "cultivation",
+                description: "增加修为",
+                required_alchemy_level: 0,
+                duration_months: 1,
+                base_success_rate: 0.86,
+                ingredients: { basic_herb: 2 },
+                effect_type: "cultivation_exp",
+                effect_value: 12,
+                effect_summary: "直接增加修为",
+                is_base_recipe: true,
+              },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({
@@ -220,6 +262,9 @@ test("switches between event, realm, and dwelling workbenches", async () => {
 
   fireEvent.click(navButtons[2]);
   expect(await screen.findByDisplayValue("Spirit Field")).toBeInTheDocument();
+
+  fireEvent.click(navButtons[3]);
+  expect(await screen.findByDisplayValue("养气丹")).toBeInTheDocument();
 });
 
 test("shows backend login error detail", async () => {

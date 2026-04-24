@@ -197,6 +197,41 @@ export type DwellingReloadResponse = {
   facility_count: number;
 };
 
+export type AlchemyLevelInput = {
+  level: number;
+  display_name: string;
+  required_mastery_exp: number;
+};
+
+export type AlchemyRecipeInput = {
+  recipe_id: string;
+  display_name: string;
+  category: string;
+  description: string;
+  required_alchemy_level: number;
+  duration_months: number;
+  base_success_rate: number;
+  ingredients: Record<string, number>;
+  effect_type: string;
+  effect_value: number;
+  effect_summary: string;
+  is_base_recipe: boolean;
+};
+
+export type AlchemyLevelListResponse = {
+  items: AlchemyLevelInput[];
+};
+
+export type AlchemyRecipeListResponse = {
+  items: AlchemyRecipeInput[];
+};
+
+export type AlchemyReloadResponse = {
+  reloaded: boolean;
+  level_count: number;
+  recipe_count: number;
+};
+
 export async function fetchEvents(filters?: {
   eventType?: string;
   riskLevel?: string;
@@ -279,6 +314,41 @@ export async function fetchBattleEnemyDetail(enemyId: string): Promise<EnemyTemp
   return response.json();
 }
 
+export async function fetchAlchemyLevels(): Promise<AlchemyLevelListResponse> {
+  const response = await fetch("/admin/api/alchemy/levels");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载丹道等级失败"));
+  }
+  return response.json();
+}
+
+export async function updateAlchemyLevels(
+  levels: AlchemyLevelInput[]
+): Promise<AlchemyLevelListResponse> {
+  return sendJson("/admin/api/alchemy/levels", {
+    method: "PUT",
+    body: JSON.stringify({ items: levels }),
+  });
+}
+
+export async function fetchAlchemyRecipes(): Promise<AlchemyRecipeListResponse> {
+  const response = await fetch("/admin/api/alchemy/recipes");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载丹方列表失败"));
+  }
+  return response.json();
+}
+
+export async function fetchAlchemyRecipeDetail(
+  recipeId: string
+): Promise<AlchemyRecipeInput> {
+  const response = await fetch(`/admin/api/alchemy/recipes/${recipeId}`);
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载丹方详情失败"));
+  }
+  return response.json();
+}
+
 export async function createEvent(payload: EventTemplateInput): Promise<EventTemplateInput> {
   return sendJson("/admin/api/events", {
     method: "POST",
@@ -350,6 +420,31 @@ export async function deleteBattleEnemy(enemyId: string): Promise<void> {
   });
 }
 
+export async function createAlchemyRecipe(
+  payload: AlchemyRecipeInput
+): Promise<AlchemyRecipeInput> {
+  return sendJson("/admin/api/alchemy/recipes", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAlchemyRecipe(
+  recipeId: string,
+  payload: AlchemyRecipeInput
+): Promise<AlchemyRecipeInput> {
+  return sendJson(`/admin/api/alchemy/recipes/${recipeId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAlchemyRecipe(recipeId: string): Promise<void> {
+  await sendJson(`/admin/api/alchemy/recipes/${recipeId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function updateEvent(
   eventId: string,
   payload: EventTemplateInput
@@ -414,6 +509,13 @@ export async function validateBattleEnemies(): Promise<ValidationResponse> {
   return localizeValidationResponse(response);
 }
 
+export async function validateAlchemy(): Promise<ValidationResponse> {
+  const response = await sendJson<ValidationResponse>("/admin/api/alchemy/validate", {
+    method: "POST",
+  });
+  return localizeValidationResponse(response);
+}
+
 export async function reloadEvents(): Promise<{
   reloaded: boolean;
   template_count: number;
@@ -438,6 +540,12 @@ export async function reloadDwelling(): Promise<DwellingReloadResponse> {
 
 export async function reloadBattleEnemies(): Promise<EnemyReloadResponse> {
   return sendJson("/admin/api/battle/reload", {
+    method: "POST",
+  });
+}
+
+export async function reloadAlchemy(): Promise<AlchemyReloadResponse> {
+  return sendJson("/admin/api/alchemy/reload", {
     method: "POST",
   });
 }

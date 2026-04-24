@@ -16,6 +16,9 @@ const LEGACY_ERROR_PATTERNS: Array<[RegExp, string]> = [
   [/Failed to load realm detail/i, "加载境界详情失败"],
   [/Failed to load dwelling facilities/i, "加载洞府设施列表失败"],
   [/Failed to load dwelling facility detail/i, "加载洞府设施详情失败"],
+  [/Failed to load alchemy levels/i, "加载丹道等级失败"],
+  [/Failed to load alchemy recipes/i, "加载丹方列表失败"],
+  [/Failed to load alchemy recipe detail/i, "加载丹方详情失败"],
   [/Failed to load admin session/i, "加载管理会话失败"],
   [/not enough spirit stones to advance time/i, "灵石不足，无法推进时间。"],
   [/run .* not found/i, "当前没有进行中的修仙历程，请先启程。"],
@@ -63,6 +66,16 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   resolution_mode: "结算模式",
   sort_order: "排序",
   time_cost_months: "事件耗时（月）",
+  required_mastery_exp: "所需熟练度",
+  required_alchemy_level: "所需丹道等级",
+  duration_months: "炼制时长（月）",
+  ingredients: "材料",
+  effect_type: "成丹效果类型",
+  effect_value: "成丹效果数值",
+  effect_summary: "成丹效果说明",
+  category: "分类",
+  description: "描述",
+  is_base_recipe: "基础丹方",
 };
 
 const VALIDATION_SCOPE_LABELS: Record<string, string> = {
@@ -70,11 +83,17 @@ const VALIDATION_SCOPE_LABELS: Record<string, string> = {
   facility: "设施",
   template: "事件模板",
   option: "事件选项",
+  "alchemy level": "丹道等级",
+  "alchemy recipe": "丹方",
 };
 
 const VALIDATION_MESSAGE_PATTERNS: ValidationPattern[] = [
   {
     pattern: /^duplicate (realm key|order_index|facility_id|event_id|option_id): (.+)$/i,
+    format: (field, value) => `${formatDuplicateFieldLabel(field)}重复：${value}`,
+  },
+  {
+    pattern: /^duplicate (alchemy_level|alchemy_recipe_id): (.+)$/i,
     format: (field, value) => `${formatDuplicateFieldLabel(field)}重复：${value}`,
   },
   {
@@ -172,6 +191,54 @@ const VALIDATION_MESSAGE_PATTERNS: ValidationPattern[] = [
     format: (optionId, payloadName) =>
       `事件选项“${optionId}”在${formatPayloadLabel(payloadName)}里同时添加并移除了同一装备`,
   },
+  {
+    pattern: /^alchemy config must define at least one mastery level$/i,
+    format: () => "丹道配置至少需要一个等级",
+  },
+  {
+    pattern: /^alchemy config must define at least one base recipe$/i,
+    format: () => "丹道配置至少需要一个基础丹方",
+  },
+  {
+    pattern: /^alchemy levels must start at 0 and be contiguous$/i,
+    format: () => "丹道等级必须从 0 开始连续配置",
+  },
+  {
+    pattern: /^alchemy level '(\d+)' has empty ([a-z_]+)$/i,
+    format: (level, field) => `丹道等级 Lv.${level} 缺少${formatValidationFieldLabel(field)}`,
+  },
+  {
+    pattern: /^alchemy level '(\d+)' has invalid ([a-z_]+)$/i,
+    format: (level, field) => `丹道等级 Lv.${level} 的${formatValidationFieldLabel(field)}填写无效`,
+  },
+  {
+    pattern: /^alchemy level '0' must start at required_mastery_exp 0$/i,
+    format: () => "丹道等级 Lv.0 的所需熟练度必须为 0",
+  },
+  {
+    pattern: /^alchemy level '(\d+)' must have increasing required_mastery_exp$/i,
+    format: (level) => `丹道等级 Lv.${level} 的所需熟练度必须严格高于前一级`,
+  },
+  {
+    pattern: /^alchemy recipe missing recipe_id$/i,
+    format: () => "丹方缺少丹方 ID",
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has empty ([a-z_]+)$/i,
+    format: (recipeId, field) => `丹方“${recipeId}”缺少${formatValidationFieldLabel(field)}`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has invalid ([a-z_]+)$/i,
+    format: (recipeId, field) => `丹方“${recipeId}”的${formatValidationFieldLabel(field)}填写无效`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has empty ingredients key$/i,
+    format: (recipeId) => `丹方“${recipeId}”的材料里存在空白资源键`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has invalid ingredients value for '(.+)'$/i,
+    format: (recipeId, resourceKey) => `丹方“${recipeId}”的材料里，资源“${resourceKey}”的数值无效`,
+  },
 ];
 
 export function formatRealmDisplayName(displayName: string | null | undefined, key: string): string {
@@ -263,6 +330,12 @@ function formatValidationFieldLabel(field: string): string {
 function formatDuplicateFieldLabel(field: string): string {
   if (field === "realm key") {
     return "境界内部标识";
+  }
+  if (field === "alchemy_level") {
+    return "丹道等级序号";
+  }
+  if (field === "alchemy_recipe_id") {
+    return "丹方 ID";
   }
   return formatValidationFieldLabel(field);
 }

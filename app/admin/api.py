@@ -10,6 +10,7 @@ from app.admin.auth import (
     set_admin_session,
 )
 from app.admin.schemas import AdminLoginRequest, AdminSessionResponse
+from app.admin.services.alchemy_admin_service import AlchemyAdminService
 from app.admin.services.dwelling_admin_service import DwellingAdminService
 from app.admin.services.enemy_admin_service import EnemyAdminService
 from app.admin.services.event_admin_service import EventAdminService
@@ -22,6 +23,7 @@ event_admin_service = EventAdminService()
 realm_admin_service = RealmAdminService()
 dwelling_admin_service = DwellingAdminService()
 enemy_admin_service = EnemyAdminService()
+alchemy_admin_service = AlchemyAdminService()
 
 
 def _raise_http_error(error: Exception) -> None:
@@ -77,6 +79,81 @@ def list_events(
 @router.get("/battle/enemies")
 def list_enemies() -> dict[str, object]:
     return enemy_admin_service.list_enemies()
+
+
+@router.get("/alchemy/recipes")
+def list_alchemy_recipes() -> dict[str, object]:
+    return alchemy_admin_service.list_recipes()
+
+
+@router.get("/alchemy/recipes/{recipe_id}")
+def get_alchemy_recipe(recipe_id: str) -> dict[str, object]:
+    try:
+        return alchemy_admin_service.get_recipe(recipe_id)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/alchemy/recipes")
+def create_alchemy_recipe(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return alchemy_admin_service.create_recipe(payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/alchemy/recipes/{recipe_id}")
+def update_alchemy_recipe(recipe_id: str, payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return alchemy_admin_service.update_recipe(recipe_id, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.delete("/alchemy/recipes/{recipe_id}")
+def delete_alchemy_recipe(recipe_id: str) -> dict[str, object]:
+    try:
+        alchemy_admin_service.delete_recipe(recipe_id)
+        return {"deleted": True}
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.get("/alchemy/levels")
+def list_alchemy_levels() -> dict[str, object]:
+    return alchemy_admin_service.list_levels()
+
+
+@router.put("/alchemy/levels")
+def update_alchemy_levels(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return alchemy_admin_service.update_levels(list(payload.get("items", [])))
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/alchemy/validate")
+def validate_alchemy() -> dict[str, object]:
+    result = alchemy_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/alchemy/reload")
+def reload_alchemy() -> dict[str, object]:
+    try:
+        return alchemy_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
 
 
 @router.get("/battle/enemies/{enemy_id}")

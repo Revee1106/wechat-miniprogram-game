@@ -18,6 +18,26 @@ from app.core_loop.types import (
 
 EXCLUDED_RANDOM_EVENT_IDS = {"evt_evil_cultist_012"}
 DO_NOTHING_OPTION_ID = "__do_nothing__"
+RESOURCE_LABELS = {
+    "spirit_stone": "灵石",
+    "herb": "药草",
+    "herbs": "药草",
+    "ore": "灵矿",
+    "basic_herb": "普通灵植",
+    "basic_ore": "普通灵矿",
+    "spirit_spring_water": "灵泉水",
+    "basic_breakthrough_material": "普通晋级材料",
+    "rare_material": "稀有材料",
+    "craft_material": "杂材",
+    "iron_essence": "玄铁精华",
+    "beast_material": "兽材",
+    "pill": "丹药",
+}
+REQUIREMENT_LABELS = {
+    "statuses": "状态条件",
+    "techniques": "功法条件",
+    "equipment_tags": "装备条件",
+}
 
 
 class EventService:
@@ -302,14 +322,22 @@ class EventService:
         return None
 
     def _build_resource_reason(self, required_resources: dict[str, int]) -> str:
-        details = ", ".join(
-            f"{resource_name}:{amount}"
+        details = "、".join(
+            f"{self._format_resource_name(resource_name)} {amount}"
             for resource_name, amount in sorted(required_resources.items())
+            if int(amount) > 0
         )
-        return f"requires resources {details}"
+        if not details:
+            return "资源不足"
+        return f"资源不足：{details}"
 
     def _build_list_reason(self, label: str, values: list[str]) -> str:
-        return f"requires {label} {', '.join(values)}"
+        if not values:
+            return "条件不足"
+        return f"条件不足：需要{REQUIREMENT_LABELS.get(label, '前置条件')}"
+
+    def _format_resource_name(self, resource_name: str) -> str:
+        return RESOURCE_LABELS.get(resource_name, "所需资源")
 
     def _get_resource_amount(self, run: RunState, resource_name: str) -> int:
         aliases = {

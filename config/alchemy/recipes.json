@@ -1,0 +1,86 @@
+[
+  {
+    "recipe_id": "yang_qi_dan",
+    "display_name": "养气丹",
+    "category": "cultivation",
+    "description": "前期主力修炼丹，服用后可直接增长修为。",
+    "required_alchemy_level": 0,
+    "duration_months": 1,
+    "base_success_rate": 0.86,
+    "ingredients": {
+      "basic_herb": 2
+    },
+    "effect_type": "cultivation_exp",
+    "effect_value": 12,
+    "effect_summary": "直接增加修为",
+    "is_base_recipe": true
+  },
+  {
+    "recipe_id": "yang_yuan_dan",
+    "display_name": "养元丹",
+    "category": "recovery",
+    "description": "恢复气血的基础丹药，用于外出后的调息。",
+    "required_alchemy_level": 0,
+    "duration_months": 1,
+    "base_success_rate": 0.8,
+    "ingredients": {
+      "basic_herb": 2,
+      "spirit_stone": 2
+    },
+    "effect_type": "hp_restore",
+    "effect_value": 25,
+    "effect_summary": "恢复气血",
+    "is_base_recipe": true
+  },
+  {
+    "recipe_id": "ning_shen_dan",
+    "display_name": "宁神丹",
+    "category": "recovery",
+    "description": "安定心神，缓解修炼与事件带来的心神损耗。",
+    "required_alchemy_level": 1,
+    "duration_months": 1,
+    "base_success_rate": 0.76,
+    "ingredients": {
+      "basic_herb": 3
+    },
+    "effect_type": "status_penalty_reduce",
+    "effect_value": 0.05,
+    "effect_summary": "降低状态惩罚",
+    "is_base_recipe": false
+  },
+  {
+    "recipe_id": "ju_ling_dan",
+    "display_name": "聚灵丹",
+    "category": "cultivation",
+    "description": "中期修炼丹，借灵泉与丹室凝聚灵力。",
+    "required_alchemy_level": 2,
+    "duration_months": 1,
+    "base_success_rate": 0.64,
+    "ingredients": {
+      "basic_herb": 4,
+      "spirit_stone": 2
+    },
+    "effect_type": "cultivation_exp",
+    "effect_value": 24,
+    "effect_summary": "较高幅度增加修为",
+    "is_base_recipe": false
+  },
+  {
+    "recipe_id": "gu_yuan_dan",
+    "display_name": "固元丹",
+    "category": "breakthrough",
+    "description": "稳定元气，为破境前的最后准备提供支撑。",
+    "required_alchemy_level": 2,
+    "duration_months": 1,
+    "base_success_rate": 0.6,
+    "ingredients": {
+      "basic_herb": 3,
+      "ore": 1,
+      "spirit_stone": 3
+    },
+    "effect_type": "breakthrough_bonus",
+    "effect_value": 6,
+    "effect_summary": "提高突破辅助值",
+    "is_base_recipe": false
+  }
+]

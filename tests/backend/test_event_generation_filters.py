@@ -321,7 +321,44 @@ def test_event_runtime_option_availability_checks_all_gate_types() -> None:
 
     gated_option = next(option for option in selected.options if option.option_id == "opt_gated")
     assert gated_option.is_available is False
-    assert gated_option.disabled_reason
+    assert gated_option.disabled_reason == "资源不足：灵石 99"
+
+
+def test_event_runtime_option_availability_uses_chinese_status_reason() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_status_gate": EventTemplateConfig(
+                event_id="evt_status_gate",
+                event_name="Status Gate",
+                event_type="technique",
+                option_ids=["opt_status_gate", "opt_status_fallback"],
+            ),
+        },
+        options={
+            "opt_status_gate": EventOptionConfig(
+                option_id="opt_status_gate",
+                event_id="evt_status_gate",
+                option_text="Status Gate",
+                requires_statuses=["focused"],
+                is_default=True,
+            ),
+            "opt_status_fallback": EventOptionConfig(
+                option_id="opt_status_fallback",
+                event_id="evt_status_gate",
+                option_text="Fallback",
+                is_default=False,
+            ),
+        },
+    )
+    run = _build_run()
+
+    selected = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    gated_option = next(
+        option for option in selected.options if option.option_id == "opt_status_gate"
+    )
+    assert gated_option.is_available is False
+    assert gated_option.disabled_reason == "条件不足：需要状态条件"
 
 
 def test_event_selection_randomizes_type_before_selecting_event() -> None:

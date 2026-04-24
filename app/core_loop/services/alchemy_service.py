@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from app.admin.repositories.alchemy_config_repository import AlchemyConfigRepository
 from app.core_loop.types import (
     AlchemyInventoryItem,
     AlchemyJob,
@@ -14,7 +15,11 @@ from app.core_loop.types import (
 from app.economy.services.run_resource_service import RunResourceService
 
 
-BASE_ALCHEMY_RECIPE_IDS = {"yang_qi_dan", "yang_yuan_dan"}
+@dataclass(frozen=True)
+class AlchemyMasteryLevelSpec:
+    level: int
+    display_name: str
+    required_mastery_exp: int
 
 
 @dataclass(frozen=True)
@@ -30,19 +35,42 @@ class AlchemyRecipeSpec:
     effect_type: str
     effect_value: float
     effect_summary: str
+    is_base_recipe: bool = False
 
 
 class AlchemyService:
     def __init__(self, base_path: str | None = None) -> None:
         self._resource_service = RunResourceService(base_path=base_path)
-        self._recipe_specs = _build_recipe_specs()
+        self._repository = AlchemyConfigRepository(base_path=base_path)
+        self._mastery_levels: list[AlchemyMasteryLevelSpec] = []
+        self._recipe_specs: list[AlchemyRecipeSpec] = []
+        self._recipe_specs_by_id: dict[str, AlchemyRecipeSpec] = {}
+        self.reload_config(base_path=base_path)
+
+    def reload_config(self, base_path: str | None = None) -> None:
+        if base_path is not None:
+            self._resource_service = RunResourceService(base_path=base_path)
+            self._repository = AlchemyConfigRepository(base_path=base_path)
+
+        payload = self._repository.load()
+        self._mastery_levels = _load_mastery_levels(payload.get("levels", []))
+        self._recipe_specs = _load_recipe_specs(payload.get("recipes", []))
+        self._recipe_specs_by_id = {
+            recipe_spec.recipe_id: recipe_spec for recipe_spec in self._recipe_specs
+        }
 
     def hydrate_run(self, run: RunState) -> None:
         if run.alchemy_state is None:
             run.alchemy_state = AlchemyState()
 
-        run.alchemy_state.mastery_level = _resolve_mastery_level(run.alchemy_state.mastery_exp)
-        run.alchemy_state.mastery_title = _resolve_mastery_title(run.alchemy_state.mastery_level)
+        run.alchemy_state.mastery_level = _resolve_mastery_level(
+            run.alchemy_state.mastery_exp,
+            self._mastery_levels,
+        )
+        run.alchemy_state.mastery_title = _resolve_mastery_title(
+            run.alchemy_state.mastery_level,
+            self._mastery_levels,
+        )
         run.alchemy_state.available_recipes = [
             self._build_recipe_state(run, spec)
             for spec in self._recipe_specs
@@ -173,7 +201,7 @@ class AlchemyService:
         self.hydrate_run(run)
 
     def _get_recipe(self, recipe_id: str) -> AlchemyRecipeSpec:
-        recipe = next((item for item in self._recipe_specs if item.recipe_id == recipe_id), None)
+        recipe = self._recipe_specs_by_id.get(recipe_id)
         if recipe is None:
             raise ConflictError(f"unknown alchemy recipe '{recipe_id}'")
         return recipe
@@ -218,7 +246,7 @@ class AlchemyService:
         return facility.level if facility is not None else 0
 
     def _is_recipe_known(self, run: RunState, recipe: AlchemyRecipeSpec) -> bool:
-        if recipe.recipe_id in BASE_ALCHEMY_RECIPE_IDS:
+        if recipe.is_base_recipe:
             return True
         return recipe.recipe_id in set(run.alchemy_state.learned_recipe_ids)
 
@@ -282,25 +310,21 @@ class AlchemyService:
         run.resources.pill = sum(item.amount for item in run.alchemy_state.inventory)
 
 
-def _resolve_mastery_level(exp: int) -> int:
-    thresholds = [0, 20, 50, 90, 140, 210]
+def _resolve_mastery_level(exp: int, levels: list[AlchemyMasteryLevelSpec]) -> int:
     level = 0
-    for index, threshold in enumerate(thresholds):
-        if exp >= threshold:
-            level = index
+    for spec in levels:
+        if exp >= spec.required_mastery_exp:
+            level = spec.level
     return level
 
 
-def _resolve_mastery_title(level: int) -> str:
-    titles = [
-        "初识丹道",
-        "初窥门径",
-        "略有所得",
-        "熟能生巧",
-        "丹道小成",
-        "丹道精进",
-    ]
-    return titles[min(level, len(titles) - 1)]
+def _resolve_mastery_title(level: int, levels: list[AlchemyMasteryLevelSpec]) -> str:
+    matching = next((spec for spec in levels if spec.level == level), None)
+    if matching is not None:
+        return matching.display_name
+    if levels:
+        return levels[0].display_name
+    return "丹道未入门"
 
 
 def _resolve_outcome(score: float) -> tuple[int, str, str]:
@@ -323,71 +347,39 @@ def _build_result_summary(recipe_name: str, outcome: str, quality: str) -> str:
     return f"{recipe_name} 炼制失手，只余废丹。"
 
 
-def _build_recipe_specs() -> list[AlchemyRecipeSpec]:
+def _load_mastery_levels(levels: list[dict[str, object]]) -> list[AlchemyMasteryLevelSpec]:
+    return sorted(
+        [
+            AlchemyMasteryLevelSpec(
+                level=int(level.get("level", 0) or 0),
+                display_name=str(level.get("display_name", "")).strip(),
+                required_mastery_exp=int(level.get("required_mastery_exp", 0) or 0),
+            )
+            for level in levels
+        ],
+        key=lambda item: item.level,
+    )
+
+
+def _load_recipe_specs(recipes: list[dict[str, object]]) -> list[AlchemyRecipeSpec]:
     return [
         AlchemyRecipeSpec(
-            recipe_id="yang_qi_dan",
-            display_name="养气丹",
-            category="cultivation",
-            description="前期主力修炼丹，服用后可直接增长修为。",
-            required_alchemy_level=0,
-            duration_months=1,
-            base_success_rate=0.86,
-            ingredients={"basic_herb": 2},
-            effect_type="cultivation_exp",
-            effect_value=12,
-            effect_summary="直接增加修为",
-        ),
-        AlchemyRecipeSpec(
-            recipe_id="yang_yuan_dan",
-            display_name="养元丹",
-            category="recovery",
-            description="恢复气血的基础丹药，用于外出后的调息。",
-            required_alchemy_level=0,
-            duration_months=1,
-            base_success_rate=0.80,
-            ingredients={"basic_herb": 2, "spirit_stone": 2},
-            effect_type="hp_restore",
-            effect_value=25,
-            effect_summary="恢复气血",
-        ),
-        AlchemyRecipeSpec(
-            recipe_id="ning_shen_dan",
-            display_name="宁神丹",
-            category="recovery",
-            description="安定心神，缓解修炼与事件带来的心神损耗。",
-            required_alchemy_level=1,
-            duration_months=1,
-            base_success_rate=0.76,
-            ingredients={"basic_herb": 3},
-            effect_type="status_penalty_reduce",
-            effect_value=0.05,
-            effect_summary="降低状态惩罚",
-        ),
-        AlchemyRecipeSpec(
-            recipe_id="ju_ling_dan",
-            display_name="聚灵丹",
-            category="cultivation",
-            description="中期修炼丹，借灵泉与丹室凝聚灵力。",
-            required_alchemy_level=2,
-            duration_months=1,
-            base_success_rate=0.64,
-            ingredients={"basic_herb": 4, "spirit_stone": 2},
-            effect_type="cultivation_exp",
-            effect_value=24,
-            effect_summary="较高幅度增加修为",
-        ),
-        AlchemyRecipeSpec(
-            recipe_id="gu_yuan_dan",
-            display_name="固元丹",
-            category="breakthrough",
-            description="稳定元气，为破境前的最后准备提供支撑。",
-            required_alchemy_level=2,
-            duration_months=1,
-            base_success_rate=0.60,
-            ingredients={"basic_herb": 3, "ore": 1, "spirit_stone": 3},
-            effect_type="breakthrough_bonus",
-            effect_value=6,
-            effect_summary="提高突破辅助值",
-        ),
+            recipe_id=str(recipe.get("recipe_id", "")).strip(),
+            display_name=str(recipe.get("display_name", "")).strip(),
+            category=str(recipe.get("category", "")).strip(),
+            description=str(recipe.get("description", "")).strip(),
+            required_alchemy_level=int(recipe.get("required_alchemy_level", 0) or 0),
+            duration_months=int(recipe.get("duration_months", 0) or 0),
+            base_success_rate=float(recipe.get("base_success_rate", 0) or 0),
+            ingredients={
+                str(key): int(value)
+                for key, value in dict(recipe.get("ingredients", {})).items()
+            },
+            effect_type=str(recipe.get("effect_type", "")).strip(),
+            effect_value=float(recipe.get("effect_value", 0) or 0),
+            effect_summary=str(recipe.get("effect_summary", "")).strip(),
+            is_base_recipe=recipe.get("is_base_recipe") is True,
+        )
+        for recipe in recipes
+        if str(recipe.get("recipe_id", "")).strip()
     ]

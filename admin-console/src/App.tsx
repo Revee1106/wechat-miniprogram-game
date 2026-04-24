@@ -6,13 +6,14 @@ import {
   logoutAdmin,
   type AdminSession,
 } from "./api/client";
+import { AlchemyConfigPage } from "./pages/AlchemyConfigPage";
 import { BattleEnemyListPage } from "./pages/BattleEnemyListPage";
 import { DwellingListPage } from "./pages/DwellingListPage";
 import { EventListPage } from "./pages/EventListPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RealmListPage } from "./pages/RealmListPage";
 
-type ViewMode = "events" | "realms" | "dwelling" | "battle";
+type ViewMode = "events" | "realms" | "dwelling" | "alchemy" | "battle";
 
 export default function App() {
   const [authState, setAuthState] = useState<
@@ -102,6 +103,8 @@ export default function App() {
       ? "洞府工坊"
       : view === "realms"
         ? "境界谱录"
+        : view === "alchemy"
+          ? "丹道工坊"
         : view === "battle"
           ? "战斗工坊"
           : "事件工坊";
@@ -110,6 +113,8 @@ export default function App() {
       ? "集中维护设施清单与等级配置"
       : view === "realms"
         ? "集中维护境界清单与突破配置"
+        : view === "alchemy"
+          ? "集中维护丹道等级、丹方、材料与成丹效果"
         : view === "battle"
           ? "集中维护敌人模板与战利品配置"
           : "集中维护事件清单与结果编排";
@@ -148,6 +153,13 @@ export default function App() {
               洞府配置
             </button>
             <button
+              className={`console-nav__button ${view === "alchemy" ? "console-nav__button--active" : ""}`}
+              type="button"
+              onClick={() => setView("alchemy")}
+            >
+              丹道配置
+            </button>
+            <button
               className={`console-nav__button ${view === "battle" ? "console-nav__button--active" : ""}`}
               type="button"
               onClick={() => setView("battle")}
@@ -168,6 +180,7 @@ export default function App() {
         {view === "events" ? <EventListPage /> : null}
         {view === "realms" ? <RealmListPage /> : null}
         {view === "dwelling" ? <DwellingListPage /> : null}
+        {view === "alchemy" ? <AlchemyConfigPage /> : null}
         {view === "battle" ? <BattleEnemyListPage /> : null}
       </div>
     </div>
