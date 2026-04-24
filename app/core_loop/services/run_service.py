@@ -75,13 +75,14 @@ class RunService:
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
-    def advance_time(self, run_id: str) -> RunState:
+    def advance_time(self, run_id: str, allow_cultivation_penalty: bool = False) -> RunState:
         run = self._repo.get(run_id)
         run = self._sync_pending_event(run)
         profile = self._repo.get_or_create_profile(run.player_id)
         updated = self._time_advance_service.advance(
             run,
             rebirth_count=profile.total_rebirth_count,
+            allow_cultivation_penalty=allow_cultivation_penalty,
         )
         self._hydrate_runtime_metadata(updated)
         return self._repo.save(updated)
@@ -252,10 +253,14 @@ class RunService:
         if current_index is None:
             run.character.realm_display_name = run.character.realm
             run.breakthrough_requirements = None
+            run.current_spirit_stone_cost_per_advance = 0
             return
 
         current_realm = self._realm_configs[current_index]
         run.character.realm_display_name = current_realm.display_name or current_realm.key
+        run.current_spirit_stone_cost_per_advance = int(
+            current_realm.base_spirit_stone_cost_per_advance
+        )
         cultivation_cap = self._get_breakthrough_cultivation_cap(run, current_index=current_index)
         if cultivation_cap is not None:
             run.character.cultivation_exp = min(

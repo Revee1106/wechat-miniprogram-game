@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 
 from app.api.schemas import (
+    AdvanceTimeRequest,
     BattleActionRequest,
     ResourceConversionRequest,
     ConsumeAlchemyItemRequest,
@@ -61,9 +62,14 @@ def get_run(payload: RunIdRequest) -> dict[str, object]:
 
 
 @router.post("/run/advance")
-def advance_time(payload: RunIdRequest) -> dict[str, object]:
+def advance_time(payload: AdvanceTimeRequest) -> dict[str, object]:
     try:
-        return serialize_run_state(run_service.advance_time(payload.run_id))
+        return serialize_run_state(
+            run_service.advance_time(
+                payload.run_id,
+                allow_cultivation_penalty=payload.allow_cultivation_penalty,
+            )
+        )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)
         raise

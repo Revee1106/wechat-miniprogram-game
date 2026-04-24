@@ -93,6 +93,23 @@ def test_advance_returns_structured_error_detail_when_spirit_stones_are_insuffic
     }
 
 
+def test_advance_can_apply_cultivation_penalty_when_spirit_stones_are_insufficient() -> None:
+    run_id = client.post("/api/run/create", json={"player_id": "p1"}).json()["run_id"]
+    run = run_service.get_run(run_id)
+    run.resources.spirit_stone = 0
+    run.character.cultivation_exp = 50
+
+    response = client.post(
+        "/api/run/advance",
+        json={"run_id": run_id, "allow_cultivation_penalty": True},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["round_index"] == 1
+    assert response.json()["resources"]["spirit_stone"] == 0
+    assert response.json()["character"]["cultivation_exp"] < 50
+
+
 def test_build_and_upgrade_dwelling_facility_round_trip() -> None:
     create_response = client.post("/api/run/create", json={"player_id": "p1"})
     run_id = create_response.json()["run_id"]

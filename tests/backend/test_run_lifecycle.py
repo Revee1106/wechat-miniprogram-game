@@ -5,6 +5,7 @@ from uuid import uuid4
 from app.admin.repositories.enemy_config_repository import EnemyConfigRepository
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
 from app.core_loop.event_config import EventRegistry
+from app.core_loop.services.event_service import EventService
 from app.core_loop.services.combat_service import CombatService
 from app.core_loop.services.run_service import RunService
 from app.core_loop.types import (
@@ -276,6 +277,169 @@ def test_advance_time_blocks_when_current_realm_spirit_stone_cost_is_unaffordabl
         assert run.round_index == before_round_index
     finally:
         rmtree(base_path)
+
+
+def test_advance_time_can_continue_with_cultivation_penalty_when_spirit_stones_are_insufficient() -> None:
+    base_path = _make_test_base_path("run-advance-base-cost-penalty")
+    RealmConfigRepository(base_path=base_path).save(
+        {
+            "realms": [
+                {
+                    "key": "qi_refining_early",
+                    "display_name": "炼气初期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 1,
+                    "order_index": 1,
+                    "base_success_rate": 0,
+                    "required_cultivation_exp": 0,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 0,
+                    "base_cultivation_gain_per_advance": 5,
+                    "base_spirit_stone_cost_per_advance": 4,
+                    "is_enabled": True,
+                },
+                {
+                    "key": "qi_refining_mid",
+                    "display_name": "炼气中期",
+                    "major_realm": "qi_refining",
+                    "stage_index": 2,
+                    "order_index": 2,
+                    "base_success_rate": 0,
+                    "required_cultivation_exp": 100,
+                    "required_spirit_stone": 0,
+                    "lifespan_bonus": 0,
+                    "base_cultivation_gain_per_advance": 5,
+                    "base_spirit_stone_cost_per_advance": 4,
+                    "is_enabled": True,
+                },
+            ]
+        }
+    )
+
+    try:
+        service = RunService(realm_config_base_path=str(base_path))
+        run = service.create_run(player_id="p1")
+        run.resources.spirit_stone = 3
+        run.character.cultivation_exp = 50
+
+        result = service.advance_time(run.run_id, allow_cultivation_penalty=True)
+
+        assert result.resources.spirit_stone == 3
+        assert result.character.cultivation_exp == 40
+        assert result.round_index == 1
+        assert result.result_summary == "灵石不足，修为下降 10 点，时间继续推进。"
+    finally:
+        rmtree(base_path)
+
+
+def test_event_with_all_spirit_stone_options_adds_do_nothing_option() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_paid": EventTemplateConfig(
+                event_id="evt_paid",
+                event_name="Paid Event",
+                event_type="material",
+                option_ids=["opt_paid"],
+            )
+        },
+        options={
+            "opt_paid": EventOptionConfig(
+                option_id="opt_paid",
+                event_id="evt_paid",
+                option_text="Pay spirit stones",
+                is_default=True,
+                requires_resources={},
+                result_on_success=EventResultPayload(resources={"spirit_stone": -1}),
+            )
+        },
+    )
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 0
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    assert [option.option_id for option in run.current_event.options] == [
+        "opt_paid",
+        "__do_nothing__",
+    ]
+    assert run.current_event.options[0].is_available is False
+    assert run.current_event.options[1].is_available is True
+
+
+def test_event_option_payload_spirit_stone_cost_blocks_free_reward_when_unaffordable() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_paid": EventTemplateConfig(
+                event_id="evt_paid",
+                event_name="Paid Event",
+                event_type="material",
+                option_ids=["opt_paid"],
+            )
+        },
+        options={
+            "opt_paid": EventOptionConfig(
+                option_id="opt_paid",
+                event_id="evt_paid",
+                option_text="Pay spirit stones",
+                is_default=True,
+                requires_resources={},
+                result_on_success=EventResultPayload(
+                    resources={"spirit_stone": -3},
+                    character={"cultivation_exp": 9},
+                ),
+            )
+        },
+    )
+    service = RunService()
+    service._event_registry = registry
+    service._rebuild_runtime_services()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 0
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    assert run.current_event.options[0].requires_resources == {"spirit_stone": 3}
+    assert run.current_event.options[0].is_available is False
+    try:
+        service.resolve_event(run.run_id, "opt_paid")
+    except ConflictError:
+        pass
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected unaffordable payload cost option to be blocked")
+
+
+def test_do_nothing_event_option_resolves_without_spending_resources() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_paid": EventTemplateConfig(
+                event_id="evt_paid",
+                event_name="Paid Event",
+                event_type="material",
+                option_ids=["opt_paid"],
+            )
+        },
+        options={
+            "opt_paid": EventOptionConfig(
+                option_id="opt_paid",
+                event_id="evt_paid",
+                option_text="Pay spirit stones",
+                is_default=True,
+                requires_resources={"spirit_stone": 1},
+                result_on_success=EventResultPayload(resources={"spirit_stone": -1}),
+            )
+        },
+    )
+    service = RunService()
+    service._event_registry = registry
+    service._rebuild_runtime_services()
+    run = service.create_run(player_id="p1")
+    run.resources.spirit_stone = 5
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = service.resolve_event(run.run_id, "__do_nothing__")
+
+    assert resolved.current_event is None
+    assert resolved.resources.spirit_stone == 5
+    assert resolved.last_event_resolution.option_id == "__do_nothing__"
 
 
 def test_advance_time_base_gain_still_respects_breakthrough_cultivation_cap() -> None:

@@ -20,6 +20,9 @@ from app.core_loop.services.combat_stat_service import CombatStatService
 from app.economy.services.run_resource_service import RunResourceService
 
 
+DO_NOTHING_OPTION_ID = "__do_nothing__"
+
+
 class EventResolutionService:
     _DEFAULT_FLEE_BASE_RATE = 0.35
     _DEFAULT_PILL_HEAL_AMOUNT = 30
@@ -70,6 +73,22 @@ class EventResolutionService:
             raise ConflictError(f"option '{option_id}' is not available")
         if not self._is_option_available(run, runtime_option):
             raise ConflictError(runtime_option.disabled_reason or "option is unavailable")
+
+        if option_id == DO_NOTHING_OPTION_ID:
+            template = self._registry.templates.get(run.current_event.event_id)
+            if template is not None:
+                run.event_trigger_counts[template.event_id] = (
+                    run.event_trigger_counts.get(template.event_id, 0) + 1
+                )
+                if template.cooldown_rounds > 0:
+                    run.event_cooldowns[template.event_id] = template.cooldown_rounds
+            run.result_summary = "你没有采取行动，事情就此过去。"
+            run.last_event_resolution = EventResolutionLog(
+                event_id=run.current_event.event_id,
+                option_id=DO_NOTHING_OPTION_ID,
+            )
+            run.current_event = None
+            return run
 
         option_config = self._registry.options.get(option_id)
         if option_config is None or option_config.event_id != run.current_event.event_id:

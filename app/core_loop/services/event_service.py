@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+from dataclasses import replace
 
 from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.event_config import EventRegistry, load_event_registry
@@ -16,6 +17,7 @@ from app.core_loop.types import (
 
 
 EXCLUDED_RANDOM_EVENT_IDS = {"evt_evil_cultist_012"}
+DO_NOTHING_OPTION_ID = "__do_nothing__"
 
 
 class EventService:
@@ -119,6 +121,16 @@ class EventService:
             self._build_current_option(run, option)
             for option in self._registry.get_options_for_event(template.event_id)
         ]
+        if self._should_add_do_nothing_option(options):
+            options.append(
+                CurrentEventOption(
+                    option_id=DO_NOTHING_OPTION_ID,
+                    option_text="什么都不做",
+                    sort_order=max((option.sort_order for option in options), default=0) + 1,
+                    is_default=False,
+                    is_available=True,
+                )
+            )
         return CurrentEvent(
             event_id=template.event_id,
             event_name=template.event_name,
@@ -134,12 +146,19 @@ class EventService:
             options=options,
         )
 
+    def _should_add_do_nothing_option(self, options: list[CurrentEventOption]) -> bool:
+        if not options:
+            return False
+        return all(int(option.requires_resources.get("spirit_stone", 0) or 0) > 0 for option in options)
+
     def _build_current_option(
         self,
         run: RunState,
         option,
     ) -> CurrentEventOption:
-        disabled_reason = self._get_option_unavailable_reason(run, option)
+        required_resources = self._build_effective_required_resources(option)
+        runtime_option = replace(option, requires_resources=required_resources)
+        disabled_reason = self._get_option_unavailable_reason(run, runtime_option)
         is_available = disabled_reason is None
         return CurrentEventOption(
             option_id=option.option_id,
@@ -147,13 +166,25 @@ class EventService:
             sort_order=option.sort_order,
             is_default=option.is_default,
             time_cost_months=option.time_cost_months,
-            requires_resources=dict(option.requires_resources),
+            requires_resources=required_resources,
             requires_statuses=list(option.requires_statuses),
             requires_techniques=list(option.requires_techniques),
             requires_equipment_tags=list(option.requires_equipment_tags),
             is_available=is_available,
             disabled_reason=disabled_reason,
         )
+
+    def _build_effective_required_resources(self, option) -> dict[str, int]:
+        required = dict(option.requires_resources)
+        for payload in (option.result_on_success, option.result_on_failure):
+            resources = getattr(payload, "resources", {})
+            for resource_name, delta in resources.items():
+                if int(delta) < 0:
+                    required[resource_name] = max(
+                        int(required.get(resource_name, 0) or 0),
+                        abs(int(delta)),
+                    )
+        return required
 
     def _is_template_eligible(
         self,
@@ -180,10 +211,11 @@ class EventService:
         template: EventTemplateConfig,
         run: RunState,
     ) -> bool:
-        return any(
-            self._get_option_unavailable_reason(run, option) is None
+        options = [
+            self._build_current_option(run, option)
             for option in self._registry.get_options_for_event(template.event_id)
-        )
+        ]
+        return any(option.is_available for option in options) or self._should_add_do_nothing_option(options)
 
     def _is_realm_eligible(self, template: EventTemplateConfig, realm_key: str) -> bool:
         current_index = self._realm_indices.get(

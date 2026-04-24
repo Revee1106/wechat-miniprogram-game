@@ -17,6 +17,11 @@ class RunIdRequest(BaseModel):
     run_id: str
 
 
+class AdvanceTimeRequest(BaseModel):
+    run_id: str
+    allow_cultivation_penalty: bool = False
+
+
 class FacilityActionRequest(BaseModel):
     run_id: str
     facility_id: str

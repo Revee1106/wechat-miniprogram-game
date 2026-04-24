@@ -371,6 +371,7 @@ class RunState:
     resource_stacks: list[RunResourceStack] = field(default_factory=list)
     alchemy_state: AlchemyState = field(default_factory=AlchemyState)
     breakthrough_requirements: BreakthroughRequirements | None = None
+    current_spirit_stone_cost_per_advance: int = 0
     current_event: CurrentEvent | None = None
     active_battle: ActiveBattleState | None = None
     dwelling_level: int = 1
