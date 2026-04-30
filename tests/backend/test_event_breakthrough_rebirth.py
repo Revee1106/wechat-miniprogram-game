@@ -224,7 +224,9 @@ def test_breakthrough_uses_realm_config_cost_and_small_stage_chain() -> None:
     run = service.create_run(player_id="p1")
     before_lifespan_max = run.character.lifespan_max
     target_realm = get_realm_configs()[1]
-    run.character.cultivation_exp = 100
+    run.character.cultivation_exp = sum(
+        max(0, int(config.required_exp)) for config in get_realm_configs()[:2]
+    )
     run.resources.spirit_stone = 20
 
     result = service.breakthrough(run.run_id)

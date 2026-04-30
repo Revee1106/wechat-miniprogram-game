@@ -69,6 +69,12 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   required_mastery_exp: "所需熟练度",
   required_alchemy_level: "所需丹道等级",
   duration_months: "炼制时长（月）",
+  success_mastery_exp_gain: "成功熟练度",
+  quality_profiles: "品级配置",
+  base_weight: "基础权重",
+  per_level_weight: "每级权重变化",
+  effect_multiplier: "效果倍率",
+  color: "标签颜色",
   ingredients: "材料",
   effect_type: "成丹效果类型",
   effect_value: "成丹效果数值",
@@ -76,6 +82,7 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   category: "分类",
   description: "描述",
   is_base_recipe: "基础丹方",
+  per_level_success_rate: "每级成丹率变化",
 };
 
 const VALIDATION_SCOPE_LABELS: Record<string, string> = {
@@ -230,6 +237,24 @@ const VALIDATION_MESSAGE_PATTERNS: ValidationPattern[] = [
   {
     pattern: /^alchemy recipe '(.+)' has invalid ([a-z_]+)$/i,
     format: (recipeId, field) => `丹方“${recipeId}”的${formatValidationFieldLabel(field)}填写无效`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has unknown quality profile '(.+)'$/i,
+    format: (recipeId, quality) => `丹方“${recipeId}”存在未知品级配置“${quality}”`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' has invalid quality profile '(.+)'$/i,
+    format: (recipeId, quality) => `丹方“${recipeId}”的品级“${quality}”配置无效`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' quality '(.+)' has empty ([a-z_]+)$/i,
+    format: (recipeId, quality, field) =>
+      `丹方“${recipeId}”的品级“${quality}”缺少${formatValidationFieldLabel(field)}`,
+  },
+  {
+    pattern: /^alchemy recipe '(.+)' quality '(.+)' has invalid ([a-z_]+)$/i,
+    format: (recipeId, quality, field) =>
+      `丹方“${recipeId}”的品级“${quality}”${formatValidationFieldLabel(field)}填写无效`,
   },
   {
     pattern: /^alchemy recipe '(.+)' has empty ingredients key$/i,

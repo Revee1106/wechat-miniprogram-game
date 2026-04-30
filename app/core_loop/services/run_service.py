@@ -138,10 +138,9 @@ class RunService:
         self,
         run_id: str,
         recipe_id: str,
-        use_spirit_spring: bool = False,
     ) -> RunState:
         run = self._repo.get(run_id)
-        self._alchemy_service.start(run, recipe_id, use_spirit_spring=use_spirit_spring)
+        self._alchemy_service.start(run, recipe_id)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 

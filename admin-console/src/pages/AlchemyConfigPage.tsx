@@ -8,14 +8,11 @@ import {
   reloadAlchemy,
   updateAlchemyLevels,
   updateAlchemyRecipe,
-  validateAlchemy,
   type AlchemyLevelInput,
   type AlchemyRecipeInput,
-  type ValidationResponse,
 } from "../api/client";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
 import { ResourceRecordEditor } from "../components/ResourceRecordEditor";
-import { ValidationPanel } from "../components/ValidationPanel";
 
 const DRAFT_RECIPE_ID = "__draft_alchemy_recipe__";
 
@@ -29,16 +26,23 @@ const effectTypeOptions = [
   { value: "breakthrough_bonus", label: "突破辅助加成" },
 ];
 
+const qualityProfileOptions = [
+  { key: "low", label: "下品", color: "white" },
+  { key: "mid", label: "中品", color: "green" },
+  { key: "high", label: "上品", color: "blue" },
+  { key: "supreme", label: "极品", color: "purple" },
+] as const;
+
 export function AlchemyConfigPage() {
   const [levels, setLevels] = useState<AlchemyLevelInput[]>([]);
   const [recipes, setRecipes] = useState<AlchemyRecipeInput[]>([]);
   const [draftRecipe, setDraftRecipe] = useState<AlchemyRecipeInput | null>(null);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [selectedLevelIndex, setSelectedLevelIndex] = useState(0);
   const [pendingRecipeId, setPendingRecipeId] = useState("");
   const [activeTab, setActiveTab] = useState<DetailTab>("recipe");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [validation, setValidation] = useState<ValidationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -61,7 +65,6 @@ export function AlchemyConfigPage() {
         setDraftRecipe(null);
         setStatusMessage(null);
         setErrorMessage(null);
-        setValidation(null);
         setSelectedRecipeId((current) => {
           if (current === DRAFT_RECIPE_ID) {
             return current;
@@ -97,6 +100,9 @@ export function AlchemyConfigPage() {
   }, [draftRecipe, recipes, selectedRecipeId]);
 
   const isDraft = selectedRecipeId === DRAFT_RECIPE_ID;
+  const normalizedSelectedLevelIndex =
+    levels.length > 0 ? Math.min(selectedLevelIndex, levels.length - 1) : 0;
+  const selectedLevel = levels[normalizedSelectedLevelIndex] ?? null;
 
   function updateSelectedRecipe(nextRecipe: AlchemyRecipeInput) {
     if (isDraft) {
@@ -120,6 +126,27 @@ export function AlchemyConfigPage() {
     updateSelectedRecipe({
       ...selectedRecipe,
       [field]: value,
+    });
+  }
+
+  function handleQualityProfileChange(
+    qualityKey: string,
+    field: "display_name" | "color" | "base_weight" | "per_level_weight" | "effect_multiplier",
+    value: string | number
+  ) {
+    if (!selectedRecipe) {
+      return;
+    }
+    const currentProfiles = normalizeQualityProfiles(selectedRecipe.quality_profiles);
+    updateSelectedRecipe({
+      ...selectedRecipe,
+      quality_profiles: {
+        ...currentProfiles,
+        [qualityKey]: {
+          ...currentProfiles[qualityKey],
+          [field]: value,
+        },
+      },
     });
   }
 
@@ -153,10 +180,10 @@ export function AlchemyConfigPage() {
     setActiveTab("recipe");
     setStatusMessage(null);
     setErrorMessage(null);
-    setValidation(null);
   }
 
   function handleAddLevel() {
+    const nextLevelIndex = levels.length;
     setLevels((current) => [
       ...current,
       {
@@ -168,6 +195,7 @@ export function AlchemyConfigPage() {
             : 0,
       },
     ]);
+    setSelectedLevelIndex(nextLevelIndex);
     setActiveTab("levels");
   }
 
@@ -179,6 +207,9 @@ export function AlchemyConfigPage() {
           ...item,
           level: itemIndex,
         }))
+    );
+    setSelectedLevelIndex((current) =>
+      Math.max(0, Math.min(current, Math.max(0, levels.length - 2)))
     );
   }
 
@@ -218,7 +249,6 @@ export function AlchemyConfigPage() {
     try {
       setErrorMessage(null);
       setStatusMessage(null);
-      setValidation(null);
       const savedRecipe = isDraft
         ? await createAlchemyRecipe(payload)
         : await updateAlchemyRecipe(payload.recipe_id, payload);
@@ -239,7 +269,6 @@ export function AlchemyConfigPage() {
     try {
       setErrorMessage(null);
       setStatusMessage(null);
-      setValidation(null);
       await deleteAlchemyRecipe(selectedRecipe.recipe_id);
       await reloadAllAndRuntime(null, "已删除丹方并自动重载运行时。");
     } catch (error) {
@@ -251,21 +280,11 @@ export function AlchemyConfigPage() {
     try {
       setErrorMessage(null);
       setStatusMessage(null);
-      setValidation(null);
       await updateAlchemyLevels(normalizeLevels(levels));
       await reloadAllAndRuntime(
         !isDraft ? selectedRecipeId : null,
         "已保存丹道等级并自动重载运行时。"
       );
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleValidate() {
-    try {
-      setErrorMessage(null);
-      setValidation(await validateAlchemy());
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -289,73 +308,134 @@ export function AlchemyConfigPage() {
 
   return (
     <ConfigWorkbench
-      className="config-workbench--compact"
+      className="config-workbench--compact config-workbench--alchemy"
       title="丹道配置"
       description="集中维护丹道等级、丹方材料和成丹效果。"
       hideHero
-      registryTitle="丹方清单"
+      registryTitle={activeTab === "levels" ? "丹道等级" : "丹方清单"}
+      registryDescription="先选择编辑对象，再维护具体配置。"
       registryContent={
         <div className="section-grid">
-          <div className="event-compact-toolbar">
-            <div className="event-compact-toolbar__grid">
-              <label className="field field--full">
-                <span className="field__label">当前丹方</span>
-                <select
-                  aria-label="当前丹方"
-                  value={selectedRecipeId ?? ""}
-                  onChange={(event) => {
-                    setSelectedRecipeId(event.target.value || null);
-                    setActiveTab("recipe");
-                    setStatusMessage(null);
-                    setErrorMessage(null);
-                  }}
-                >
-                  <option value="">选择已有丹方</option>
-                  {draftRecipe ? (
-                    <option value={DRAFT_RECIPE_ID}>
-                      草稿：{draftRecipe.display_name || draftRecipe.recipe_id || "未命名丹方"}
-                    </option>
-                  ) : null}
-                  {recipes.map((item) => (
-                    <option key={item.recipe_id} value={item.recipe_id}>
-                      {item.display_name
-                        ? `${item.display_name} / ${item.recipe_id}`
-                        : item.recipe_id}
-                    </option>
-                  ))}
-                </select>
-              </label>
+          <nav className="tab-strip" aria-label="丹道配置对象">
+            <button
+              aria-pressed={activeTab === "recipe"}
+              className={
+                activeTab === "recipe"
+                  ? "tab-strip__button tab-strip__button--active"
+                  : "tab-strip__button"
+              }
+              type="button"
+              onClick={() => setActiveTab("recipe")}
+            >
+              <span>丹方</span>
+              <small>{recipes.length + (draftRecipe ? 1 : 0)}</small>
+            </button>
+            <button
+              aria-pressed={activeTab === "levels"}
+              className={
+                activeTab === "levels"
+                  ? "tab-strip__button tab-strip__button--active"
+                  : "tab-strip__button"
+              }
+              type="button"
+              onClick={() => setActiveTab("levels")}
+            >
+              <span>丹道等级</span>
+              <small>{levels.length}</small>
+            </button>
+          </nav>
 
-              <label className="field field--full">
-                <span className="field__label">新建丹方 ID</span>
-                <input
-                  aria-label="新建丹方 ID"
-                  placeholder="例如 ning_shen_dan"
-                  value={pendingRecipeId}
-                  onChange={(event) => setPendingRecipeId(event.target.value)}
-                />
-              </label>
+          {activeTab === "recipe" ? (
+            <div className="event-compact-toolbar">
+              <div className="event-compact-toolbar__grid">
+                <label className="field field--full">
+                  <span className="field__label">当前丹方</span>
+                  <select
+                    aria-label="当前丹方"
+                    value={selectedRecipeId ?? ""}
+                    onChange={(event) => {
+                      setSelectedRecipeId(event.target.value || null);
+                      setStatusMessage(null);
+                      setErrorMessage(null);
+                    }}
+                  >
+                    <option value="">选择已有丹方</option>
+                    {draftRecipe ? (
+                      <option value={DRAFT_RECIPE_ID}>
+                        草稿：{draftRecipe.display_name || draftRecipe.recipe_id || "未命名丹方"}
+                      </option>
+                    ) : null}
+                    {recipes.map((item) => (
+                      <option key={item.recipe_id} value={item.recipe_id}>
+                        {item.display_name
+                          ? `${item.display_name} / ${item.recipe_id}`
+                          : item.recipe_id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field field--full">
+                  <span className="field__label">新建丹方 ID</span>
+                  <input
+                    aria-label="新建丹方 ID"
+                    placeholder="例如 ning_shen_dan"
+                    value={pendingRecipeId}
+                    onChange={(event) => setPendingRecipeId(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="event-compact-toolbar__actions event-compact-toolbar__actions--stack">
+                <button className="button-secondary" type="button" onClick={handleCreateDraft}>
+                  新建丹方
+                </button>
+                <button className="button-secondary" type="button" onClick={() => void handleReload()}>
+                  重载运行时
+                </button>
+              </div>
             </div>
-
-            <div className="event-compact-toolbar__actions event-compact-toolbar__actions--stack">
-              <button className="button-secondary" type="button" onClick={handleCreateDraft}>
-                新建丹方
-              </button>
-              <button className="button-accent" type="button" onClick={() => void handleValidate()}>
-                校验配置
-              </button>
-              <button className="button-secondary" type="button" onClick={() => void handleReload()}>
-                重载运行时
-              </button>
+          ) : (
+            <div className="event-compact-toolbar">
+              <div className="event-compact-toolbar__grid">
+                <label className="field field--full">
+                  <span className="field__label">当前等级</span>
+                  <select
+                    aria-label="当前丹道等级"
+                    value={normalizedSelectedLevelIndex}
+                    onChange={(event) => setSelectedLevelIndex(Number(event.target.value) || 0)}
+                  >
+                    {levels.map((level, index) => (
+                      <option key={level.level} value={index}>
+                        {`Lv.${level.level} ${level.display_name || "未命名等级"}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className="event-compact-toolbar__actions event-compact-toolbar__actions--stack">
+                <button className="button-secondary" type="button" onClick={handleAddLevel}>
+                  新增等级
+                </button>
+                <button className="button-secondary" type="button" onClick={() => void handleReload()}>
+                  重载运行时
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {recipes.length === 0 && !draftRecipe ? (
+          {activeTab === "recipe" && recipes.length === 0 && !draftRecipe ? (
             <div className="empty-state">当前还没有丹方，可先创建一个草稿。</div>
           ) : null}
         </div>
       }
-      detailTitle={activeTab === "levels" ? "丹道等级" : selectedRecipe?.display_name || "丹方详情"}
+      detailTitle={
+        activeTab === "levels"
+          ? selectedLevel
+            ? `丹道等级 ${selectedLevel.level}`
+            : "丹道等级"
+          : selectedRecipe?.display_name || "丹方详情"
+      }
       detailDescription={
         activeTab === "levels"
           ? "维护每级丹道名称与解锁所需熟练度。"
@@ -377,75 +457,71 @@ export function AlchemyConfigPage() {
               <strong>{selectedRecipe.recipe_id || "未填写"}</strong>
             </span>
           ) : null}
+          {activeTab === "levels" && selectedLevel ? (
+            <span className="event-detail-chip">
+              <small>当前等级</small>
+              <strong>{`Lv.${selectedLevel.level} ${selectedLevel.display_name || "未命名"}`}</strong>
+            </span>
+          ) : null}
         </div>
       }
-      detailTabs={[
-        { id: "recipe", label: "丹方详情" },
-        { id: "levels", label: "丹道等级", badge: levels.length },
-      ]}
-      activeTab={activeTab}
-      onTabChange={(tabId) => setActiveTab(tabId as DetailTab)}
       detailContent={
-        activeTab === "levels" ? (
+        activeTab === "levels" && selectedLevel ? (
           <div className="section-grid">
-            <div className="toolbar">
-              <button className="button-secondary" type="button" onClick={handleAddLevel}>
-                新增等级
-              </button>
-            </div>
-
-            <div className="library-grid">
-              {levels.map((level, index) => (
-                <section key={level.level} className="section-card">
-                  <div className="section-card__header">
-                    <div>
-                      <h3>等级 {level.level}</h3>
-                      <p>设置该等级的名称与所需熟练度门槛。</p>
-                    </div>
-                    <button
-                      className="button-secondary"
-                      disabled={levels.length <= 1}
-                      type="button"
-                      onClick={() => handleRemoveLevel(index)}
-                    >
-                      删除等级
-                    </button>
-                  </div>
-                  <div className="field-grid">
-                    <label className="field">
-                      <span className="field__label">等级序号</span>
-                      <input aria-label={`等级序号-${level.level}`} disabled value={level.level} />
-                    </label>
-                    <label className="field">
-                      <span className="field__label">等级名称</span>
-                      <input
-                        aria-label={`等级名称-${level.level}`}
-                        value={level.display_name}
-                        onChange={(event) =>
-                          handleLevelFieldChange(index, "display_name", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="field">
-                      <span className="field__label">所需熟练度</span>
-                      <input
-                        aria-label={`所需熟练度-${level.level}`}
-                        type="number"
-                        value={level.required_mastery_exp}
-                        onChange={(event) =>
-                          handleLevelFieldChange(
-                            index,
-                            "required_mastery_exp",
-                            Number(event.target.value) || 0
-                          )
-                        }
-                      />
-                    </label>
-                  </div>
-                </section>
-              ))}
-            </div>
+            <section className="section-card">
+              <div className="section-card__header">
+                <div>
+                  <h3>等级 {selectedLevel.level}</h3>
+                  <p>只编辑当前选中的等级，切换左侧等级标签可维护其它等级。</p>
+                </div>
+                <button
+                  className="button-secondary"
+                  disabled={levels.length <= 1}
+                  type="button"
+                  onClick={() => handleRemoveLevel(normalizedSelectedLevelIndex)}
+                >
+                  删除等级
+                </button>
+              </div>
+              <div className="field-grid">
+                <label className="field">
+                  <span className="field__label">等级序号</span>
+                  <input aria-label={`等级序号-${selectedLevel.level}`} disabled value={selectedLevel.level} />
+                </label>
+                <label className="field">
+                  <span className="field__label">等级名称</span>
+                  <input
+                    aria-label={`等级名称-${selectedLevel.level}`}
+                    value={selectedLevel.display_name}
+                    onChange={(event) =>
+                      handleLevelFieldChange(
+                        normalizedSelectedLevelIndex,
+                        "display_name",
+                        event.target.value
+                      )
+                    }
+                  />
+                </label>
+                <label className="field">
+                  <span className="field__label">所需熟练度</span>
+                  <input
+                    aria-label={`所需熟练度-${selectedLevel.level}`}
+                    type="number"
+                    value={selectedLevel.required_mastery_exp}
+                    onChange={(event) =>
+                      handleLevelFieldChange(
+                        normalizedSelectedLevelIndex,
+                        "required_mastery_exp",
+                        Number(event.target.value) || 0
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </section>
           </div>
+        ) : activeTab === "levels" ? (
+          <div className="empty-state">当前还没有丹道等级，可先新增一个等级。</div>
         ) : selectedRecipe ? (
           <div className="section-grid">
             <div className="field-grid">
@@ -520,6 +596,38 @@ export function AlchemyConfigPage() {
                   onChange={(event) =>
                     handleRecipeFieldChange(
                       "base_success_rate",
+                      Number(event.target.value) || 0
+                    )
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="field__label">每级成丹率变化</span>
+                <input
+                  aria-label="每级成丹率变化"
+                  max={1}
+                  min={-1}
+                  step="0.01"
+                  type="number"
+                  value={selectedRecipe.per_level_success_rate}
+                  onChange={(event) =>
+                    handleRecipeFieldChange(
+                      "per_level_success_rate",
+                      Number(event.target.value) || 0
+                    )
+                  }
+                />
+              </label>
+              <label className="field">
+                <span className="field__label">成功熟练度</span>
+                <input
+                  aria-label="成功熟练度"
+                  min={0}
+                  type="number"
+                  value={selectedRecipe.success_mastery_exp_gain}
+                  onChange={(event) =>
+                    handleRecipeFieldChange(
+                      "success_mastery_exp_gain",
                       Number(event.target.value) || 0
                     )
                   }
@@ -607,6 +715,106 @@ export function AlchemyConfigPage() {
                 </label>
               </div>
             </section>
+
+            <section className="section-card">
+              <div className="section-card__header">
+                <div>
+                  <h3>品级概率与效果</h3>
+                  <p>基础权重 + 丹道等级 * 每级权重变化，决定成丹后的品级概率；效果倍率决定服用收益。</p>
+                </div>
+              </div>
+              <div className="alchemy-quality-grid">
+                {qualityProfileOptions.map((quality) => {
+                  const profile = normalizeQualityProfiles(selectedRecipe.quality_profiles)[quality.key];
+                  return (
+                    <div key={quality.key} className={`alchemy-quality-card alchemy-quality-card--${quality.key}`}>
+                      <div className="alchemy-quality-card__title">
+                        <strong>{profile.display_name || quality.label}</strong>
+                        <small>{quality.key}</small>
+                      </div>
+                      <div className="field-grid">
+                        <label className="field">
+                          <span className="field__label">品级名称</span>
+                          <input
+                            aria-label={`${quality.label}名称`}
+                            value={profile.display_name}
+                            onChange={(event) =>
+                              handleQualityProfileChange(
+                                quality.key,
+                                "display_name",
+                                event.target.value
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span className="field__label">颜色标识</span>
+                          <input
+                            aria-label={`${quality.label}颜色标识`}
+                            value={profile.color}
+                            onChange={(event) =>
+                              handleQualityProfileChange(
+                                quality.key,
+                                "color",
+                                event.target.value
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span className="field__label">基础权重</span>
+                          <input
+                            aria-label={`${quality.label}基础权重`}
+                            min={0}
+                            type="number"
+                            value={profile.base_weight}
+                            onChange={(event) =>
+                              handleQualityProfileChange(
+                                quality.key,
+                                "base_weight",
+                                Number(event.target.value) || 0
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field">
+                          <span className="field__label">每级权重变化</span>
+                          <input
+                            aria-label={`${quality.label}每级权重变化`}
+                            type="number"
+                            value={profile.per_level_weight}
+                            onChange={(event) =>
+                              handleQualityProfileChange(
+                                quality.key,
+                                "per_level_weight",
+                                Number(event.target.value) || 0
+                              )
+                            }
+                          />
+                        </label>
+                        <label className="field field--full">
+                          <span className="field__label">效果倍率</span>
+                          <input
+                            aria-label={`${quality.label}效果倍率`}
+                            min={0.01}
+                            step="0.01"
+                            type="number"
+                            value={profile.effect_multiplier}
+                            onChange={(event) =>
+                              handleQualityProfileChange(
+                                quality.key,
+                                "effect_multiplier",
+                                Number(event.target.value) || 0
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
           </div>
         ) : (
           <div className="empty-state">左侧选择一个丹方后，即可在这里编辑材料与成丹效果。</div>
@@ -641,13 +849,34 @@ export function AlchemyConfigPage() {
         )
       }
       statusPanel={
-        <ValidationPanel
-          errorMessage={errorMessage}
-          statusMessage={statusMessage}
-          validation={validation}
-        />
+        <AlchemyStatusPanel errorMessage={errorMessage} statusMessage={statusMessage} />
       }
     />
+  );
+}
+
+function AlchemyStatusPanel({
+  errorMessage,
+  statusMessage,
+}: {
+  errorMessage: string | null;
+  statusMessage: string | null;
+}) {
+  if (!errorMessage && !statusMessage) {
+    return null;
+  }
+
+  return (
+    <section className="status-card">
+      {statusMessage ? (
+        <div className="status-card__banner">{statusMessage}</div>
+      ) : null}
+      {errorMessage ? (
+        <div className="status-card__banner status-card__banner--error" role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -663,10 +892,13 @@ function createEmptyRecipe(
     required_alchemy_level: levels[0]?.level ?? 0,
     duration_months: 1,
     base_success_rate: 0.5,
+    per_level_success_rate: 0.04,
+    success_mastery_exp_gain: 10,
     ingredients: {},
     effect_type: "cultivation_exp",
     effect_value: 1,
     effect_summary: "",
+    quality_profiles: createDefaultQualityProfiles(),
     is_base_recipe: false,
   };
 }
@@ -690,6 +922,11 @@ function normalizeRecipe(recipe: AlchemyRecipeInput): AlchemyRecipeInput {
     required_alchemy_level: Math.max(0, Number(recipe.required_alchemy_level ?? 0) || 0),
     duration_months: Math.max(1, Number(recipe.duration_months ?? 1) || 1),
     base_success_rate: Number(recipe.base_success_rate ?? 0) || 0,
+    per_level_success_rate: Number(recipe.per_level_success_rate ?? 0.04) || 0,
+    success_mastery_exp_gain: Math.max(
+      0,
+      Number(recipe.success_mastery_exp_gain ?? 10) || 0
+    ),
     ingredients:
       recipe.ingredients && typeof recipe.ingredients === "object" && !Array.isArray(recipe.ingredients)
         ? recipe.ingredients
@@ -697,6 +934,69 @@ function normalizeRecipe(recipe: AlchemyRecipeInput): AlchemyRecipeInput {
     effect_type: String(recipe.effect_type ?? "").trim(),
     effect_value: Number(recipe.effect_value ?? 0) || 0,
     effect_summary: String(recipe.effect_summary ?? "").trim(),
+    quality_profiles: normalizeQualityProfiles(recipe.quality_profiles),
     is_base_recipe: recipe.is_base_recipe === true,
   };
+}
+
+function createDefaultQualityProfiles(): AlchemyRecipeInput["quality_profiles"] {
+  return {
+    low: {
+      display_name: "下品",
+      color: "white",
+      base_weight: 70,
+      per_level_weight: -10,
+      effect_multiplier: 1,
+    },
+    mid: {
+      display_name: "中品",
+      color: "green",
+      base_weight: 25,
+      per_level_weight: 4,
+      effect_multiplier: 1.25,
+    },
+    high: {
+      display_name: "上品",
+      color: "blue",
+      base_weight: 5,
+      per_level_weight: 4,
+      effect_multiplier: 1.5,
+    },
+    supreme: {
+      display_name: "极品",
+      color: "purple",
+      base_weight: 0,
+      per_level_weight: 2,
+      effect_multiplier: 2,
+    },
+  };
+}
+
+function normalizeQualityProfiles(
+  profiles: AlchemyRecipeInput["quality_profiles"] | undefined
+): AlchemyRecipeInput["quality_profiles"] {
+  const defaults = createDefaultQualityProfiles();
+  const source =
+    profiles && typeof profiles === "object" && !Array.isArray(profiles)
+      ? profiles
+      : {};
+
+  return Object.fromEntries(
+    qualityProfileOptions.map((quality) => {
+      const profile = source[quality.key] ?? defaults[quality.key];
+      return [
+        quality.key,
+        {
+          display_name: String(profile.display_name ?? defaults[quality.key].display_name).trim(),
+          color: String(profile.color ?? defaults[quality.key].color).trim(),
+          base_weight: Math.max(0, Number(profile.base_weight ?? defaults[quality.key].base_weight) || 0),
+          per_level_weight: Number(profile.per_level_weight ?? defaults[quality.key].per_level_weight) || 0,
+          effect_multiplier: Math.max(
+            0.01,
+            Number(profile.effect_multiplier ?? defaults[quality.key].effect_multiplier) || 0
+          ),
+        },
+      ];
+    })
+  ) as AlchemyRecipeInput["quality_profiles"];
 }

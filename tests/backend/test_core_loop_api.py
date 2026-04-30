@@ -144,7 +144,7 @@ def test_start_and_consume_alchemy_round_trip() -> None:
 
     start_response = client.post(
         "/api/run/alchemy/start",
-        json={"run_id": run_id, "recipe_id": "yang_qi_dan", "use_spirit_spring": False},
+        json={"run_id": run_id, "recipe_id": "yang_qi_dan"},
     )
     run_service.get_run(run_id).current_event = None
     run_service.advance_time(run_id)

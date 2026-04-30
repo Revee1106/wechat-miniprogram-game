@@ -51,10 +51,13 @@ def test_admin_alchemy_recipe_crud_endpoint_persists_changes(monkeypatch) -> Non
             "required_alchemy_level": 1,
             "duration_months": 1,
             "base_success_rate": 0.7,
+            "per_level_success_rate": 0.05,
+            "success_mastery_exp_gain": 12,
             "ingredients": {"basic_herb": 3},
             "effect_type": "status_penalty_reduce",
             "effect_value": 0.05,
             "effect_summary": "降低状态惩罚",
+            "quality_profiles": _sample_quality_profiles(),
             "is_base_recipe": False,
         },
     )
@@ -68,10 +71,22 @@ def test_admin_alchemy_recipe_crud_endpoint_persists_changes(monkeypatch) -> Non
             "required_alchemy_level": 1,
             "duration_months": 2,
             "base_success_rate": 0.72,
+            "per_level_success_rate": 0.06,
+            "success_mastery_exp_gain": 18,
             "ingredients": {"basic_herb": 4},
             "effect_type": "status_penalty_reduce",
             "effect_value": 0.08,
             "effect_summary": "显著降低状态惩罚",
+            "quality_profiles": {
+                **_sample_quality_profiles(),
+                "supreme": {
+                    "display_name": "极品",
+                    "color": "purple",
+                    "base_weight": 1,
+                    "per_level_weight": 3,
+                    "effect_multiplier": 2.5,
+                },
+            },
             "is_base_recipe": False,
         },
     )
@@ -80,6 +95,12 @@ def test_admin_alchemy_recipe_crud_endpoint_persists_changes(monkeypatch) -> Non
     assert create_response.status_code == 200
     assert update_response.status_code == 200
     assert update_response.json()["duration_months"] == 2
+    assert update_response.json()["per_level_success_rate"] == 0.06
+    assert update_response.json()["success_mastery_exp_gain"] == 18
+    assert (
+        update_response.json()["quality_profiles"]["supreme"]["effect_multiplier"]
+        == 2.5
+    )
     assert delete_response.status_code == 200
     assert all(
         recipe["recipe_id"] != "ning_shen_dan"
@@ -122,6 +143,7 @@ def _sample_alchemy_payload() -> dict[str, list[dict[str, object]]]:
                 "required_alchemy_level": 0,
                 "duration_months": 1,
                 "base_success_rate": 0.86,
+                "success_mastery_exp_gain": 19,
                 "ingredients": {"basic_herb": 2},
                 "effect_type": "cultivation_exp",
                 "effect_value": 12,
@@ -136,6 +158,7 @@ def _sample_alchemy_payload() -> dict[str, list[dict[str, object]]]:
                 "required_alchemy_level": 1,
                 "duration_months": 1,
                 "base_success_rate": 0.64,
+                "success_mastery_exp_gain": 13,
                 "ingredients": {"basic_herb": 4, "spirit_stone": 2},
                 "effect_type": "cultivation_exp",
                 "effect_value": 24,
@@ -143,6 +166,39 @@ def _sample_alchemy_payload() -> dict[str, list[dict[str, object]]]:
                 "is_base_recipe": False,
             },
         ],
+    }
+
+
+def _sample_quality_profiles() -> dict[str, dict[str, object]]:
+    return {
+        "low": {
+            "display_name": "下品",
+            "color": "white",
+            "base_weight": 70,
+            "per_level_weight": -10,
+            "effect_multiplier": 1,
+        },
+        "mid": {
+            "display_name": "中品",
+            "color": "green",
+            "base_weight": 25,
+            "per_level_weight": 4,
+            "effect_multiplier": 1.25,
+        },
+        "high": {
+            "display_name": "上品",
+            "color": "blue",
+            "base_weight": 5,
+            "per_level_weight": 4,
+            "effect_multiplier": 1.5,
+        },
+        "supreme": {
+            "display_name": "极品",
+            "color": "purple",
+            "base_weight": 0,
+            "per_level_weight": 2,
+            "effect_multiplier": 2,
+        },
     }
 
 

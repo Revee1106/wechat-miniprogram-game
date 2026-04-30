@@ -42,6 +42,8 @@ def test_service_updates_levels_and_recipe_crud() -> None:
             "required_alchemy_level": 1,
             "duration_months": 1,
             "base_success_rate": 0.7,
+            "per_level_success_rate": 0.05,
+            "success_mastery_exp_gain": 12,
             "ingredients": {"basic_herb": 3},
             "effect_type": "status_penalty_reduce",
             "effect_value": 0.05,
@@ -59,6 +61,8 @@ def test_service_updates_levels_and_recipe_crud() -> None:
             "required_alchemy_level": 2,
             "duration_months": 2,
             "base_success_rate": 0.72,
+            "per_level_success_rate": 0.06,
+            "success_mastery_exp_gain": 18,
             "ingredients": {"basic_herb": 4, "spirit_stone": 1},
             "effect_type": "status_penalty_reduce",
             "effect_value": 0.08,
@@ -71,6 +75,7 @@ def test_service_updates_levels_and_recipe_crud() -> None:
     assert [item["level"] for item in updated_levels["items"]] == [0, 1, 2]
     assert created["recipe_id"] == "ning_shen_dan"
     assert updated["display_name"] == "宁神丹·改"
+    assert updated["per_level_success_rate"] == 0.06
     assert service.list_recipes()["items"][0]["recipe_id"] == "yang_qi_dan"
     rmtree(base_path)
 
@@ -92,6 +97,7 @@ def test_service_reloads_runtime_config() -> None:
                     "required_alchemy_level": 0,
                     "duration_months": 1,
                     "base_success_rate": 0.9,
+                    "success_mastery_exp_gain": 7,
                     "ingredients": {"basic_herb": 1},
                     "effect_type": "cultivation_exp",
                     "effect_value": 5,
@@ -128,6 +134,7 @@ def _sample_alchemy_payload() -> dict[str, list[dict[str, object]]]:
                 "required_alchemy_level": 0,
                 "duration_months": 1,
                 "base_success_rate": 0.86,
+                "success_mastery_exp_gain": 19,
                 "ingredients": {"basic_herb": 2},
                 "effect_type": "cultivation_exp",
                 "effect_value": 12,
@@ -142,6 +149,7 @@ def _sample_alchemy_payload() -> dict[str, list[dict[str, object]]]:
                 "required_alchemy_level": 1,
                 "duration_months": 1,
                 "base_success_rate": 0.64,
+                "success_mastery_exp_gain": 13,
                 "ingredients": {"basic_herb": 4, "spirit_stone": 2},
                 "effect_type": "cultivation_exp",
                 "effect_value": 24,

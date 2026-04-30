@@ -41,7 +41,6 @@ class ResourceConversionRequest(BaseModel):
 class StartAlchemyRequest(BaseModel):
     run_id: str
     recipe_id: str
-    use_spirit_spring: bool = False
 
 
 class ConsumeAlchemyItemRequest(BaseModel):

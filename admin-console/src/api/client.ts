@@ -211,11 +211,22 @@ export type AlchemyRecipeInput = {
   required_alchemy_level: number;
   duration_months: number;
   base_success_rate: number;
+  per_level_success_rate: number;
+  success_mastery_exp_gain: number;
   ingredients: Record<string, number>;
   effect_type: string;
   effect_value: number;
   effect_summary: string;
+  quality_profiles: Record<string, AlchemyQualityProfileInput>;
   is_base_recipe: boolean;
+};
+
+export type AlchemyQualityProfileInput = {
+  display_name: string;
+  color: string;
+  base_weight: number;
+  per_level_weight: number;
+  effect_multiplier: number;
 };
 
 export type AlchemyLevelListResponse = {

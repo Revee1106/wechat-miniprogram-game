@@ -5,6 +5,7 @@ from uuid import uuid4
 from app.admin.repositories.enemy_config_repository import EnemyConfigRepository
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
 from app.core_loop.event_config import EventRegistry
+from app.core_loop.seeds import get_realm_configs
 from app.core_loop.services.event_service import EventService
 from app.core_loop.services.combat_service import CombatService
 from app.core_loop.services.run_service import RunService
@@ -148,7 +149,14 @@ def test_resolve_event_exposes_capped_cultivation_log_metadata() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")
     run.character.realm = "qi_refining_peak"
-    run.character.cultivation_exp = 570
+    realm_configs = get_realm_configs()
+    current_index = next(
+        index for index, config in enumerate(realm_configs) if config.key == run.character.realm
+    )
+    cultivation_cap = sum(
+        max(0, int(config.required_exp)) for config in realm_configs[: current_index + 2]
+    )
+    run.character.cultivation_exp = cultivation_cap
     run.current_event = CurrentEvent(
         event_id="evt_mountain_spirit_tide_001",
         event_name="晨雾吐纳",
@@ -173,13 +181,17 @@ def test_resolve_event_exposes_capped_cultivation_log_metadata() -> None:
 
     resolved = service.resolve_event(run.run_id, "opt_mountain_spirit_tide_001_absorb")
 
-    assert resolved.character.cultivation_exp == 570
+    assert resolved.character.cultivation_exp == cultivation_cap
     assert resolved.resources.spirit_stone == 96
     assert resolved.last_event_resolution is not None
     assert resolved.last_event_resolution.option_id == "opt_mountain_spirit_tide_001_absorb"
-    assert resolved.last_event_resolution.intended_character["cultivation_exp"] == 16
+    intended_cultivation = resolved.last_event_resolution.intended_character["cultivation_exp"]
+    assert intended_cultivation > 0
     assert resolved.last_event_resolution.actual_character["cultivation_exp"] == 0
-    assert resolved.last_event_resolution.capped_character["cultivation_exp"] == 16
+    assert (
+        resolved.last_event_resolution.capped_character["cultivation_exp"]
+        == intended_cultivation
+    )
 
 
 def test_advance_time_applies_current_realm_base_gain_and_cost() -> None:

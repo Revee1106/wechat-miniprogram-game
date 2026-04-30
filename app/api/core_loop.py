@@ -166,7 +166,6 @@ def start_alchemy(payload: StartAlchemyRequest) -> dict[str, object]:
             run_service.start_alchemy(
                 payload.run_id,
                 payload.recipe_id,
-                use_spirit_spring=payload.use_spirit_spring,
             )
         )
     except Exception as error:  # pragma: no cover - centralized mapping

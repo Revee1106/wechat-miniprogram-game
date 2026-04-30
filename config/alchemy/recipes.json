@@ -6,13 +6,45 @@
     "description": "前期主力修炼丹，服用后可直接增长修为。",
     "required_alchemy_level": 0,
     "duration_months": 1,
-    "base_success_rate": 0.86,
+    "base_success_rate": 0.65,
+    "per_level_success_rate": 0.05,
+    "success_mastery_exp_gain": 5,
     "ingredients": {
       "basic_herb": 2
     },
     "effect_type": "cultivation_exp",
     "effect_value": 12,
     "effect_summary": "直接增加修为",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 70,
+        "per_level_weight": -10,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 25,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 0,
+        "per_level_weight": 2,
+        "effect_multiplier": 2
+      }
+    },
     "is_base_recipe": true
   },
   {
@@ -22,7 +54,9 @@
     "description": "恢复气血的基础丹药，用于外出后的调息。",
     "required_alchemy_level": 0,
     "duration_months": 1,
-    "base_success_rate": 0.8,
+    "base_success_rate": 0.65,
+    "per_level_success_rate": 0.05,
+    "success_mastery_exp_gain": 5,
     "ingredients": {
       "basic_herb": 2,
       "spirit_stone": 2
@@ -30,6 +64,36 @@
     "effect_type": "hp_restore",
     "effect_value": 25,
     "effect_summary": "恢复气血",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 70,
+        "per_level_weight": -10,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 25,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 0,
+        "per_level_weight": 2,
+        "effect_multiplier": 2
+      }
+    },
     "is_base_recipe": true
   },
   {
@@ -40,12 +104,44 @@
     "required_alchemy_level": 1,
     "duration_months": 1,
     "base_success_rate": 0.76,
+    "per_level_success_rate": 0.04,
+    "success_mastery_exp_gain": 16,
     "ingredients": {
       "basic_herb": 3
     },
     "effect_type": "status_penalty_reduce",
     "effect_value": 0.05,
     "effect_summary": "降低状态惩罚",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 70,
+        "per_level_weight": -10,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 25,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 0,
+        "per_level_weight": 2,
+        "effect_multiplier": 2
+      }
+    },
     "is_base_recipe": false
   },
   {
@@ -56,6 +152,8 @@
     "required_alchemy_level": 2,
     "duration_months": 1,
     "base_success_rate": 0.64,
+    "per_level_success_rate": 0.04,
+    "success_mastery_exp_gain": 13,
     "ingredients": {
       "basic_herb": 4,
       "spirit_stone": 2
@@ -63,6 +161,36 @@
     "effect_type": "cultivation_exp",
     "effect_value": 24,
     "effect_summary": "较高幅度增加修为",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 70,
+        "per_level_weight": -10,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 25,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 0,
+        "per_level_weight": 2,
+        "effect_multiplier": 2
+      }
+    },
     "is_base_recipe": false
   },
   {
@@ -73,6 +201,8 @@
     "required_alchemy_level": 2,
     "duration_months": 1,
     "base_success_rate": 0.6,
+    "per_level_success_rate": 0.04,
+    "success_mastery_exp_gain": 13,
     "ingredients": {
       "basic_herb": 3,
       "ore": 1,
@@ -81,6 +211,36 @@
     "effect_type": "breakthrough_bonus",
     "effect_value": 6,
     "effect_summary": "提高突破辅助值",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 70,
+        "per_level_weight": -10,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 25,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 0,
+        "per_level_weight": 2,
+        "effect_multiplier": 2
+      }
+    },
     "is_base_recipe": false
   }
 ]

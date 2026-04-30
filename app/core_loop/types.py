@@ -280,7 +280,11 @@ class AlchemyRecipeState:
     required_alchemy_level: int
     duration_months: int
     base_success_rate: float
+    per_level_success_rate: float
+    current_success_rate: float
+    success_mastery_exp_gain: int
     ingredients: dict[str, int] = field(default_factory=dict)
+    quality_chances: list[dict[str, object]] = field(default_factory=list)
     can_start: bool = False
     disabled_reason: str | None = None
 
@@ -292,8 +296,11 @@ class AlchemyInventoryItem:
     quality: str
     amount: int
     effect_summary: str
+    quality_label: str = ""
+    quality_color: str = ""
     effect_type: str = ""
     effect_value: float = 0.0
+    effect_multiplier: float = 1.0
 
 
 @dataclass
@@ -302,7 +309,6 @@ class AlchemyJob:
     recipe_name: str
     total_months: int
     remaining_months: int
-    use_spirit_spring: bool = False
 
 
 @dataclass

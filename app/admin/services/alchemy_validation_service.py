@@ -11,6 +11,8 @@ _EFFECT_TYPE_WHITELIST = {
     "breakthrough_bonus",
 }
 
+_QUALITY_KEYS = {"low", "mid", "high", "supreme"}
+
 
 def validate_alchemy_config(
     *,
@@ -68,9 +70,16 @@ def validate_alchemy_config(
         effect_type = str(recipe.get("effect_type", "")).strip()
         required_alchemy_level = _coerce_int(recipe.get("required_alchemy_level"))
         duration_months = _coerce_int(recipe.get("duration_months"))
+        success_mastery_exp_gain = _coerce_int(
+            recipe.get("success_mastery_exp_gain", 10)
+        )
         effect_value = _coerce_float(recipe.get("effect_value"))
         base_success_rate = _coerce_float(recipe.get("base_success_rate"))
+        per_level_success_rate = _coerce_float(
+            recipe.get("per_level_success_rate", 0.04)
+        )
         ingredients = recipe.get("ingredients")
+        quality_profiles = recipe.get("quality_profiles", {})
         is_base_recipe = recipe.get("is_base_recipe") is True
 
         if not recipe_id:
@@ -86,8 +95,12 @@ def validate_alchemy_config(
             errors.append(f"alchemy recipe '{recipe_id}' has invalid required_alchemy_level")
         if duration_months < 1:
             errors.append(f"alchemy recipe '{recipe_id}' has invalid duration_months")
+        if success_mastery_exp_gain < 0:
+            errors.append(f"alchemy recipe '{recipe_id}' has invalid success_mastery_exp_gain")
         if not 0 <= base_success_rate <= 1:
             errors.append(f"alchemy recipe '{recipe_id}' has invalid base_success_rate")
+        if not -1 <= per_level_success_rate <= 1:
+            errors.append(f"alchemy recipe '{recipe_id}' has invalid per_level_success_rate")
         if not effect_summary:
             errors.append(f"alchemy recipe '{recipe_id}' has empty effect_summary")
         if effect_type not in _EFFECT_TYPE_WHITELIST:
@@ -107,6 +120,7 @@ def validate_alchemy_config(
                     errors.append(
                         f"alchemy recipe '{recipe_id}' has invalid ingredients value for '{resource_key}'"
                     )
+        errors.extend(_validate_quality_profiles(recipe_id, quality_profiles))
         if is_base_recipe:
             base_recipe_count += 1
 
@@ -127,6 +141,44 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _validate_quality_profiles(recipe_id: str, raw_profiles: object) -> list[str]:
+    if raw_profiles in (None, {}):
+        return []
+    if not isinstance(raw_profiles, dict):
+        return [f"alchemy recipe '{recipe_id}' has invalid quality_profiles"]
+
+    errors: list[str] = []
+    for quality, profile in raw_profiles.items():
+        normalized_quality = str(quality).strip()
+        if normalized_quality not in _QUALITY_KEYS:
+            errors.append(
+                f"alchemy recipe '{recipe_id}' has unknown quality profile '{normalized_quality}'"
+            )
+            continue
+        if not isinstance(profile, dict):
+            errors.append(
+                f"alchemy recipe '{recipe_id}' has invalid quality profile '{normalized_quality}'"
+            )
+            continue
+        if not str(profile.get("display_name", "")).strip():
+            errors.append(
+                f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has empty display_name"
+            )
+        if _coerce_float(profile.get("base_weight")) < 0:
+            errors.append(
+                f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has invalid base_weight"
+            )
+        if _coerce_float(profile.get("effect_multiplier")) <= 0:
+            errors.append(
+                f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has invalid effect_multiplier"
+            )
+        if not str(profile.get("color", "")).strip():
+            errors.append(
+                f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has empty color"
+            )
+    return errors
 
 
 def _coerce_int(value: object) -> int:
