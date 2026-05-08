@@ -82,6 +82,7 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   category: "分类",
   description: "描述",
   is_base_recipe: "基础丹方",
+  usable_in_battle: "战斗中可服用",
   per_level_success_rate: "每级成丹率变化",
 };
 

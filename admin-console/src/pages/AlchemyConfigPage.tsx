@@ -231,7 +231,7 @@ export function AlchemyConfigPage() {
     );
     setStatusMessage(
       message ??
-        `已重载运行时，当前载入 ${reloadResult.level_count} 个丹道等级、${reloadResult.recipe_count} 个丹方。`
+        `已同步并立即生效，当前载入 ${reloadResult.level_count} 个丹道等级、${reloadResult.recipe_count} 个丹方。`
     );
   }
 
@@ -252,7 +252,7 @@ export function AlchemyConfigPage() {
       const savedRecipe = isDraft
         ? await createAlchemyRecipe(payload)
         : await updateAlchemyRecipe(payload.recipe_id, payload);
-      await reloadAllAndRuntime(savedRecipe.recipe_id, "已保存丹方并自动重载运行时。");
+      await reloadAllAndRuntime(savedRecipe.recipe_id, "已保存丹方并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -270,7 +270,7 @@ export function AlchemyConfigPage() {
       setErrorMessage(null);
       setStatusMessage(null);
       await deleteAlchemyRecipe(selectedRecipe.recipe_id);
-      await reloadAllAndRuntime(null, "已删除丹方并自动重载运行时。");
+      await reloadAllAndRuntime(null, "已删除丹方并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -283,19 +283,7 @@ export function AlchemyConfigPage() {
       await updateAlchemyLevels(normalizeLevels(levels));
       await reloadAllAndRuntime(
         !isDraft ? selectedRecipeId : null,
-        "已保存丹道等级并自动重载运行时。"
-      );
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleReload() {
-    try {
-      setErrorMessage(null);
-      const result = await reloadAlchemy();
-      setStatusMessage(
-        `已重载运行时，当前载入 ${result.level_count} 个丹道等级、${result.recipe_count} 个丹方。`
+        "已保存丹道等级并立即生效。"
       );
     } catch (error) {
       setErrorMessage((error as Error).message);
@@ -390,9 +378,6 @@ export function AlchemyConfigPage() {
                 <button className="button-secondary" type="button" onClick={handleCreateDraft}>
                   新建丹方
                 </button>
-                <button className="button-secondary" type="button" onClick={() => void handleReload()}>
-                  重载运行时
-                </button>
               </div>
             </div>
           ) : (
@@ -416,9 +401,6 @@ export function AlchemyConfigPage() {
               <div className="event-compact-toolbar__actions event-compact-toolbar__actions--stack">
                 <button className="button-secondary" type="button" onClick={handleAddLevel}>
                   新增等级
-                </button>
-                <button className="button-secondary" type="button" onClick={() => void handleReload()}>
-                  重载运行时
                 </button>
               </div>
             </div>
@@ -713,6 +695,19 @@ export function AlchemyConfigPage() {
                     <option value="false">否</option>
                   </select>
                 </label>
+                <label className="field">
+                  <span className="field__label">战斗中可服用</span>
+                  <select
+                    aria-label="战斗中可服用"
+                    value={selectedRecipe.usable_in_battle ? "true" : "false"}
+                    onChange={(event) =>
+                      handleRecipeFieldChange("usable_in_battle", event.target.value === "true")
+                    }
+                  >
+                    <option value="true">是</option>
+                    <option value="false">否</option>
+                  </select>
+                </label>
               </div>
             </section>
 
@@ -900,6 +895,7 @@ function createEmptyRecipe(
     effect_summary: "",
     quality_profiles: createDefaultQualityProfiles(),
     is_base_recipe: false,
+    usable_in_battle: false,
   };
 }
 
@@ -936,6 +932,7 @@ function normalizeRecipe(recipe: AlchemyRecipeInput): AlchemyRecipeInput {
     effect_summary: String(recipe.effect_summary ?? "").trim(),
     quality_profiles: normalizeQualityProfiles(recipe.quality_profiles),
     is_base_recipe: recipe.is_base_recipe === true,
+    usable_in_battle: recipe.usable_in_battle === true,
   };
 }
 

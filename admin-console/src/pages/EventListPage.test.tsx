@@ -178,7 +178,7 @@ test("uses four direct editor tabs and a right drawer instead of summary cards",
   expect(screen.getByRole("button", { name: "触发规则" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "前置条件" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "选项与结果" })).toBeInTheDocument();
-  expect(screen.queryByText("保存后自动重载运行时")).toBeNull();
+  expect(screen.queryByText("手动重载运行时")).toBeNull();
   expect(screen.getByText("全局触发 / 境界触发")).toBeInTheDocument();
   expect(screen.getByText("权重 2")).toBeInTheDocument();
   expect(screen.getByText("二择其一")).toBeInTheDocument();

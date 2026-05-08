@@ -21,8 +21,6 @@ class ResourceSaleService:
             "basic_herb": SaleRule(price=1),
             "basic_ore": SaleRule(price=2),
             "spirit_spring_water": SaleRule(price=3),
-            "basic_breakthrough_material": SaleRule(price=4),
-            "rare_material": SaleRule(price=10),
         }
 
     def sell(self, run: RunState, resource_key: str, amount: int) -> None:

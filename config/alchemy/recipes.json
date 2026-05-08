@@ -15,6 +15,7 @@
     "effect_type": "cultivation_exp",
     "effect_value": 12,
     "effect_summary": "直接增加修为",
+    "usable_in_battle": false,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
@@ -64,6 +65,7 @@
     "effect_type": "hp_restore",
     "effect_value": 25,
     "effect_summary": "恢复气血",
+    "usable_in_battle": true,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
@@ -112,6 +114,7 @@
     "effect_type": "status_penalty_reduce",
     "effect_value": 0.05,
     "effect_summary": "降低状态惩罚",
+    "usable_in_battle": false,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
@@ -161,6 +164,7 @@
     "effect_type": "cultivation_exp",
     "effect_value": 24,
     "effect_summary": "较高幅度增加修为",
+    "usable_in_battle": false,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
@@ -211,6 +215,7 @@
     "effect_type": "breakthrough_bonus",
     "effect_value": 6,
     "effect_summary": "提高突破辅助值",
+    "usable_in_battle": false,
     "quality_profiles": {
       "low": {
         "display_name": "下品",

@@ -6,12 +6,10 @@ import {
   fetchRealmDetail,
   reloadRealms,
   updateRealm,
-  validateRealms,
   type RealmInput,
-  type ValidationResponse,
 } from "../api/client";
 import { RealmForm, formatMajorRealm } from "../components/RealmForm";
-import { ValidationPanel } from "../components/ValidationPanel";
+import { StatusPanel } from "../components/StatusPanel";
 
 type RealmEditorPageProps = {
   realmKey?: string;
@@ -32,7 +30,6 @@ export function RealmEditorPage({
   onSaved,
 }: RealmEditorPageProps) {
   const [realm, setRealm] = useState<RealmInput>(createEmptyRealm());
-  const [validation, setValidation] = useState<ValidationResponse | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +46,6 @@ export function RealmEditorPage({
           return;
         }
         setRealm(createEmptyRealm());
-        setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
         setActivePanel(null);
@@ -63,7 +59,6 @@ export function RealmEditorPage({
           return;
         }
         setRealm(normalizeRealm(detail));
-        setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
         setActivePanel(null);
@@ -116,32 +111,13 @@ export function RealmEditorPage({
       try {
         const result = await reloadRealms();
         setStatusMessage(
-          `境界已保存，并已重载运行时。当前共载入 ${result.realm_count} 条境界。`
+          `境界已保存并立即生效，当前共载入 ${result.realm_count} 条境界。`
         );
       } catch (reloadError) {
-        setStatusMessage("境界已保存，但运行时重载失败，请手动点击“重载运行时”。");
+        setStatusMessage("境界已保存，但运行时生效失败。");
         setErrorMessage((reloadError as Error).message);
       }
       onSaved(savedRealm.key || realmKeyValue);
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleValidate() {
-    try {
-      setErrorMessage(null);
-      setValidation(await validateRealms());
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleReload() {
-    try {
-      setErrorMessage(null);
-      const result = await reloadRealms();
-      setStatusMessage(`境界配置已重载，共载入 ${result.realm_count} 条境界。`);
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -232,10 +208,9 @@ export function RealmEditorPage({
         />
       </section>
 
-      <ValidationPanel
+      <StatusPanel
         errorMessage={errorMessage}
         statusMessage={statusMessage}
-        validation={validation}
       />
 
       <footer className="editor-footer">
@@ -246,12 +221,6 @@ export function RealmEditorPage({
         <div className="toolbar">
           <button className="button-secondary" type="button" onClick={onBack}>
             返回境界谱册
-          </button>
-          <button className="button-accent" type="button" onClick={() => void handleValidate()}>
-            校验配置
-          </button>
-          <button className="button-secondary" type="button" onClick={() => void handleReload()}>
-            重载运行时
           </button>
           <button className="button-primary" type="button" onClick={() => void handleSave()}>
             保存境界

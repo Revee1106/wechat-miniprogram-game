@@ -6,7 +6,7 @@ export type ResourceOption = {
 export const resourceOptions: ResourceOption[] = [
   { value: "spirit_stone", label: "灵石" },
   { value: "herb", label: "药草" },
-  { value: "basic_herb", label: "基础药草" },
+  { value: "basic_herb", label: "基础灵草" },
   { value: "ore", label: "玄铁精华" },
   { value: "basic_ore", label: "基础矿材" },
   { value: "beast_material", label: "妖兽材料" },
@@ -35,7 +35,11 @@ const resourceOrder = resourceOptions.reduce<Record<string, number>>((map, optio
 }, {});
 
 export function normalizeResourceKey(value: string): string | null {
-  return resourceAliasMap[value.trim()] ?? null;
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return resourceAliasMap[trimmed] ?? trimmed;
 }
 
 export function normalizeResourceRecord(

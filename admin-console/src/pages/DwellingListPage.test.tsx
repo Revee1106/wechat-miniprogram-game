@@ -52,6 +52,25 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
           }),
         };
       }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                material_id: "basic_herb",
+                display_name: "基础灵草",
+                category: "herb",
+                tier: 1,
+                rarity: "common",
+                source: "dwelling",
+                description: "",
+                tags: ["dwelling"],
+              },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({
@@ -93,4 +112,11 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
   fireEvent.click(screen.getByRole("button", { name: "设施信息" }));
   expect(await screen.findByRole("dialog", { name: "设施信息" })).toBeInTheDocument();
   expect(await screen.findByDisplayValue("spirit_gathering_array")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "关闭" }));
+
+  fireEvent.change(screen.getByLabelText("当前设施"), {
+    target: { value: "spirit_field" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "等级配置" }));
+  expect((await screen.findAllByText("基础灵草")).length).toBeGreaterThan(0);
 });

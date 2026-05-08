@@ -81,6 +81,7 @@ def validate_alchemy_config(
         ingredients = recipe.get("ingredients")
         quality_profiles = recipe.get("quality_profiles", {})
         is_base_recipe = recipe.get("is_base_recipe") is True
+        usable_in_battle = recipe.get("usable_in_battle", False)
 
         if not recipe_id:
             errors.append("alchemy recipe missing recipe_id")
@@ -123,6 +124,8 @@ def validate_alchemy_config(
         errors.extend(_validate_quality_profiles(recipe_id, quality_profiles))
         if is_base_recipe:
             base_recipe_count += 1
+        if "usable_in_battle" in recipe and not isinstance(usable_in_battle, bool):
+            errors.append(f"alchemy recipe '{recipe_id}' has invalid usable_in_battle")
 
     if recipes and base_recipe_count == 0:
         errors.append("alchemy config must define at least one base recipe")

@@ -328,11 +328,14 @@ def test_resolve_combat_event_enters_active_battle_without_applying_payload() ->
     run.resources.pill = 1
     run.alchemy_state.inventory = [
         AlchemyInventoryItem(
-            item_id="yang_qi_dan",
-            display_name="养气丹",
+            item_id="yang_yuan_dan",
+            display_name="养元丹",
             quality="low",
             amount=1,
-            effect_summary="恢复修为",
+            effect_summary="恢复气血",
+            effect_type="hp_restore",
+            effect_value=25,
+            usable_in_battle=True,
         )
     ]
     run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)

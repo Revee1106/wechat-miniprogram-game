@@ -1,4 +1,4 @@
-import { buildAdminErrorMessage, localizeValidationResponse } from "../utils/displayText";
+import { buildAdminErrorMessage } from "../utils/displayText";
 
 export type EventListItem = {
   event_id: string;
@@ -111,12 +111,6 @@ export type EventDetailResponse = {
   options: EventOptionInput[];
 };
 
-export type ValidationResponse = {
-  is_valid: boolean;
-  errors: string[];
-  warnings: string[];
-};
-
 export type AdminSession = {
   authenticated: boolean;
   username: string;
@@ -219,6 +213,7 @@ export type AlchemyRecipeInput = {
   effect_summary: string;
   quality_profiles: Record<string, AlchemyQualityProfileInput>;
   is_base_recipe: boolean;
+  usable_in_battle: boolean;
 };
 
 export type AlchemyQualityProfileInput = {
@@ -241,6 +236,48 @@ export type AlchemyReloadResponse = {
   reloaded: boolean;
   level_count: number;
   recipe_count: number;
+};
+
+export type EquipmentSlot = "weapon" | "armor" | "accessory" | "artifact";
+
+export type EquipmentItemInput = {
+  equipment_id: string;
+  display_name: string;
+  slot: EquipmentSlot;
+  description: string;
+  attack: number;
+  defense: number;
+  hp_max: number;
+  special_effects: Record<string, unknown>;
+};
+
+export type EquipmentItemListResponse = {
+  items: EquipmentItemInput[];
+};
+
+export type EquipmentReloadResponse = {
+  reloaded: boolean;
+  equipment_count: number;
+};
+
+export type MaterialInput = {
+  material_id: string;
+  display_name: string;
+  category: string;
+  tier: number;
+  rarity: string;
+  source: string;
+  description: string;
+  tags: string[];
+};
+
+export type MaterialListResponse = {
+  items: MaterialInput[];
+};
+
+export type MaterialReloadResponse = {
+  reloaded: boolean;
+  material_count: number;
 };
 
 export async function fetchEvents(filters?: {
@@ -360,6 +397,42 @@ export async function fetchAlchemyRecipeDetail(
   return response.json();
 }
 
+export async function fetchEquipmentItems(): Promise<EquipmentItemListResponse> {
+  const response = await fetch("/admin/api/equipment/items");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载装备列表失败"));
+  }
+  return response.json();
+}
+
+export async function fetchEquipmentItemDetail(
+  equipmentId: string
+): Promise<EquipmentItemInput> {
+  const response = await fetch(`/admin/api/equipment/items/${equipmentId}`);
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载装备详情失败"));
+  }
+  return response.json();
+}
+
+export async function fetchMaterials(): Promise<MaterialListResponse> {
+  const response = await fetch("/admin/api/materials");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载材料列表失败"));
+  }
+  return response.json();
+}
+
+export async function fetchMaterialDetail(
+  materialId: string
+): Promise<MaterialInput> {
+  const response = await fetch(`/admin/api/materials/${materialId}`);
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载材料详情失败"));
+  }
+  return response.json();
+}
+
 export async function createEvent(payload: EventTemplateInput): Promise<EventTemplateInput> {
   return sendJson("/admin/api/events", {
     method: "POST",
@@ -456,6 +529,54 @@ export async function deleteAlchemyRecipe(recipeId: string): Promise<void> {
   });
 }
 
+export async function createEquipmentItem(
+  payload: EquipmentItemInput
+): Promise<EquipmentItemInput> {
+  return sendJson("/admin/api/equipment/items", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateEquipmentItem(
+  equipmentId: string,
+  payload: EquipmentItemInput
+): Promise<EquipmentItemInput> {
+  return sendJson(`/admin/api/equipment/items/${equipmentId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteEquipmentItem(equipmentId: string): Promise<void> {
+  await sendJson(`/admin/api/equipment/items/${equipmentId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function createMaterial(payload: MaterialInput): Promise<MaterialInput> {
+  return sendJson("/admin/api/materials", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateMaterial(
+  materialId: string,
+  payload: MaterialInput
+): Promise<MaterialInput> {
+  return sendJson(`/admin/api/materials/${materialId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteMaterial(materialId: string): Promise<void> {
+  await sendJson(`/admin/api/materials/${materialId}`, {
+    method: "DELETE",
+  });
+}
+
 export async function updateEvent(
   eventId: string,
   payload: EventTemplateInput
@@ -492,41 +613,6 @@ export async function deleteOption(optionId: string): Promise<void> {
   });
 }
 
-export async function validateEvents(): Promise<ValidationResponse> {
-  const response = await sendJson<ValidationResponse>("/admin/api/events/validate", {
-    method: "POST",
-  });
-  return localizeValidationResponse(response);
-}
-
-export async function validateRealms(): Promise<ValidationResponse> {
-  const response = await sendJson<ValidationResponse>("/admin/api/realms/validate", {
-    method: "POST",
-  });
-  return localizeValidationResponse(response);
-}
-
-export async function validateDwelling(): Promise<ValidationResponse> {
-  const response = await sendJson<ValidationResponse>("/admin/api/dwelling/validate", {
-    method: "POST",
-  });
-  return localizeValidationResponse(response);
-}
-
-export async function validateBattleEnemies(): Promise<ValidationResponse> {
-  const response = await sendJson<ValidationResponse>("/admin/api/battle/validate", {
-    method: "POST",
-  });
-  return localizeValidationResponse(response);
-}
-
-export async function validateAlchemy(): Promise<ValidationResponse> {
-  const response = await sendJson<ValidationResponse>("/admin/api/alchemy/validate", {
-    method: "POST",
-  });
-  return localizeValidationResponse(response);
-}
-
 export async function reloadEvents(): Promise<{
   reloaded: boolean;
   template_count: number;
@@ -557,6 +643,18 @@ export async function reloadBattleEnemies(): Promise<EnemyReloadResponse> {
 
 export async function reloadAlchemy(): Promise<AlchemyReloadResponse> {
   return sendJson("/admin/api/alchemy/reload", {
+    method: "POST",
+  });
+}
+
+export async function reloadEquipment(): Promise<EquipmentReloadResponse> {
+  return sendJson("/admin/api/equipment/reload", {
+    method: "POST",
+  });
+}
+
+export async function reloadMaterials(): Promise<MaterialReloadResponse> {
+  return sendJson("/admin/api/materials/reload", {
     method: "POST",
   });
 }

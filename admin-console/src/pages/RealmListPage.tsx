@@ -130,7 +130,7 @@ export function RealmListPage({ refreshToken = 0 }: RealmListPageProps) {
     setItems(nextItems);
     setSelectedRealmKey(selectedKey ?? nextItems[0]?.key ?? null);
     setStatusMessage(
-      message ?? `已同步并重载运行时，当前载入 ${reloadResult.realm_count} 条境界配置。`
+      message ?? `已同步并立即生效，当前载入 ${reloadResult.realm_count} 条境界配置。`
     );
   }
 
@@ -150,7 +150,7 @@ export function RealmListPage({ refreshToken = 0 }: RealmListPageProps) {
       setStatusMessage(null);
       const saved = isDraft ? await createRealm(payload) : await updateRealm(payload.key, payload);
       setDraftRealm(null);
-      await reloadListAndRuntime(saved.key, "已保存并自动重载运行时。");
+      await reloadListAndRuntime(saved.key, "已保存并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -168,7 +168,7 @@ export function RealmListPage({ refreshToken = 0 }: RealmListPageProps) {
       setErrorMessage(null);
       setStatusMessage(null);
       await deleteRealm(selectedRealm.key);
-      await reloadListAndRuntime(null, "已删除并自动重载运行时。");
+      await reloadListAndRuntime(null, "已删除并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -194,7 +194,7 @@ export function RealmListPage({ refreshToken = 0 }: RealmListPageProps) {
       const reorderResult = await reorderRealms(reordered.map((item) => item.key));
       setItems(reorderResult.items ?? reordered);
       const reloadResult = await reloadRealms();
-      setStatusMessage(`排序已更新，并自动重载运行时。当前载入 ${reloadResult.realm_count} 条境界。`);
+      setStatusMessage(`排序已更新并立即生效，当前载入 ${reloadResult.realm_count} 条境界。`);
       setSelectedRealmKey(selectedRealm.key);
     } catch (error) {
       setErrorMessage((error as Error).message);

@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   fetchDwellingFacilities,
   fetchDwellingFacilityDetail,
+  fetchMaterials,
   reloadDwelling,
   updateDwellingFacility,
   type DwellingFacilityInput,
   type DwellingFacilityListItem,
   type DwellingLevelInput,
+  type MaterialInput,
 } from "../api/client";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
 import { ResourceRecordEditor } from "../components/ResourceRecordEditor";
@@ -46,6 +48,7 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [materials, setMaterials] = useState<MaterialInput[]>([]);
 
   useEffect(() => {
     let isMounted = true;
@@ -53,12 +56,16 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
     async function load() {
       setIsLoading(true);
       try {
-        const response = await fetchDwellingFacilities();
+        const [response, materialResponse] = await Promise.all([
+          fetchDwellingFacilities(),
+          fetchMaterials(),
+        ]);
         if (!isMounted) {
           return;
         }
         const nextItems = response.items ?? [];
         setItems(nextItems);
+        setMaterials(materialResponse.items ?? []);
         setStatusMessage(null);
         setErrorMessage(null);
         setSelectedFacilityId((current) => {
@@ -127,6 +134,16 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
   const allowedSpecialEffects = useMemo(
     () => getSpecialEffectOptions(facility?.facility_id, currentLevel?.special_effects),
     [currentLevel?.special_effects, facility?.facility_id]
+  );
+  const materialResourceOptions = useMemo(
+    () => [
+      { value: "spirit_stone", label: "灵石" },
+      ...materials.map((item) => ({
+        value: item.material_id,
+        label: item.display_name || item.material_id,
+      })),
+    ],
+    [materials]
   );
 
   function updateFacility(nextFacility: DwellingFacilityInput) {
@@ -218,7 +235,7 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
       const savedFacility = await updateDwellingFacility(payload.facility_id, payload);
       updateFacility(savedFacility);
       const result = await reloadDwelling();
-      setStatusMessage(`已保存并自动重载运行时，当前载入 ${result.facility_count} 项洞府设施。`);
+      setStatusMessage(`已保存并立即生效，当前载入 ${result.facility_count} 项洞府设施。`);
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -431,6 +448,7 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
                 emptyMessage="当前等级还没有资源产出。"
                 label="资源产出"
                 value={currentLevel.resource_yields}
+                resourceOptions={materialResourceOptions}
                 onChange={(value) =>
                   handleLevelFieldChange(currentLevel.level, "resource_yields", value)
                 }

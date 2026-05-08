@@ -1,0 +1,43 @@
+[
+  {
+    "material_id": "basic_herb",
+    "display_name": "基础灵草",
+    "category": "herb",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "洞府灵田稳定产出的基础炼丹材料。",
+    "tags": [
+      "alchemy",
+      "dwelling",
+      "basic"
+    ]
+  },
+  {
+    "material_id": "basic_ore",
+    "display_name": "基础矿材",
+    "category": "ore",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "洞府矿洞产出的基础矿材，可作为炼丹或炼器辅材。",
+    "tags": [
+      "dwelling",
+      "basic"
+    ]
+  },
+  {
+    "material_id": "spirit_spring_water",
+    "display_name": "灵泉水",
+    "category": "alchemy_auxiliary",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "洞府灵泉产出的炼丹辅助材料。",
+    "tags": [
+      "alchemy",
+      "dwelling",
+      "auxiliary"
+    ]
+  }
+]

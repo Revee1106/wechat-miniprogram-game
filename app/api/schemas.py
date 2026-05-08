@@ -7,6 +7,7 @@ from pydantic import BaseModel, model_validator
 
 from app.core_loop.services.combat_stat_service import CombatStatService
 from app.core_loop.types import BreakthroughResult, RebirthResult, RunState
+from app.economy.resource_catalog import load_resource_definitions
 
 
 class CreateRunRequest(BaseModel):
@@ -25,6 +26,11 @@ class AdvanceTimeRequest(BaseModel):
 class FacilityActionRequest(BaseModel):
     run_id: str
     facility_id: str
+
+
+class EquipmentActionRequest(BaseModel):
+    run_id: str
+    item_id: str
 
 
 class ResourceSaleRequest(BaseModel):
@@ -68,6 +74,8 @@ class ResolveEventRequest(BaseModel):
 class BattleActionRequest(BaseModel):
     run_id: str
     action: str
+    item_id: str | None = None
+    quality: str | None = None
 
 
 def _serialize(value: Any) -> Any:
@@ -82,6 +90,8 @@ def _serialize(value: Any) -> Any:
 
 def _apply_character_combat_stats(serialized_run: dict[str, Any], run: RunState) -> None:
     player_combat_state = CombatStatService().build_player_state(run)
+    serialized_run["character"]["hp_current"] = player_combat_state.hp_current
+    serialized_run["character"]["hp_max"] = player_combat_state.hp_max
     serialized_run["character"]["attack"] = player_combat_state.attack
     serialized_run["character"]["defense"] = player_combat_state.defense
     serialized_run["character"]["speed"] = player_combat_state.speed
@@ -90,6 +100,9 @@ def _apply_character_combat_stats(serialized_run: dict[str, Any], run: RunState)
 def serialize_run_state(run: RunState) -> dict[str, Any]:
     serialized = _serialize(run)
     _apply_character_combat_stats(serialized, run)
+    serialized["resource_definitions"] = [
+        _serialize(definition) for definition in load_resource_definitions()
+    ]
     return serialized
 
 

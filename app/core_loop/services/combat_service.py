@@ -38,7 +38,14 @@ class CombatService:
             result=None,
         )
 
-    def perform_action(self, battle: ActiveBattleState, action: str) -> ActiveBattleState:
+    def perform_action(
+        self,
+        battle: ActiveBattleState,
+        action: str,
+        *,
+        pill_heal_amount: int | None = None,
+        pill_name: str = "丹药",
+    ) -> ActiveBattleState:
         if battle.is_finished:
             raise ConflictError("battle has already finished", code="core.combat.finished")
 
@@ -79,13 +86,25 @@ class CombatService:
             return battle
 
         if player_first:
-            self._resolve_player_action(battle, normalized_action, player_first=True)
+            self._resolve_player_action(
+                battle,
+                normalized_action,
+                player_first=True,
+                pill_heal_amount=pill_heal_amount,
+                pill_name=pill_name,
+            )
             if not battle.is_finished and battle.enemy.hp_current > 0:
                 self._enemy_attack(battle, defended=False, before_player=False, prefix="")
         else:
             self._enemy_attack(battle, defended=False, before_player=True, prefix="先手")
             if not battle.is_finished and battle.player.hp_current > 0:
-                self._resolve_player_action(battle, normalized_action, player_first=False)
+                self._resolve_player_action(
+                    battle,
+                    normalized_action,
+                    player_first=False,
+                    pill_heal_amount=pill_heal_amount,
+                    pill_name=pill_name,
+                )
 
         self._advance_round(battle)
         return battle
@@ -96,6 +115,8 @@ class CombatService:
         action: str,
         *,
         player_first: bool,
+        pill_heal_amount: int | None = None,
+        pill_name: str = "丹药",
     ) -> None:
         if action == "attack":
             damage = self._calculate_damage(battle.player.attack, battle.enemy.defense)
@@ -112,14 +133,19 @@ class CombatService:
         if action == "use_pill":
             if battle.pill_count <= 0:
                 raise ConflictError("no pill available", code="core.combat.no_pill")
+            resolved_heal_amount = (
+                battle.pill_heal_amount
+                if pill_heal_amount is None
+                else max(0, int(pill_heal_amount))
+            )
             healed = min(
                 battle.player.hp_max,
-                battle.player.hp_current + battle.pill_heal_amount,
+                battle.player.hp_current + resolved_heal_amount,
             )
             actual_heal = healed - battle.player.hp_current
             battle.player.hp_current = healed
             battle.pill_count -= 1
-            battle.log_lines.append(f"你服下丹药，恢复了{actual_heal}点气血。")
+            battle.log_lines.append(f"你服下{pill_name or '丹药'}，恢复了{actual_heal}点气血。")
             return
 
         raise ConflictError(f"unknown combat action '{action}'", code="core.combat.invalid_action")

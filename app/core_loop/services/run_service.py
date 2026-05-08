@@ -10,6 +10,7 @@ from app.core_loop.services.alchemy_service import AlchemyService
 from app.core_loop.services.combat_service import CombatService
 from app.core_loop.repository import InMemoryRunRepository
 from app.core_loop.services.dwelling_service import DwellingService
+from app.core_loop.services.equipment_service import EquipmentService
 from app.core_loop.services.event_service import EventService
 from app.core_loop.services.event_resolution_service import EventResolutionService
 from app.core_loop.services.progression_service import ProgressionService
@@ -28,6 +29,8 @@ class RunService:
         realm_config_base_path: str | None = None,
         dwelling_config_base_path: str | None = None,
         alchemy_config_base_path: str | None = None,
+        equipment_config_base_path: str | None = None,
+        material_config_base_path: str | None = None,
     ) -> None:
         self._repo = InMemoryRunRepository()
         self._event_config_base_path = event_config_base_path
@@ -45,7 +48,18 @@ class RunService:
             if alchemy_config_base_path is not None
             else event_config_base_path
         )
+        self._equipment_config_base_path = (
+            equipment_config_base_path
+            if equipment_config_base_path is not None
+            else event_config_base_path
+        )
+        self._material_config_base_path = (
+            material_config_base_path
+            if material_config_base_path is not None
+            else event_config_base_path
+        )
         self._dwelling_service = DwellingService(base_path=self._dwelling_config_base_path)
+        self._equipment_service = EquipmentService(base_path=self._equipment_config_base_path)
         self._alchemy_service = AlchemyService(base_path=self._alchemy_config_base_path)
         self._rebirth_service = RebirthService()
         self._rebirth_point_service = RebirthPointService(base_path=event_config_base_path)
@@ -102,12 +116,20 @@ class RunService:
         self._hydrate_event_resolution_log(before_resolution, updated)
         return self._repo.save(updated)
 
-    def perform_battle_action(self, run_id: str, action: str) -> RunState:
+    def perform_battle_action(
+        self,
+        run_id: str,
+        action: str,
+        item_id: str | None = None,
+        quality: str | None = None,
+    ) -> RunState:
         run = self._repo.get(run_id)
         before_action = deepcopy(run)
         updated = self._event_resolution_service.perform_battle_action(
             run,
             action,
+            item_id=item_id,
+            quality=quality,
             combat_service=self._combat_service,
         )
         self._hydrate_runtime_metadata(updated)
@@ -131,6 +153,18 @@ class RunService:
     def upgrade_dwelling_facility(self, run_id: str, facility_id: str) -> RunState:
         run = self._repo.get(run_id)
         self._dwelling_service.upgrade_facility(run, facility_id)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
+    def equip_item(self, run_id: str, item_id: str) -> RunState:
+        run = self._repo.get(run_id)
+        self._equipment_service.equip(run, item_id)
+        self._hydrate_runtime_metadata(run)
+        return self._repo.save(run)
+
+    def unequip_item(self, run_id: str, item_id: str) -> RunState:
+        run = self._repo.get(run_id)
+        self._equipment_service.unequip(run, item_id)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 
@@ -214,6 +248,23 @@ class RunService:
         self._alchemy_service.reload_config(base_path=self._alchemy_config_base_path)
         self._rebuild_runtime_services()
 
+    def reload_equipment_config(self, equipment_config_base_path: str | None = None) -> None:
+        if equipment_config_base_path is not None:
+            self._equipment_config_base_path = equipment_config_base_path
+        self._equipment_service.reload_config(base_path=self._equipment_config_base_path)
+        self._rebuild_runtime_services()
+
+    def reload_material_config(self, material_config_base_path: str | None = None) -> None:
+        if material_config_base_path is not None:
+            self._material_config_base_path = material_config_base_path
+        self._dwelling_service.reload_config(base_path=self._material_config_base_path)
+        self._alchemy_service.reload_config(base_path=self._material_config_base_path)
+        self._resource_sale_service = ResourceSaleService(base_path=self._material_config_base_path)
+        self._resource_conversion_service = ResourceConversionService(
+            base_path=self._material_config_base_path
+        )
+        self._rebuild_runtime_services()
+
     def _rebuild_runtime_services(self) -> None:
         self._progression_service = ProgressionService(
             self._dwelling_service,
@@ -259,6 +310,7 @@ class RunService:
 
     def _hydrate_runtime_metadata(self, run: RunState) -> None:
         self._dwelling_service.refresh_operational_status(run)
+        self._equipment_service.hydrate_run(run)
         self._alchemy_service.hydrate_run(run)
         current_index = self._get_current_realm_index(run)
         if current_index is None:

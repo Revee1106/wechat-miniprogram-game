@@ -57,6 +57,7 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
                 effect_value: 12,
                 effect_summary: "直接增加修为",
                 is_base_recipe: true,
+                usable_in_battle: false,
               },
             ],
           }),
@@ -140,6 +141,7 @@ test("separates recipe and level editing with a single active level panel", asyn
                 effect_value: 12,
                 effect_summary: "直接增加修为",
                 is_base_recipe: true,
+                usable_in_battle: false,
               },
             ],
           }),
@@ -160,7 +162,7 @@ test("separates recipe and level editing with a single active level panel", asyn
   expect(await screen.findByLabelText("当前丹道等级")).toBeInTheDocument();
   expect(screen.getByDisplayValue("初识丹道")).toBeInTheDocument();
   expect(container.querySelectorAll(".config-workbench__detail-body .section-card")).toHaveLength(1);
-  expect(screen.queryByText("校验回执")).not.toBeInTheDocument();
+  expect(screen.queryByText("手动重载运行时")).not.toBeInTheDocument();
   expect(container.querySelector(".event-chip-cloud")).toBeNull();
 
   fireEvent.change(screen.getByLabelText("当前丹道等级"), {

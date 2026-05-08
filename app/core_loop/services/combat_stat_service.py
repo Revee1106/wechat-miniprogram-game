@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.seeds import get_realm_configs
+from app.core_loop.services.equipment_service import EquipmentService
 from app.core_loop.types import CombatActorState, ConflictError, RealmConfig, RunState
 
 
@@ -24,15 +25,49 @@ class CombatStatService:
         realm_config = self._realm_configs[current_index]
 
         progress_bonus = self._resolve_progress_bonus(run, current_index)
+        equipment_bonus = self._resolve_equipment_bonus(run)
+        hp_max = run.character.hp_max + equipment_bonus["hp_max"]
+        hp_current = min(hp_max, run.character.hp_current + equipment_bonus["hp_max"])
         return CombatActorState(
             name=run.character.name,
             realm_label=realm_config.display_name,
-            hp_current=run.character.hp_current,
-            hp_max=run.character.hp_max,
-            attack=8 + realm_config.order_index + progress_bonus,
-            defense=2 + realm_config.stage_index + progress_bonus + realm_config.order_index // 5,
-            speed=6 + realm_config.stage_index + (progress_bonus // 2) + realm_config.order_index // 5,
+            hp_current=hp_current,
+            hp_max=hp_max,
+            attack=8 + realm_config.order_index + progress_bonus + equipment_bonus["attack"],
+            defense=(
+                2
+                + realm_config.stage_index
+                + progress_bonus
+                + realm_config.order_index // 5
+                + equipment_bonus["defense"]
+            ),
+            speed=(
+                6
+                + realm_config.stage_index
+                + (progress_bonus // 2)
+                + realm_config.order_index // 5
+                + equipment_bonus["speed"]
+            ),
         )
+
+    def _resolve_equipment_bonus(self, run: RunState) -> dict[str, int]:
+        if run.equipment_inventory:
+            bonus = {
+                "attack": 0,
+                "defense": 0,
+                "speed": 0,
+                "hp_max": 0,
+            }
+            equipped_ids = set(run.character.equipped_items.values())
+            for item in run.equipment_inventory:
+                if not item.is_equipped and item.item_id not in equipped_ids:
+                    continue
+                bonus["attack"] += int(item.attack)
+                bonus["defense"] += int(item.defense)
+                bonus["speed"] += int(item.speed)
+                bonus["hp_max"] += int(item.hp_max)
+            return bonus
+        return EquipmentService().get_equipped_stat_bonus(run)
 
     def _resolve_progress_bonus(self, run: RunState, current_index: int) -> int:
         local_progress = max(

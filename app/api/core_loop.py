@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException
 from app.api.schemas import (
     AdvanceTimeRequest,
     BattleActionRequest,
+    EquipmentActionRequest,
     ResourceConversionRequest,
     ConsumeAlchemyItemRequest,
     CreateRunRequest,
@@ -90,7 +91,12 @@ def resolve_event(payload: ResolveEventRequest) -> dict[str, object]:
 def perform_battle_action(payload: BattleActionRequest) -> dict[str, object]:
     try:
         return serialize_run_state(
-            run_service.perform_battle_action(payload.run_id, payload.action)
+            run_service.perform_battle_action(
+                payload.run_id,
+                payload.action,
+                item_id=payload.item_id,
+                quality=payload.quality,
+            )
         )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)
@@ -122,6 +128,28 @@ def upgrade_dwelling_facility(payload: FacilityActionRequest) -> dict[str, objec
     try:
         return serialize_run_state(
             run_service.upgrade_dwelling_facility(payload.run_id, payload.facility_id)
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/equipment/equip")
+def equip_item(payload: EquipmentActionRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.equip_item(payload.run_id, payload.item_id)
+        )
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/run/equipment/unequip")
+def unequip_item(payload: EquipmentActionRequest) -> dict[str, object]:
+    try:
+        return serialize_run_state(
+            run_service.unequip_item(payload.run_id, payload.item_id)
         )
     except Exception as error:  # pragma: no cover - centralized mapping
         _raise_http_error(error)

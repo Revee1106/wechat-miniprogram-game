@@ -13,7 +13,9 @@ from app.admin.schemas import AdminLoginRequest, AdminSessionResponse
 from app.admin.services.alchemy_admin_service import AlchemyAdminService
 from app.admin.services.dwelling_admin_service import DwellingAdminService
 from app.admin.services.enemy_admin_service import EnemyAdminService
+from app.admin.services.equipment_admin_service import EquipmentAdminService
 from app.admin.services.event_admin_service import EventAdminService
+from app.admin.services.material_admin_service import MaterialAdminService
 from app.admin.services.realm_admin_service import RealmAdminService
 from app.core_loop.types import NotFoundError
 
@@ -24,6 +26,8 @@ realm_admin_service = RealmAdminService()
 dwelling_admin_service = DwellingAdminService()
 enemy_admin_service = EnemyAdminService()
 alchemy_admin_service = AlchemyAdminService()
+equipment_admin_service = EquipmentAdminService()
+material_admin_service = MaterialAdminService()
 
 
 def _raise_http_error(error: Exception) -> None:
@@ -84,6 +88,128 @@ def list_enemies() -> dict[str, object]:
 @router.get("/alchemy/recipes")
 def list_alchemy_recipes() -> dict[str, object]:
     return alchemy_admin_service.list_recipes()
+
+
+@router.get("/equipment/items")
+def list_equipment_items() -> dict[str, object]:
+    return equipment_admin_service.list_items()
+
+
+@router.get("/materials")
+def list_materials() -> dict[str, object]:
+    return material_admin_service.list_items()
+
+
+@router.post("/materials/validate")
+def validate_materials() -> dict[str, object]:
+    result = material_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/materials/reload")
+def reload_materials() -> dict[str, object]:
+    try:
+        return material_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.get("/materials/{material_id}")
+def get_material(material_id: str) -> dict[str, object]:
+    try:
+        return material_admin_service.get_item(material_id)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/materials")
+def create_material(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return material_admin_service.create_item(payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/materials/{material_id}")
+def update_material(material_id: str, payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return material_admin_service.update_item(material_id, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.delete("/materials/{material_id}")
+def delete_material(material_id: str) -> dict[str, object]:
+    try:
+        material_admin_service.delete_item(material_id)
+        return {"deleted": True}
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.get("/equipment/items/{equipment_id}")
+def get_equipment_item(equipment_id: str) -> dict[str, object]:
+    try:
+        return equipment_admin_service.get_item(equipment_id)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/equipment/items")
+def create_equipment_item(payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return equipment_admin_service.create_item(payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.put("/equipment/items/{equipment_id}")
+def update_equipment_item(equipment_id: str, payload: dict[str, object]) -> dict[str, object]:
+    try:
+        return equipment_admin_service.update_item(equipment_id, payload)
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.delete("/equipment/items/{equipment_id}")
+def delete_equipment_item(equipment_id: str) -> dict[str, object]:
+    try:
+        equipment_admin_service.delete_item(equipment_id)
+        return {"deleted": True}
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
+
+
+@router.post("/equipment/validate")
+def validate_equipment() -> dict[str, object]:
+    result = equipment_admin_service.validate_current_config()
+    return {
+        "is_valid": result.is_valid,
+        "errors": result.errors,
+        "warnings": result.warnings,
+    }
+
+
+@router.post("/equipment/reload")
+def reload_equipment() -> dict[str, object]:
+    try:
+        return equipment_admin_service.reload_runtime_config()
+    except Exception as error:  # pragma: no cover - centralized mapping
+        _raise_http_error(error)
+        raise
 
 
 @router.get("/alchemy/recipes/{recipe_id}")

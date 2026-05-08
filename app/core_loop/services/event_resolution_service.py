@@ -172,6 +172,8 @@ class EventResolutionService:
         run: RunState,
         action: str,
         *,
+        item_id: str | None = None,
+        quality: str | None = None,
         combat_service: CombatService | None = None,
         combat_stat_service: CombatStatService | None = None,
     ) -> RunState:
@@ -179,12 +181,24 @@ class EventResolutionService:
             raise ConflictError("there is no active battle")
 
         service = combat_service or self._combat_service
+        selected_pill = (
+            self._resolve_battle_pill(run, item_id=item_id, quality=quality)
+            if action.strip().lower() == "use_pill"
+            else None
+        )
         before_pill_count = int(run.active_battle.pill_count)
-        battle = service.perform_action(run.active_battle, action)
+        battle = service.perform_action(
+            run.active_battle,
+            action,
+            pill_heal_amount=(
+                self._get_battle_pill_heal_amount(selected_pill)
+                if selected_pill is not None
+                else None
+            ),
+            pill_name=selected_pill.display_name if selected_pill is not None else "丹药",
+        )
         if self._did_use_pill(action, before_pill_count, battle.pill_count):
-            self._consume_battle_pill(run, before_pill_count - battle.pill_count)
-            self._run_resource_service.add(run, "pill", -1)
-            # Keep the aggregated pill counter aligned with inventory.
+            self._consume_battle_pill(run, selected_pill)
             run.resources.pill = sum(item.amount for item in run.alchemy_state.inventory)
 
         if not battle.is_finished:
@@ -441,7 +455,7 @@ class EventResolutionService:
             allow_flee=allow_flee,
             flee_base_rate=flee_base_rate,
             pill_heal_amount=pill_heal_amount,
-            pill_count=max(0, int(getattr(run.resources, "pill", 0))),
+            pill_count=self._count_battle_usable_pills(run),
         )
 
     def _finalize_battle(
@@ -620,19 +634,49 @@ class EventResolutionService:
             and before_pill_count > after_pill_count
         )
 
-    def _consume_battle_pill(self, run: RunState, amount: int) -> None:
-        if amount <= 0:
+    def _resolve_battle_pill(
+        self,
+        run: RunState,
+        *,
+        item_id: str | None,
+        quality: str | None,
+    ):
+        candidates = [
+            item
+            for item in run.alchemy_state.inventory
+            if item.amount > 0 and self._is_battle_usable_pill(item)
+        ]
+        if item_id:
+            candidates = [item for item in candidates if item.item_id == item_id]
+        if quality:
+            candidates = [item for item in candidates if item.quality == quality]
+
+        selected = candidates[0] if candidates else None
+        if selected is None:
+            raise ConflictError(
+                "no battle usable pill available",
+                code="core.combat.no_battle_pill",
+            )
+        return selected
+
+    def _is_battle_usable_pill(self, item) -> bool:
+        return item.usable_in_battle is True and item.effect_type == "hp_restore"
+
+    def _get_battle_pill_heal_amount(self, item) -> int:
+        return max(0, int(float(item.effect_value or 0) * float(item.effect_multiplier or 1)))
+
+    def _count_battle_usable_pills(self, run: RunState) -> int:
+        return sum(
+            max(0, int(item.amount))
+            for item in run.alchemy_state.inventory
+            if self._is_battle_usable_pill(item)
+        )
+
+    def _consume_battle_pill(self, run: RunState, item) -> None:
+        if item is None:
             return
 
-        remaining = amount
-        for item in list(run.alchemy_state.inventory):
-            if remaining <= 0:
-                break
-            if item.amount <= 0:
-                continue
-            consumed = min(item.amount, remaining)
-            item.amount -= consumed
-            remaining -= consumed
+        item.amount -= 1
 
         run.alchemy_state.inventory = [
             item for item in run.alchemy_state.inventory if item.amount > 0

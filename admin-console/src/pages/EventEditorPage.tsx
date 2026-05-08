@@ -11,11 +11,9 @@ import {
   reloadEvents,
   updateEvent,
   updateOption,
-  validateEvents,
   type EventListItem,
   type EventOptionInput,
   type EventTemplateInput,
-  type ValidationResponse,
 } from "../api/client";
 import { EventOptionEditor } from "../components/EventOptionEditor";
 import { EventTemplateForm } from "../components/EventTemplateForm";
@@ -27,7 +25,7 @@ import {
   riskLevelOptions,
 } from "../components/FieldLabelMap";
 import { SingleOutcomeEditor } from "../components/SingleOutcomeEditor";
-import { ValidationPanel } from "../components/ValidationPanel";
+import { StatusPanel } from "../components/StatusPanel";
 import { getEventTypeTotalWeight } from "../utils/eventTypeWeight";
 
 type EventEditorPageProps = {
@@ -63,7 +61,6 @@ export function EventEditorPage({
   const [enemyTemplateOptions, setEnemyTemplateOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
-  const [validation, setValidation] = useState<ValidationResponse | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,7 +94,6 @@ export function EventEditorPage({
             label: `${enemy.enemy_name || enemy.enemy_id} / ${enemy.enemy_id}`,
           }))
         );
-        setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
         setActivePanel(null);
@@ -129,7 +125,6 @@ export function EventEditorPage({
             label: `${enemy.enemy_name || enemy.enemy_id} / ${enemy.enemy_id}`,
           }))
         );
-        setValidation(null);
         setStatusMessage(null);
         setErrorMessage(null);
         setActivePanel(null);
@@ -238,34 +233,13 @@ export function EventEditorPage({
       try {
         const result = await reloadEvents();
         setStatusMessage(
-          `事件已保存，并已重载运行时。当前共载入 ${result.template_count} 条事件和 ${result.option_count} 个选项。`
+          `事件已保存并立即生效，当前共载入 ${result.template_count} 条事件和 ${result.option_count} 个选项。`
         );
       } catch (reloadError) {
-        setStatusMessage("事件已保存，但运行时重载失败，请手动点击“重载运行时”。");
+        setStatusMessage("事件已保存，但运行时生效失败。");
         setErrorMessage((reloadError as Error).message);
       }
       onSaved(eventIdValue);
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleValidate() {
-    try {
-      setErrorMessage(null);
-      setValidation(await validateEvents());
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleReload() {
-    try {
-      setErrorMessage(null);
-      const result = await reloadEvents();
-      setStatusMessage(
-        `运行时配置已重载，共载入 ${result.template_count} 条事件和 ${result.option_count} 个选项。`
-      );
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -442,10 +416,9 @@ export function EventEditorPage({
         )}
       </section>
 
-      <ValidationPanel
+      <StatusPanel
         errorMessage={errorMessage}
         statusMessage={statusMessage}
-        validation={validation}
       />
 
       <footer className="editor-footer">
@@ -456,12 +429,6 @@ export function EventEditorPage({
         <div className="toolbar">
           <button className="button-secondary" type="button" onClick={onBack}>
             返回事件库
-          </button>
-          <button className="button-accent" type="button" onClick={handleValidate}>
-            校验配置
-          </button>
-          <button className="button-secondary" type="button" onClick={handleReload}>
-            重载运行时
           </button>
           <button className="button-primary" type="button" onClick={handleSave}>
             保存事件

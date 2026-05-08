@@ -1,4 +1,4 @@
-import { resourceOptions, sortResourceRecord } from "../utils/resourceCatalog";
+import { resourceOptions as defaultResourceOptions, sortResourceRecord, type ResourceOption } from "../utils/resourceCatalog";
 
 type ResourceRecordEditorProps = {
   label: string;
@@ -8,6 +8,7 @@ type ResourceRecordEditorProps = {
   emptyMessage?: string;
   hint?: string;
   hideLabel?: boolean;
+  resourceOptions?: ResourceOption[];
 };
 
 export function ResourceRecordEditor({
@@ -18,10 +19,12 @@ export function ResourceRecordEditor({
   emptyMessage = "当前还没有资源项。",
   hint,
   hideLabel = false,
+  resourceOptions = defaultResourceOptions,
 }: ResourceRecordEditorProps) {
+  const configuredOptions = mergeResourceOptions(resourceOptions, value ?? {});
   const entries = Object.entries(sortResourceRecord(value ?? {}));
   const usedKeys = entries.map(([key]) => key);
-  const canAddResource = usedKeys.length < resourceOptions.length;
+  const canAddResource = usedKeys.length < configuredOptions.length;
 
   function updateEntries(nextEntries: Array<[string, number]>) {
     onChange(
@@ -32,7 +35,7 @@ export function ResourceRecordEditor({
   }
 
   function handleAdd() {
-    const nextResource = resourceOptions.find((option) => !usedKeys.includes(option.value));
+    const nextResource = configuredOptions.find((option) => !usedKeys.includes(option.value));
     if (!nextResource) {
       return;
     }
@@ -84,7 +87,7 @@ export function ResourceRecordEditor({
                   value={resourceKey}
                   onChange={(event) => handleKeyChange(index, event.target.value)}
                 >
-                  {resourceOptions.map((option) => {
+                  {configuredOptions.map((option) => {
                     const disabled =
                       usedKeys.includes(option.value) && option.value !== resourceKey;
                     return (
@@ -123,4 +126,15 @@ export function ResourceRecordEditor({
       {hint ? <span className="field__hint">{hint}</span> : null}
     </div>
   );
+}
+
+function mergeResourceOptions(
+  options: ResourceOption[],
+  value: Record<string, number>
+): ResourceOption[] {
+  const known = new Set(options.map((option) => option.value));
+  const missingOptions = Object.keys(value)
+    .filter((key) => key && !known.has(key))
+    .map((key) => ({ value: key, label: key }));
+  return [...options, ...missingOptions];
 }

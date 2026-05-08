@@ -553,6 +553,30 @@ def test_get_run_marks_all_unaffordable_dwelling_facilities_as_stalled() -> None
     assert mine_cave.status == "stalled"
 
 
+def test_equipment_can_be_equipped_and_unequipped_from_four_slots() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    run.character.equipment_tags = ["iron_sword", "cloth_armor", "jade_token", "bronze_bell"]
+
+    hydrated = service.get_run(run.run_id)
+    assert [item.slot for item in hydrated.equipment_inventory] == [
+        "weapon",
+        "armor",
+        "accessory",
+        "artifact",
+    ]
+
+    equipped = service.equip_item(run.run_id, "iron_sword")
+    assert equipped.character.equipped_items["weapon"] == "iron_sword"
+    assert next(item for item in equipped.equipment_inventory if item.item_id == "iron_sword").is_equipped
+
+    replaced = service.equip_item(run.run_id, "bronze_bell")
+    assert replaced.character.equipped_items["artifact"] == "bronze_bell"
+
+    unequipped = service.unequip_item(run.run_id, "iron_sword")
+    assert "weapon" not in unequipped.character.equipped_items
+
+
 def test_combat_victory_applies_success_payload_and_clears_event() -> None:
     service = RunService()
     _attach_combat_registry(service)
@@ -702,11 +726,24 @@ def test_combat_use_pill_consumes_pill_and_persists_after_refresh() -> None:
     run.resources.pill = 1
     run.alchemy_state.inventory = [
         AlchemyInventoryItem(
+            item_id="yang_yuan_dan",
+            display_name="养元丹",
+            quality="low",
+            amount=1,
+            effect_summary="恢复气血",
+            effect_type="hp_restore",
+            effect_value=25,
+            usable_in_battle=True,
+        ),
+        AlchemyInventoryItem(
             item_id="yang_qi_dan",
             display_name="养气丹",
             quality="low",
             amount=1,
             effect_summary="恢复修为",
+            effect_type="cultivation_exp",
+            effect_value=12,
+            usable_in_battle=False,
         )
     ]
     run.current_event = CurrentEvent(
@@ -734,14 +771,19 @@ def test_combat_use_pill_consumes_pill_and_persists_after_refresh() -> None:
     resolved = service.resolve_event(run.run_id, "opt_fight")
     assert resolved.active_battle is not None
 
-    updated = service.perform_battle_action(run.run_id, "use_pill")
+    updated = service.perform_battle_action(
+        run.run_id,
+        "use_pill",
+        item_id="yang_yuan_dan",
+        quality="low",
+    )
     refreshed = service.get_run(run.run_id)
 
     assert updated.active_battle is not None
     assert updated.active_battle.pill_count == 0
-    assert updated.resources.pill == 0
-    assert updated.alchemy_state.inventory == []
-    assert refreshed.resources.pill == 0
+    assert updated.resources.pill == 1
+    assert [item.item_id for item in updated.alchemy_state.inventory] == ["yang_qi_dan"]
+    assert refreshed.resources.pill == 1
 
 
 def test_combat_option_resolves_enemy_from_enemy_template_id() -> None:

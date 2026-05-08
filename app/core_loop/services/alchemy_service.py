@@ -50,6 +50,7 @@ class AlchemyRecipeSpec:
     effect_summary: str
     quality_profiles: dict[str, AlchemyQualitySpec]
     is_base_recipe: bool = False
+    usable_in_battle: bool = False
 
 
 QUALITY_ORDER = ["low", "mid", "high", "supreme"]
@@ -194,6 +195,7 @@ class AlchemyService:
                 effect_type=recipe.effect_type,
                 effect_value=recipe.effect_value,
                 effect_multiplier=quality_spec.effect_multiplier,
+                usable_in_battle=recipe.usable_in_battle,
             )
 
         result = AlchemyResult(
@@ -307,6 +309,7 @@ class AlchemyService:
             quality_chances=_build_quality_chances(recipe, mastery_level),
             can_start=disabled_reason is None,
             disabled_reason=disabled_reason,
+            usable_in_battle=recipe.usable_in_battle,
         )
 
     def _get_dwelling_level(self, run: RunState, facility_id: str) -> int:
@@ -355,6 +358,7 @@ class AlchemyService:
         effect_type: str,
         effect_value: float,
         effect_multiplier: float,
+        usable_in_battle: bool,
     ) -> None:
         existing = next(
             (
@@ -380,6 +384,7 @@ class AlchemyService:
                 effect_type=effect_type,
                 effect_value=effect_value,
                 effect_multiplier=effect_multiplier,
+                usable_in_battle=usable_in_battle,
             )
         )
 
@@ -550,6 +555,7 @@ def _load_recipe_specs(recipes: list[dict[str, object]]) -> list[AlchemyRecipeSp
             effect_summary=str(recipe.get("effect_summary", "")).strip(),
             quality_profiles=_load_quality_profiles(recipe.get("quality_profiles", {})),
             is_base_recipe=recipe.get("is_base_recipe") is True,
+            usable_in_battle=recipe.get("usable_in_battle") is True,
         )
         for recipe in recipes
         if str(recipe.get("recipe_id", "")).strip()

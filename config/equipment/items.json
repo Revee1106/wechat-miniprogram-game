@@ -1,0 +1,46 @@
+[
+  {
+    "equipment_id": "iron_sword",
+    "display_name": "铁剑",
+    "slot": "weapon",
+    "description": "入门弟子常用的铁剑。",
+    "attack": 4,
+    "defense": 0,
+    "hp_max": 0,
+    "special_effects": {}
+  },
+  {
+    "equipment_id": "cloth_armor",
+    "display_name": "布甲",
+    "slot": "armor",
+    "description": "粗布缝制的护身衣。",
+    "attack": 0,
+    "defense": 2,
+    "hp_max": 12,
+    "special_effects": {}
+  },
+  {
+    "equipment_id": "jade_token",
+    "display_name": "玉符",
+    "slot": "accessory",
+    "description": "佩在身侧的温润玉符。",
+    "attack": 0,
+    "defense": 0,
+    "hp_max": 0,
+    "special_effects": {
+      "luck": 1
+    }
+  },
+  {
+    "equipment_id": "bronze_bell",
+    "display_name": "青铜铃",
+    "slot": "artifact",
+    "description": "可牵引灵机的古旧法宝。",
+    "attack": 0,
+    "defense": 0,
+    "hp_max": 0,
+    "special_effects": {
+      "battle_opening_focus": 1
+    }
+  }
+]

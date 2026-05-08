@@ -290,7 +290,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
       savedEventId ?? nextItems[0]?.event_id ?? nextAllItems[0]?.event_id ?? null
     );
     setStatusMessage(
-      `已保存并自动重载运行时，当前载入 ${reloadResult.template_count} 条事件和 ${reloadResult.option_count} 个选项。`
+      `已保存并立即生效，当前载入 ${reloadResult.template_count} 条事件和 ${reloadResult.option_count} 个选项。`
     );
   }
 

@@ -21,234 +21,17 @@ test("shows redesigned login page when session is missing", async () => {
 });
 
 test("shows shell and sign out action when session is active", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: string | URL) => {
-      const url = String(input);
-      if (url.includes("/admin/api/auth/session")) {
-        return {
-          ok: true,
-          json: async () => ({ authenticated: true, username: "admin" }),
-        };
-      }
-      if (url.includes("/admin/api/events/event_one")) {
-        return {
-          ok: true,
-          json: async () => ({
-            template: {
-              event_id: "event_one",
-              event_name: "Event One",
-              event_type: "cultivation",
-              outcome_type: "cultivation",
-              risk_level: "normal",
-              trigger_sources: ["global"],
-              choice_pattern: "binary_choice",
-              title_text: "Event One",
-              body_text: "Body",
-              weight: 1,
-              is_repeatable: true,
-              option_ids: ["option_one"],
-            },
-            options: [
-              {
-                option_id: "option_one",
-                event_id: "event_one",
-                option_text: "Absorb",
-                sort_order: 1,
-                is_default: true,
-              },
-            ],
-          }),
-        };
-      }
-      return {
-        ok: true,
-        json: async () => ({
-          items: [
-            {
-              event_id: "event_one",
-              event_name: "Event One",
-              event_type: "cultivation",
-              risk_level: "normal",
-              weight: 1,
-              option_ids: ["option_one"],
-              is_repeatable: true,
-            },
-          ],
-        }),
-      };
-    })
-  );
+  vi.stubGlobal("fetch", vi.fn(mockAdminFetch));
 
   render(<App />);
 
   expect(await screen.findByDisplayValue("Event One")).toBeInTheDocument();
-  expect(screen.getByRole("navigation")).toBeInTheDocument();
+  expect(screen.getByRole("navigation", { name: "主导航" })).toBeInTheDocument();
   expect(screen.getByText("退出登录")).toBeInTheDocument();
 });
 
-test("switches between event, realm, dwelling, and alchemy workbenches", async () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: string | URL) => {
-      const url = String(input);
-      if (url.includes("/admin/api/auth/session")) {
-        return {
-          ok: true,
-          json: async () => ({ authenticated: true, username: "admin" }),
-        };
-      }
-      if (url.includes("/admin/api/events/event_one")) {
-        return {
-          ok: true,
-          json: async () => ({
-            template: {
-              event_id: "event_one",
-              event_name: "Event One",
-              event_type: "cultivation",
-              outcome_type: "cultivation",
-              risk_level: "normal",
-              trigger_sources: ["global"],
-              choice_pattern: "binary_choice",
-              title_text: "Event One",
-              body_text: "Body",
-              weight: 1,
-              is_repeatable: true,
-              option_ids: ["option_one"],
-            },
-            options: [
-              {
-                option_id: "option_one",
-                event_id: "event_one",
-                option_text: "Absorb",
-                sort_order: 1,
-                is_default: true,
-              },
-            ],
-          }),
-        };
-      }
-      if (url.includes("/admin/api/realms")) {
-        return {
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                key: "realm_one",
-                display_name: "Realm One",
-                major_realm: "qi_refining",
-                stage_index: 1,
-                order_index: 1,
-                base_success_rate: 0.95,
-                required_cultivation_exp: 100,
-                required_spirit_stone: 20,
-                lifespan_bonus: 6,
-                is_enabled: true,
-              },
-            ],
-          }),
-        };
-      }
-      if (url.includes("/admin/api/dwelling/facilities/spirit_field")) {
-        return {
-          ok: true,
-          json: async () => ({
-            facility_id: "spirit_field",
-            display_name: "Spirit Field",
-            facility_type: "production",
-            summary: "Provides herbs",
-            function_unlock_text: "",
-            levels: [
-              {
-                level: 1,
-                entry_cost: { spirit_stone: 50 },
-                maintenance_cost: { spirit_stone: 2 },
-                resource_yields: { basic_herb: 2 },
-                cultivation_exp_gain: 0,
-                special_effects: {},
-              },
-            ],
-          }),
-        };
-      }
-      if (url.includes("/admin/api/dwelling/facilities")) {
-        return {
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                facility_id: "spirit_field",
-                display_name: "Spirit Field",
-                facility_type: "production",
-                summary: "Provides herbs",
-                max_level: 3,
-                level_count: 3,
-              },
-            ],
-          }),
-        };
-      }
-      if (url.includes("/admin/api/alchemy/levels")) {
-        return {
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                level: 0,
-                display_name: "初识丹道",
-                required_mastery_exp: 0,
-              },
-              {
-                level: 1,
-                display_name: "初窥门径",
-                required_mastery_exp: 20,
-              },
-            ],
-          }),
-        };
-      }
-      if (url.includes("/admin/api/alchemy/recipes")) {
-        return {
-          ok: true,
-          json: async () => ({
-            items: [
-              {
-                recipe_id: "yang_qi_dan",
-                display_name: "养气丹",
-                category: "cultivation",
-                description: "增加修为",
-                required_alchemy_level: 0,
-                duration_months: 1,
-                base_success_rate: 0.86,
-                success_mastery_exp_gain: 19,
-                ingredients: { basic_herb: 2 },
-                effect_type: "cultivation_exp",
-                effect_value: 12,
-                effect_summary: "直接增加修为",
-                is_base_recipe: true,
-              },
-            ],
-          }),
-        };
-      }
-      return {
-        ok: true,
-        json: async () => ({
-          items: [
-            {
-              event_id: "event_one",
-              event_name: "Event One",
-              event_type: "cultivation",
-              risk_level: "normal",
-              weight: 1,
-              option_ids: ["option_one"],
-              is_repeatable: true,
-            },
-          ],
-        }),
-      };
-    })
-  );
+test("switches between event, realm, dwelling, material, alchemy, and equipment workbenches", async () => {
+  vi.stubGlobal("fetch", vi.fn(mockAdminFetch));
 
   render(<App />);
 
@@ -265,7 +48,13 @@ test("switches between event, realm, dwelling, and alchemy workbenches", async (
   expect(await screen.findByDisplayValue("Spirit Field")).toBeInTheDocument();
 
   fireEvent.click(navButtons[3]);
+  expect(await screen.findByDisplayValue("基础灵草")).toBeInTheDocument();
+
+  fireEvent.click(navButtons[4]);
   expect(await screen.findByDisplayValue("养气丹")).toBeInTheDocument();
+
+  fireEvent.click(navButtons[5]);
+  expect(await screen.findByDisplayValue("Iron Sword")).toBeInTheDocument();
 });
 
 test("shows backend login error detail", async () => {
@@ -312,3 +101,231 @@ test("shows backend login error detail", async () => {
 
   expect(await screen.findByRole("alert")).toHaveTextContent("invalid admin credentials");
 });
+
+async function mockAdminFetch(input: string | URL) {
+  const url = String(input);
+  if (url.includes("/admin/api/auth/session")) {
+    return {
+      ok: true,
+      json: async () => ({ authenticated: true, username: "admin" }),
+    };
+  }
+  if (url.includes("/admin/api/events/event_one")) {
+    return {
+      ok: true,
+      json: async () => ({
+        template: {
+          event_id: "event_one",
+          event_name: "Event One",
+          event_type: "cultivation",
+          outcome_type: "cultivation",
+          risk_level: "normal",
+          trigger_sources: ["global"],
+          choice_pattern: "binary_choice",
+          title_text: "Event One",
+          body_text: "Body",
+          weight: 1,
+          is_repeatable: true,
+          option_ids: ["option_one"],
+        },
+        options: [
+          {
+            option_id: "option_one",
+            event_id: "event_one",
+            option_text: "Absorb",
+            sort_order: 1,
+            is_default: true,
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/realms")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            key: "realm_one",
+            display_name: "Realm One",
+            major_realm: "qi_refining",
+            stage_index: 1,
+            order_index: 1,
+            base_success_rate: 0.95,
+            required_cultivation_exp: 100,
+            required_spirit_stone: 20,
+            lifespan_bonus: 6,
+            is_enabled: true,
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/dwelling/facilities/spirit_field")) {
+    return {
+      ok: true,
+      json: async () => ({
+        facility_id: "spirit_field",
+        display_name: "Spirit Field",
+        facility_type: "production",
+        summary: "Provides herbs",
+        function_unlock_text: "",
+        levels: [
+          {
+            level: 1,
+            entry_cost: { spirit_stone: 50 },
+            maintenance_cost: { spirit_stone: 2 },
+            resource_yields: { basic_herb: 2 },
+            cultivation_exp_gain: 0,
+            special_effects: {},
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/dwelling/facilities")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            facility_id: "spirit_field",
+            display_name: "Spirit Field",
+            facility_type: "production",
+            summary: "Provides herbs",
+            max_level: 3,
+            level_count: 3,
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/materials/basic_herb")) {
+    return {
+      ok: true,
+      json: async () => ({
+        material_id: "basic_herb",
+        display_name: "基础灵草",
+        category: "herb",
+        tier: 1,
+        rarity: "common",
+        source: "dwelling",
+        description: "洞府产出",
+        tags: ["alchemy", "dwelling"],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/materials")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            material_id: "basic_herb",
+            display_name: "基础灵草",
+            category: "herb",
+            tier: 1,
+            rarity: "common",
+            source: "dwelling",
+            description: "洞府产出",
+            tags: ["alchemy", "dwelling"],
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/alchemy/levels")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            level: 0,
+            display_name: "初识丹道",
+            required_mastery_exp: 0,
+          },
+          {
+            level: 1,
+            display_name: "初窥门径",
+            required_mastery_exp: 20,
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/alchemy/recipes")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            recipe_id: "yang_qi_dan",
+            display_name: "养气丹",
+            category: "cultivation",
+            description: "增加修为",
+            required_alchemy_level: 0,
+            duration_months: 1,
+            base_success_rate: 0.86,
+            success_mastery_exp_gain: 19,
+            ingredients: { basic_herb: 2 },
+            effect_type: "cultivation_exp",
+            effect_value: 12,
+            effect_summary: "直接增加修为",
+            is_base_recipe: true,
+            usable_in_battle: false,
+          },
+        ],
+      }),
+    };
+  }
+  if (url.includes("/admin/api/equipment/items/iron_sword")) {
+    return {
+      ok: true,
+      json: async () => ({
+        equipment_id: "iron_sword",
+        display_name: "Iron Sword",
+        slot: "weapon",
+        description: "A basic sword",
+        attack: 4,
+        defense: 0,
+        hp_max: 0,
+        special_effects: {},
+      }),
+    };
+  }
+  if (url.includes("/admin/api/equipment/items")) {
+    return {
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            equipment_id: "iron_sword",
+            display_name: "Iron Sword",
+            slot: "weapon",
+            description: "A basic sword",
+            attack: 4,
+            defense: 0,
+            hp_max: 0,
+            special_effects: {},
+          },
+        ],
+      }),
+    };
+  }
+  return {
+    ok: true,
+    json: async () => ({
+      items: [
+        {
+          event_id: "event_one",
+          event_name: "Event One",
+          event_type: "cultivation",
+          risk_level: "normal",
+          weight: 1,
+          option_ids: ["option_one"],
+          is_repeatable: true,
+        },
+      ],
+    }),
+  };
+}

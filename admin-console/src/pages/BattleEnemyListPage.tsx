@@ -7,13 +7,11 @@ import {
   fetchBattleEnemyDetail,
   reloadBattleEnemies,
   updateBattleEnemy,
-  validateBattleEnemies,
   type EnemyTemplateInput,
-  type ValidationResponse,
 } from "../api/client";
 import { BattleEnemyForm } from "../components/BattleEnemyForm";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
-import { ValidationPanel } from "../components/ValidationPanel";
+import { StatusPanel } from "../components/StatusPanel";
 
 const DRAFT_ENEMY_ID = "__draft_enemy__";
 
@@ -28,7 +26,6 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
   const [pendingEnemyId, setPendingEnemyId] = useState("");
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [validation, setValidation] = useState<ValidationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -45,7 +42,6 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
         setItems(nextItems);
         setStatusMessage(null);
         setErrorMessage(null);
-        setValidation(null);
         setSelectedEnemyId((current) => {
           if (current === DRAFT_ENEMY_ID) {
             return current;
@@ -161,7 +157,6 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
     setPendingEnemyId("");
     setStatusMessage(null);
     setErrorMessage(null);
-    setValidation(null);
   }
 
   async function reloadListAndRuntime(selectedId?: string | null, message?: string) {
@@ -174,7 +169,7 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
     setSelectedEnemyId(selectedId ?? nextItems[0]?.enemy_id ?? null);
     setDraftEnemy(null);
     setStatusMessage(
-      message ?? `已同步并重载运行时，当前载入 ${reloadResult.enemy_count} 个敌人模板。`
+      message ?? `已同步并立即生效，当前载入 ${reloadResult.enemy_count} 个敌人模板。`
     );
   }
 
@@ -192,11 +187,10 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
     try {
       setErrorMessage(null);
       setStatusMessage(null);
-      setValidation(null);
       const savedEnemy = isDraft
         ? await createBattleEnemy(payload)
         : await updateBattleEnemy(payload.enemy_id, payload);
-      await reloadListAndRuntime(savedEnemy.enemy_id, "已保存敌人模板并自动重载运行时。");
+      await reloadListAndRuntime(savedEnemy.enemy_id, "已保存敌人模板并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -213,28 +207,8 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
     try {
       setErrorMessage(null);
       setStatusMessage(null);
-      setValidation(null);
       await deleteBattleEnemy(selectedEnemy.enemy_id);
-      await reloadListAndRuntime(null, "已删除敌人模板并自动重载运行时。");
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleValidate() {
-    try {
-      setErrorMessage(null);
-      setValidation(await validateBattleEnemies());
-    } catch (error) {
-      setErrorMessage((error as Error).message);
-    }
-  }
-
-  async function handleReload() {
-    try {
-      setErrorMessage(null);
-      const result = await reloadBattleEnemies();
-      setStatusMessage(`已重载运行时，当前载入 ${result.enemy_count} 个敌人模板。`);
+      await reloadListAndRuntime(null, "已删除敌人模板并立即生效。");
     } catch (error) {
       setErrorMessage((error as Error).message);
     }
@@ -290,12 +264,6 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
             <div className="event-compact-toolbar__actions event-compact-toolbar__actions--stack">
               <button className="button-secondary" type="button" onClick={handleCreateDraft}>
                 新建敌人模板
-              </button>
-              <button className="button-accent" type="button" onClick={() => void handleValidate()}>
-                校验配置
-              </button>
-              <button className="button-secondary" type="button" onClick={() => void handleReload()}>
-                重载运行时
               </button>
               <button
                 className="button-danger"
@@ -357,10 +325,9 @@ export function BattleEnemyListPage({ refreshToken = 0 }: BattleEnemyListPagePro
         )
       }
       statusPanel={
-        <ValidationPanel
+        <StatusPanel
           errorMessage={errorMessage}
           statusMessage={statusMessage}
-          validation={validation}
         />
       }
     />

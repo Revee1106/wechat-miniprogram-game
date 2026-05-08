@@ -135,7 +135,7 @@ export function DwellingEditorPage({
       const savedFacility = await updateDwellingFacility(facility.facility_id, payload);
       setFacility(toEditableFacility(savedFacility));
       const result = await reloadDwelling();
-      setStatusMessage(`洞府配置已保存，并已重载运行时。当前共载入 ${result.facility_count} 项设施。`);
+      setStatusMessage(`洞府配置已保存并立即生效，当前共载入 ${result.facility_count} 项设施。`);
       onSaved(savedFacility.facility_id);
     } catch (error) {
       setErrorMessage((error as Error).message);

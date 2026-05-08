@@ -197,6 +197,21 @@ class CombatActorState:
 
 
 @dataclass
+class EquipmentItemState:
+    item_id: str
+    display_name: str
+    slot: str
+    slot_label: str
+    attack: int = 0
+    defense: int = 0
+    speed: int = 0
+    hp_max: int = 0
+    description: str = ""
+    special_effects: dict[str, object] = field(default_factory=dict)
+    is_equipped: bool = False
+
+
+@dataclass
 class ActiveBattleState:
     source_event_id: str
     source_option_id: str
@@ -287,6 +302,7 @@ class AlchemyRecipeState:
     quality_chances: list[dict[str, object]] = field(default_factory=list)
     can_start: bool = False
     disabled_reason: str | None = None
+    usable_in_battle: bool = False
 
 
 @dataclass
@@ -301,6 +317,7 @@ class AlchemyInventoryItem:
     effect_type: str = ""
     effect_value: float = 0.0
     effect_multiplier: float = 1.0
+    usable_in_battle: bool = False
 
 
 @dataclass
@@ -355,6 +372,7 @@ class CharacterState:
     statuses: list[str] = field(default_factory=list)
     techniques: list[str] = field(default_factory=list)
     equipment_tags: list[str] = field(default_factory=list)
+    equipped_items: dict[str, str] = field(default_factory=dict)
     rebirth_progress: int = 0
     is_dead: bool = False
 
@@ -382,6 +400,7 @@ class RunState:
     active_battle: ActiveBattleState | None = None
     dwelling_level: int = 1
     dwelling_facilities: list[DwellingFacilityState] = field(default_factory=list)
+    equipment_inventory: list[EquipmentItemState] = field(default_factory=list)
     dwelling_last_settlement: DwellingSettlement | None = None
     last_event_resolution: EventResolutionLog | None = None
     result_summary: str | None = None
