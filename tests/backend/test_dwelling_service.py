@@ -60,7 +60,9 @@ def test_advance_time_settles_dwelling_outputs_before_event_selection() -> None:
     assert advanced.dwelling_last_settlement.total_cultivation_exp_gain == 6
     assert advanced.resources.herbs == run.resources.herbs
     assert advanced.resources.ore == run.resources.ore
-    assert advanced.character.cultivation_exp == before_exp + 12
+    assert advanced.character.cultivation_exp == (
+        before_exp + advanced.dwelling_last_settlement.total_cultivation_exp_gain
+    )
     assert advanced.resources.spirit_stone == before_spirit_stone - 10
     assert any(
         stack.resource_key == "basic_herb" and stack.amount == 2
@@ -221,6 +223,128 @@ def test_dwelling_service_reads_costs_and_yields_from_json_config() -> None:
     rmtree(base_path)
 
 
+def test_dwelling_service_applies_configured_random_resource_yields() -> None:
+    base_path = _make_test_base_path("dwelling-random-yields")
+    DwellingConfigRepository(base_path=base_path).save(
+        {
+            "facilities": [
+                _facility_config(
+                    facility_id="spirit_field",
+                    display_name="灵田",
+                    facility_type="production",
+                    levels=[
+                        _facility_level(
+                            level=1,
+                            entry_cost={"spirit_stone": 50},
+                            maintenance_cost={"spirit_stone": 2},
+                            resource_yields={"basic_herb": 2},
+                            random_resource_yields=[
+                                {
+                                    "resource_key": "herb_ninglucao",
+                                    "chance": 1,
+                                    "amount": 2,
+                                },
+                                {
+                                    "resource_key": "rare_herb",
+                                    "chance": 0,
+                                    "amount": 9,
+                                },
+                            ],
+                        ),
+                    ],
+                ),
+                _facility_config("spirit_spring", "灵泉", "production", [_facility_level(1)]),
+                _facility_config("mine_cave", "矿洞", "production", [_facility_level(1)]),
+                _facility_config("alchemy_room", "炼丹房", "function", [_facility_level(1)]),
+                _facility_config(
+                    "spirit_gathering_array",
+                    "聚灵阵",
+                    "boost",
+                    [_facility_level(1, cultivation_exp_gain=6)],
+                ),
+            ]
+        }
+    )
+
+    service = RunService(dwelling_config_base_path=str(base_path))
+    run = service.create_run(player_id="random-yield")
+    run.resources.spirit_stone = 200
+    run.unlocked_material_ids = ["herb_ninglucao"]
+    service.build_dwelling_facility(run.run_id, "spirit_field")
+    advanced = service.advance_time(run.run_id)
+
+    assert advanced.dwelling_last_settlement is not None
+    assert advanced.dwelling_last_settlement.total_resource_gains["basic_herb"] == 2
+    assert advanced.dwelling_last_settlement.total_resource_gains["herb_ninglucao"] == 2
+    assert "rare_herb" not in advanced.dwelling_last_settlement.total_resource_gains
+    rmtree(base_path)
+
+
+def test_dwelling_random_resource_yields_require_material_unlock() -> None:
+    base_path = _make_test_base_path("dwelling-random-yield-unlock")
+    DwellingConfigRepository(base_path=base_path).save(
+        {
+            "facilities": [
+                _facility_config(
+                    facility_id="spirit_field",
+                    display_name="灵田",
+                    facility_type="production",
+                    levels=[
+                        _facility_level(
+                            level=1,
+                            entry_cost={"spirit_stone": 50},
+                            maintenance_cost={"spirit_stone": 2},
+                            resource_yields={"basic_herb": 2},
+                        ),
+                        _facility_level(
+                            level=2,
+                            entry_cost={"spirit_stone": 50},
+                            maintenance_cost={"spirit_stone": 2},
+                            resource_yields={"basic_herb": 2},
+                            random_resource_yields=[
+                                {
+                                    "resource_key": "herb_julingzhi",
+                                    "chance": 1,
+                                    "amount": 1,
+                                },
+                            ],
+                        ),
+                    ],
+                ),
+                _facility_config("spirit_spring", "灵泉", "production", [_facility_level(1)]),
+                _facility_config("mine_cave", "矿洞", "production", [_facility_level(1)]),
+                _facility_config("alchemy_room", "炼丹房", "function", [_facility_level(1)]),
+                _facility_config(
+                    "spirit_gathering_array",
+                    "聚灵阵",
+                    "boost",
+                    [_facility_level(1, cultivation_exp_gain=6)],
+                ),
+            ]
+        }
+    )
+
+    service = RunService(dwelling_config_base_path=str(base_path))
+    locked_run = service.create_run(player_id="locked-random-yield")
+    locked_run.resources.spirit_stone = 200
+    service.build_dwelling_facility(locked_run.run_id, "spirit_field")
+    service.upgrade_dwelling_facility(locked_run.run_id, "spirit_field")
+    locked_advanced = service.advance_time(locked_run.run_id)
+
+    unlocked_run = service.create_run(player_id="unlocked-random-yield")
+    unlocked_run.resources.spirit_stone = 200
+    unlocked_run.unlocked_material_ids = ["herb_julingzhi"]
+    service.build_dwelling_facility(unlocked_run.run_id, "spirit_field")
+    service.upgrade_dwelling_facility(unlocked_run.run_id, "spirit_field")
+    unlocked_advanced = service.advance_time(unlocked_run.run_id)
+
+    assert locked_advanced.dwelling_last_settlement is not None
+    assert "herb_julingzhi" not in locked_advanced.dwelling_last_settlement.total_resource_gains
+    assert unlocked_advanced.dwelling_last_settlement is not None
+    assert unlocked_advanced.dwelling_last_settlement.total_resource_gains["herb_julingzhi"] == 1
+    rmtree(base_path)
+
+
 def test_dwelling_service_can_upgrade_to_newly_added_level_four() -> None:
     base_path = _make_test_base_path("dwelling-runtime-level-four")
     DwellingConfigRepository(base_path=base_path).save(
@@ -364,6 +488,7 @@ def _facility_level(
     entry_cost: dict[str, int] | None = None,
     maintenance_cost: dict[str, int] | None = None,
     resource_yields: dict[str, int] | None = None,
+    random_resource_yields: list[dict[str, object]] | None = None,
     cultivation_exp_gain: int = 0,
     special_effects: dict[str, float] | None = None,
 ) -> dict[str, object]:
@@ -374,6 +499,9 @@ def _facility_level(
             maintenance_cost if maintenance_cost is not None else {"spirit_stone": 2}
         ),
         "resource_yields": resource_yields if resource_yields is not None else {},
+        "random_resource_yields": (
+            random_resource_yields if random_resource_yields is not None else []
+        ),
         "cultivation_exp_gain": cultivation_exp_gain,
         "special_effects": special_effects if special_effects is not None else {},
     }

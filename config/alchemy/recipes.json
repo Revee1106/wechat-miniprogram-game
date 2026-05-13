@@ -99,153 +99,54 @@
     "is_base_recipe": true
   },
   {
-    "recipe_id": "ning_shen_dan",
-    "display_name": "宁神丹",
-    "category": "recovery",
-    "description": "安定心神，缓解修炼与事件带来的心神损耗。",
+    "recipe_id": "ning_qi_dan",
+    "display_name": "凝气丹",
+    "category": "cultivation",
+    "description": "以凝露草调和灵泉水炼成的进阶修炼丹药，药力较养气丹更为绵长，可帮助修士凝聚灵气，提升修为。",
     "required_alchemy_level": 1,
     "duration_months": 1,
-    "base_success_rate": 0.76,
+    "base_success_rate": 0.5,
     "per_level_success_rate": 0.04,
-    "success_mastery_exp_gain": 16,
+    "success_mastery_exp_gain": 10,
     "ingredients": {
-      "basic_herb": 3
-    },
-    "effect_type": "status_penalty_reduce",
-    "effect_value": 0.05,
-    "effect_summary": "降低状态惩罚",
-    "usable_in_battle": false,
-    "quality_profiles": {
-      "low": {
-        "display_name": "下品",
-        "color": "white",
-        "base_weight": 70,
-        "per_level_weight": -10,
-        "effect_multiplier": 1
-      },
-      "mid": {
-        "display_name": "中品",
-        "color": "green",
-        "base_weight": 25,
-        "per_level_weight": 4,
-        "effect_multiplier": 1.25
-      },
-      "high": {
-        "display_name": "上品",
-        "color": "blue",
-        "base_weight": 5,
-        "per_level_weight": 4,
-        "effect_multiplier": 1.5
-      },
-      "supreme": {
-        "display_name": "极品",
-        "color": "purple",
-        "base_weight": 0,
-        "per_level_weight": 2,
-        "effect_multiplier": 2
-      }
-    },
-    "is_base_recipe": false
-  },
-  {
-    "recipe_id": "ju_ling_dan",
-    "display_name": "聚灵丹",
-    "category": "cultivation",
-    "description": "中期修炼丹，借灵泉与丹室凝聚灵力。",
-    "required_alchemy_level": 2,
-    "duration_months": 1,
-    "base_success_rate": 0.64,
-    "per_level_success_rate": 0.04,
-    "success_mastery_exp_gain": 13,
-    "ingredients": {
-      "basic_herb": 4,
-      "spirit_stone": 2
+      "spirit_spring_water": 1,
+      "basic_herb": 3,
+      "herb_ninglucao": 1
     },
     "effect_type": "cultivation_exp",
-    "effect_value": 24,
-    "effect_summary": "较高幅度增加修为",
-    "usable_in_battle": false,
+    "effect_value": 26,
+    "effect_summary": "蕴含凝露灵气，服用后增加修为。",
     "quality_profiles": {
       "low": {
         "display_name": "下品",
         "color": "white",
-        "base_weight": 70,
-        "per_level_weight": -10,
+        "base_weight": 80,
+        "per_level_weight": -6,
         "effect_multiplier": 1
       },
       "mid": {
         "display_name": "中品",
         "color": "green",
-        "base_weight": 25,
-        "per_level_weight": 4,
+        "base_weight": 12,
+        "per_level_weight": 3,
         "effect_multiplier": 1.25
       },
       "high": {
         "display_name": "上品",
         "color": "blue",
-        "base_weight": 5,
-        "per_level_weight": 4,
+        "base_weight": 6,
+        "per_level_weight": 2,
         "effect_multiplier": 1.5
       },
       "supreme": {
         "display_name": "极品",
         "color": "purple",
-        "base_weight": 0,
-        "per_level_weight": 2,
+        "base_weight": 2,
+        "per_level_weight": 1,
         "effect_multiplier": 2
       }
     },
-    "is_base_recipe": false
-  },
-  {
-    "recipe_id": "gu_yuan_dan",
-    "display_name": "固元丹",
-    "category": "breakthrough",
-    "description": "稳定元气，为破境前的最后准备提供支撑。",
-    "required_alchemy_level": 2,
-    "duration_months": 1,
-    "base_success_rate": 0.6,
-    "per_level_success_rate": 0.04,
-    "success_mastery_exp_gain": 13,
-    "ingredients": {
-      "basic_herb": 3,
-      "ore": 1,
-      "spirit_stone": 3
-    },
-    "effect_type": "breakthrough_bonus",
-    "effect_value": 6,
-    "effect_summary": "提高突破辅助值",
-    "usable_in_battle": false,
-    "quality_profiles": {
-      "low": {
-        "display_name": "下品",
-        "color": "white",
-        "base_weight": 70,
-        "per_level_weight": -10,
-        "effect_multiplier": 1
-      },
-      "mid": {
-        "display_name": "中品",
-        "color": "green",
-        "base_weight": 25,
-        "per_level_weight": 4,
-        "effect_multiplier": 1.25
-      },
-      "high": {
-        "display_name": "上品",
-        "color": "blue",
-        "base_weight": 5,
-        "per_level_weight": 4,
-        "effect_multiplier": 1.5
-      },
-      "supreme": {
-        "display_name": "极品",
-        "color": "purple",
-        "base_weight": 0,
-        "per_level_weight": 2,
-        "effect_multiplier": 2
-      }
-    },
-    "is_base_recipe": false
+    "is_base_recipe": false,
+    "usable_in_battle": false
   }
 ]

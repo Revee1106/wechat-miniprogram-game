@@ -5,18 +5,30 @@ import {
   deleteAlchemyRecipe,
   fetchAlchemyLevels,
   fetchAlchemyRecipes,
+  fetchMaterials,
   reloadAlchemy,
   updateAlchemyLevels,
   updateAlchemyRecipe,
   type AlchemyLevelInput,
   type AlchemyRecipeInput,
+  type MaterialInput,
 } from "../api/client";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
 import { ResourceRecordEditor } from "../components/ResourceRecordEditor";
 
 const DRAFT_RECIPE_ID = "__draft_alchemy_recipe__";
+const CUSTOM_CATEGORY_VALUE = "__custom_alchemy_category__";
 
 type DetailTab = "recipe" | "levels";
+
+const defaultCategoryOptions = [
+  { value: "cultivation", label: "修炼类" },
+  { value: "recovery", label: "恢复类" },
+  { value: "breakthrough", label: "突破类" },
+  { value: "support", label: "辅助类" },
+  { value: "special", label: "特殊类" },
+  { value: "combat", label: "战斗类" },
+];
 
 const effectTypeOptions = [
   { value: "cultivation_exp", label: "修为增长" },
@@ -37,6 +49,7 @@ export function AlchemyConfigPage() {
   const [levels, setLevels] = useState<AlchemyLevelInput[]>([]);
   const [recipes, setRecipes] = useState<AlchemyRecipeInput[]>([]);
   const [draftRecipe, setDraftRecipe] = useState<AlchemyRecipeInput | null>(null);
+  const [materials, setMaterials] = useState<MaterialInput[]>([]);
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [selectedLevelIndex, setSelectedLevelIndex] = useState(0);
   const [pendingRecipeId, setPendingRecipeId] = useState("");
@@ -51,9 +64,10 @@ export function AlchemyConfigPage() {
     async function load() {
       setIsLoading(true);
       try {
-        const [levelsResponse, recipesResponse] = await Promise.all([
+        const [levelsResponse, recipesResponse, materialsResponse] = await Promise.all([
           fetchAlchemyLevels(),
           fetchAlchemyRecipes(),
+          fetchMaterials(),
         ]);
         if (!isMounted) {
           return;
@@ -62,6 +76,7 @@ export function AlchemyConfigPage() {
         const nextRecipes = (recipesResponse.items ?? []).map(normalizeRecipe);
         setLevels(nextLevels);
         setRecipes(nextRecipes);
+        setMaterials(materialsResponse.items ?? []);
         setDraftRecipe(null);
         setStatusMessage(null);
         setErrorMessage(null);
@@ -103,6 +118,21 @@ export function AlchemyConfigPage() {
   const normalizedSelectedLevelIndex =
     levels.length > 0 ? Math.min(selectedLevelIndex, levels.length - 1) : 0;
   const selectedLevel = levels[normalizedSelectedLevelIndex] ?? null;
+  const categoryOptions = useMemo(
+    () => buildCategoryOptions(recipes, draftRecipe?.category),
+    [draftRecipe?.category, recipes]
+  );
+  const materialResourceOptions = useMemo(
+    () => buildMaterialResourceOptions(materials),
+    [materials]
+  );
+  const selectedCategoryInOptions = Boolean(
+    selectedRecipe?.category &&
+      categoryOptions.some((option) => option.value === selectedRecipe.category)
+  );
+  const selectedCategorySelectValue = selectedCategoryInOptions
+    ? selectedRecipe?.category ?? ""
+    : CUSTOM_CATEGORY_VALUE;
 
   function updateSelectedRecipe(nextRecipe: AlchemyRecipeInput) {
     if (isDraft) {
@@ -165,6 +195,14 @@ export function AlchemyConfigPage() {
           : item
       )
     );
+  }
+
+  function handleRecipeCategorySelect(value: string) {
+    if (value === CUSTOM_CATEGORY_VALUE) {
+      handleRecipeFieldChange("category", "");
+      return;
+    }
+    handleRecipeFieldChange("category", value);
   }
 
   function handleCreateDraft() {
@@ -530,12 +568,32 @@ export function AlchemyConfigPage() {
               </label>
               <label className="field">
                 <span className="field__label">分类</span>
-                <input
+                <select
                   aria-label="分类"
-                  value={selectedRecipe.category}
-                  onChange={(event) => handleRecipeFieldChange("category", event.target.value)}
-                />
+                  value={selectedCategorySelectValue}
+                  onChange={(event) => handleRecipeCategorySelect(event.target.value)}
+                >
+                  {categoryOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  <option value={CUSTOM_CATEGORY_VALUE}>新增分类...</option>
+                </select>
               </label>
+              {!selectedCategoryInOptions ? (
+                <label className="field">
+                  <span className="field__label">新增分类</span>
+                  <input
+                    aria-label="新增分类"
+                    placeholder="输入底层分类字段，例如 healing"
+                    value={selectedRecipe.category}
+                    onChange={(event) =>
+                      handleRecipeFieldChange("category", event.target.value)
+                    }
+                  />
+                </label>
+              ) : null}
               <label className="field">
                 <span className="field__label">所需丹道等级</span>
                 <select
@@ -634,6 +692,7 @@ export function AlchemyConfigPage() {
               addLabel="新增材料"
               emptyMessage="当前还没有配置材料。"
               hint="成丹前会按这里配置的材料扣除库存。"
+              resourceOptions={materialResourceOptions}
             />
 
             <section className="section-card">
@@ -882,7 +941,7 @@ function createEmptyRecipe(
   return {
     recipe_id: recipeId,
     display_name: "",
-    category: "",
+    category: "cultivation",
     description: "",
     required_alchemy_level: levels[0]?.level ?? 0,
     duration_months: 1,
@@ -897,6 +956,48 @@ function createEmptyRecipe(
     is_base_recipe: false,
     usable_in_battle: false,
   };
+}
+
+function buildCategoryOptions(
+  recipes: AlchemyRecipeInput[],
+  draftCategory?: string
+): Array<{ value: string; label: string }> {
+  const optionMap = new Map(defaultCategoryOptions.map((option) => [option.value, option]));
+  [...recipes.map((recipe) => recipe.category), draftCategory]
+    .map((category) => String(category ?? "").trim())
+    .filter(Boolean)
+    .forEach((category) => {
+      if (!optionMap.has(category)) {
+        optionMap.set(category, {
+          value: category,
+          label: formatAlchemyCategory(category),
+        });
+      }
+    });
+  return Array.from(optionMap.values());
+}
+
+function formatAlchemyCategory(category: string): string {
+  const normalizedCategory = String(category ?? "").trim();
+  const defaultOption = defaultCategoryOptions.find(
+    (option) => option.value === normalizedCategory
+  );
+  if (defaultOption) {
+    return defaultOption.label;
+  }
+  return normalizedCategory ? `${normalizedCategory}（自定义）` : "未分类";
+}
+
+function buildMaterialResourceOptions(
+  materials: MaterialInput[]
+): Array<{ value: string; label: string }> {
+  return [
+    { value: "spirit_stone", label: "灵石" },
+    ...materials.map((item) => ({
+      value: item.material_id,
+      label: item.display_name || item.material_id,
+    })),
+  ];
 }
 
 function normalizeLevels(levels: AlchemyLevelInput[]): AlchemyLevelInput[] {

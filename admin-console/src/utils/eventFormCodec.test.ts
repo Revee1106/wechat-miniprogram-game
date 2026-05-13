@@ -34,10 +34,13 @@ test("builds compact structured payloads from editor state", () => {
     technique_exp: 0,
     luck_delta: 0,
     karma_delta: 0,
+    alchemy_mastery_exp_delta: 8,
     rebirth_progress_delta: 0,
     statuses_add: ["blessed"],
     statuses_remove: [],
     techniques_add: [],
+    learned_alchemy_recipe_ids: ["ning_qi_dan"],
+    unlocked_material_ids: ["herb_julingzhi"],
     equipment_add: [],
     equipment_remove: [],
     death: false,
@@ -46,7 +49,10 @@ test("builds compact structured payloads from editor state", () => {
   expect(payload).toEqual({
     resources: { spirit_stone: 2 },
     character: { cultivation_exp: 6 },
+    alchemy_mastery_exp_delta: 8,
     statuses_add: ["blessed"],
+    learned_alchemy_recipe_ids: ["ning_qi_dan"],
+    unlocked_material_ids: ["herb_julingzhi"],
   });
 });
 

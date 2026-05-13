@@ -45,9 +45,11 @@ def test_event_registry_exposes_spec_fields_and_sorted_options() -> None:
     assert template.required_techniques == []
     assert template.required_equipment_tags == []
     assert template.required_resources == {}
+    assert template.required_completed_event_ids == []
     assert template.required_rebirth_count == 0
     assert template.required_karma_min is None
     assert template.required_luck_min == 0
+    assert template.excluded_learned_alchemy_recipe_ids == []
     assert template.flags == []
     assert options[0].sort_order < options[1].sort_order
     assert options[0].is_default is True
@@ -70,6 +72,7 @@ def test_event_registry_seed_data_uses_allowed_vocab_and_unique_option_links() -
         "material",
         "technique",
         "equipment",
+        "alchemy",
         "encounter",
         "survival",
     }
@@ -84,6 +87,7 @@ def test_event_registry_seed_data_uses_allowed_vocab_and_unique_option_links() -
         "karma_based",
         "luck_based",
         "rebirth_based",
+        "alchemy_based",
         "global",
     }
     allowed_outcome_types = {
@@ -94,6 +98,7 @@ def test_event_registry_seed_data_uses_allowed_vocab_and_unique_option_links() -
         "lifespan",
         "status",
         "breakthrough",
+        "alchemy",
         "karma",
         "luck",
         "mixed",
@@ -334,6 +339,57 @@ def test_runtime_registry_loads_from_repository_files() -> None:
 
     assert "evt_from_json" in registry.templates
     assert "opt_from_json" in registry.options
+    rmtree(base_path)
+
+
+def test_runtime_registry_preserves_learned_alchemy_recipe_payload() -> None:
+    base_path = _make_test_base_path("registry-alchemy-recipe-payload")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_alchemy_scroll",
+                    "event_name": "Alchemy Scroll",
+                    "event_type": "alchemy",
+                    "outcome_type": "alchemy",
+                    "risk_level": "normal",
+                    "trigger_sources": ["alchemy_based"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "Alchemy Scroll",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": False,
+                    "required_alchemy_level": 1,
+                    "excluded_learned_alchemy_recipe_ids": ["ning_qi_dan"],
+                    "required_completed_event_ids": ["evt_prereq"],
+                    "option_ids": ["opt_learn_recipe"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_learn_recipe",
+                    "event_id": "evt_alchemy_scroll",
+                    "option_text": "参悟丹方",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {
+                        "learned_alchemy_recipe_ids": ["ning_qi_dan"],
+                        "alchemy_mastery_exp_delta": 9,
+                    },
+                }
+            ],
+        }
+    )
+
+    registry = load_event_registry(base_path=base_path)
+
+    template = registry.templates["evt_alchemy_scroll"]
+    option = registry.options["opt_learn_recipe"]
+    assert template.required_alchemy_level == 1
+    assert template.excluded_learned_alchemy_recipe_ids == ["ning_qi_dan"]
+    assert template.required_completed_event_ids == ["evt_prereq"]
+    assert option.result_on_success.learned_alchemy_recipe_ids == ["ning_qi_dan"]
+    assert option.result_on_success.alchemy_mastery_exp_delta == 9
     rmtree(base_path)
 
 

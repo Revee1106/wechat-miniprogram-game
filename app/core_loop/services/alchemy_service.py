@@ -214,7 +214,17 @@ class AlchemyService:
         self.hydrate_run(run)
         return result
 
-    def consume(self, run: RunState, item_id: str, quality: str | None = None) -> None:
+    def consume(
+        self,
+        run: RunState,
+        item_id: str,
+        quality: str | None = None,
+        amount: int = 1,
+    ) -> None:
+        consume_amount = int(amount)
+        if consume_amount <= 0:
+            raise ConflictError("alchemy consume amount must be a positive integer")
+
         self.hydrate_run(run)
         inventory_item = next(
             (
@@ -231,6 +241,8 @@ class AlchemyService:
             )
         if inventory_item is None:
             raise ConflictError(f"alchemy item '{item_id}' is not available")
+        if inventory_item.amount < consume_amount:
+            raise ConflictError(f"not enough alchemy item '{item_id}'")
 
         recipe = self._get_recipe(item_id)
         quality_spec = recipe.quality_profiles.get(
@@ -238,7 +250,7 @@ class AlchemyService:
             DEFAULT_QUALITY_PROFILES["low"],
         )
         multiplier = quality_spec.effect_multiplier
-        effect_value = recipe.effect_value * multiplier
+        effect_value = recipe.effect_value * multiplier * consume_amount
 
         if recipe.effect_type == "cultivation_exp":
             run.character.cultivation_exp += int(effect_value)
@@ -260,13 +272,16 @@ class AlchemyService:
         elif recipe.effect_type == "breakthrough_bonus":
             run.character.breakthrough_bonus += int(effect_value)
 
-        inventory_item.amount -= 1
+        inventory_item.amount -= consume_amount
         if inventory_item.amount <= 0:
             run.alchemy_state.inventory = [
                 item for item in run.alchemy_state.inventory if item.amount > 0
             ]
 
-        run.result_summary = f"已服用 {inventory_item.display_name}（{quality_spec.display_name}）。"
+        amount_suffix = f" x{consume_amount}" if consume_amount > 1 else ""
+        run.result_summary = (
+            f"已服用 {inventory_item.display_name}（{quality_spec.display_name}）{amount_suffix}。"
+        )
         self.hydrate_run(run)
 
     def _get_recipe(self, recipe_id: str) -> AlchemyRecipeSpec:

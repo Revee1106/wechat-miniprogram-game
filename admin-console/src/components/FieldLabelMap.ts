@@ -8,6 +8,7 @@ export const eventTypeOptions: OptionItem[] = [
   { value: "material", label: "采集" },
   { value: "technique", label: "功法" },
   { value: "equipment", label: "装备" },
+  { value: "alchemy", label: "炼丹" },
   { value: "encounter", label: "奇遇" },
   { value: "survival", label: "生存" },
 ];
@@ -20,6 +21,7 @@ export const outcomeTypeOptions: OptionItem[] = [
   { value: "lifespan", label: "寿元变动" },
   { value: "status", label: "状态变动" },
   { value: "breakthrough", label: "突破相关" },
+  { value: "alchemy", label: "炼丹收益" },
   { value: "karma", label: "因果变动" },
   { value: "luck", label: "气运变动" },
   { value: "mixed", label: "混合结果" },
@@ -43,6 +45,7 @@ export const triggerSourceOptions: OptionItem[] = [
   { value: "karma_based", label: "因果触发" },
   { value: "luck_based", label: "气运触发" },
   { value: "rebirth_based", label: "转生触发" },
+  { value: "alchemy_based", label: "炼丹触发" },
 ];
 
 export const choicePatternOptions: OptionItem[] = [

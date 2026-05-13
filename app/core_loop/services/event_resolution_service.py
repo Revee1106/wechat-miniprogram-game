@@ -126,6 +126,7 @@ class EventResolutionService:
         run.event_trigger_counts[template.event_id] = (
             run.event_trigger_counts.get(template.event_id, 0) + 1
         )
+        self._unlock_next_event(run, option_config)
         if template.cooldown_rounds > 0:
             run.event_cooldowns[template.event_id] = template.cooldown_rounds
         if run.character.lifespan_current <= 0:
@@ -301,6 +302,10 @@ class EventResolutionService:
                 learned_alchemy_recipe_ids=list(
                     payload_config.get("learned_alchemy_recipe_ids", [])
                 ),
+                unlocked_material_ids=list(payload_config.get("unlocked_material_ids", [])),
+                alchemy_mastery_exp_delta=int(
+                    payload_config.get("alchemy_mastery_exp_delta", 0)
+                ),
                 equipment_add=list(payload_config.get("equipment_add", [])),
                 equipment_remove=list(payload_config.get("equipment_remove", [])),
                 battle=payload_config.get("battle"),
@@ -395,6 +400,15 @@ class EventResolutionService:
             run.alchemy_state.learned_recipe_ids,
             payload.learned_alchemy_recipe_ids,
             [],
+        )
+        run.unlocked_material_ids = self._merge_tags(
+            run.unlocked_material_ids,
+            payload.unlocked_material_ids,
+            [],
+        )
+        run.alchemy_state.mastery_exp = max(
+            0,
+            run.alchemy_state.mastery_exp + payload.alchemy_mastery_exp_delta,
         )
         run.character.equipment_tags = self._merge_tags(
             run.character.equipment_tags,
@@ -513,6 +527,7 @@ class EventResolutionService:
         run.event_trigger_counts[template.event_id] = (
             run.event_trigger_counts.get(template.event_id, 0) + 1
         )
+        self._unlock_next_event(run, option_config)
         if template.cooldown_rounds > 0:
             run.event_cooldowns[template.event_id] = template.cooldown_rounds
         if run.character.lifespan_current <= 0:
@@ -537,6 +552,19 @@ class EventResolutionService:
         run.current_event = None
         run.active_battle = None
         return run
+
+    def _unlock_next_event(
+        self,
+        run: RunState,
+        option_config: EventOptionConfig,
+    ) -> None:
+        if not option_config.next_event_id:
+            return
+        run.unlocked_event_ids = self._merge_tags(
+            run.unlocked_event_ids,
+            [option_config.next_event_id],
+            [],
+        )
 
     def _build_combat_enemy_state(self, battle_payload: dict[str, object]) -> CombatActorState:
         return CombatActorState(

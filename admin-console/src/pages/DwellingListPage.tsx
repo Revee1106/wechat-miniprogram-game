@@ -9,6 +9,7 @@ import {
   type DwellingFacilityInput,
   type DwellingFacilityListItem,
   type DwellingLevelInput,
+  type DwellingRandomYieldInput,
   type MaterialInput,
 } from "../api/client";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
@@ -214,6 +215,7 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
           entry_cost: {},
           maintenance_cost: {},
           resource_yields: {},
+          random_resource_yields: [],
           cultivation_exp_gain: 0,
           special_effects: {},
         },
@@ -446,11 +448,18 @@ export function DwellingListPage({ refreshToken = 0 }: DwellingListPageProps) {
               <ResourceRecordEditor
                 addLabel="新增产出项"
                 emptyMessage="当前等级还没有资源产出。"
-                label="资源产出"
+                label="固定资源产出"
                 value={currentLevel.resource_yields}
                 resourceOptions={materialResourceOptions}
                 onChange={(value) =>
                   handleLevelFieldChange(currentLevel.level, "resource_yields", value)
+                }
+              />
+              <RandomResourceYieldEditor
+                resourceOptions={materialResourceOptions}
+                value={currentLevel.random_resource_yields ?? []}
+                onChange={(value) =>
+                  handleLevelFieldChange(currentLevel.level, "random_resource_yields", value)
                 }
               />
               <label className="field">
@@ -614,11 +623,140 @@ function normalizeFacility(facility: DwellingFacilityInput): DwellingFacilityInp
         entry_cost: level.entry_cost ?? {},
         maintenance_cost: level.maintenance_cost ?? {},
         resource_yields: level.resource_yields ?? {},
+        random_resource_yields: normalizeRandomResourceYields(level.random_resource_yields),
         cultivation_exp_gain: Number(level.cultivation_exp_gain ?? 0) || 0,
         special_effects: level.special_effects ?? {},
       }))
       .sort((left, right) => left.level - right.level),
   };
+}
+
+function normalizeRandomResourceYields(
+  value: DwellingRandomYieldInput[] | undefined
+): DwellingRandomYieldInput[] {
+  return (value ?? [])
+    .map((item) => ({
+      resource_key: String(item.resource_key ?? "").trim(),
+      chance: Math.max(0, Math.min(1, Number(item.chance ?? 0) || 0)),
+      amount: Math.max(0, Number(item.amount ?? 0) || 0),
+    }))
+    .filter((item) => item.resource_key);
+}
+
+function RandomResourceYieldEditor({
+  resourceOptions,
+  value,
+  onChange,
+}: {
+  resourceOptions: Array<{ value: string; label: string }>;
+  value: DwellingRandomYieldInput[];
+  onChange: (value: DwellingRandomYieldInput[]) => void;
+}) {
+  const options = resourceOptions.length
+    ? resourceOptions
+    : [{ value: "basic_herb", label: "基础灵草" }];
+
+  function handleAdd() {
+    onChange([
+      ...value,
+      {
+        resource_key: options[0]?.value ?? "basic_herb",
+        chance: 0.25,
+        amount: 1,
+      },
+    ]);
+  }
+
+  function handleChange(
+    index: number,
+    field: keyof DwellingRandomYieldInput,
+    fieldValue: string | number
+  ) {
+    onChange(
+      value.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              [field]:
+                field === "resource_key"
+                  ? String(fieldValue)
+                  : field === "chance"
+                    ? Math.max(0, Math.min(1, Number(fieldValue) || 0))
+                    : Math.max(0, Number(fieldValue) || 0),
+            }
+          : item
+      )
+    );
+  }
+
+  function handleRemove(index: number) {
+    onChange(value.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <div className="field field--full">
+      <div className="field__label">
+        <span>概率资源产出</span>
+        <button className="button-secondary" type="button" onClick={handleAdd}>
+          新增概率产出
+        </button>
+      </div>
+      <span className="field__hint">概率填 0-1，例如 0.25 表示 25%；产量为触发后获得数量。</span>
+      {value.length > 0 ? (
+        <div className="resource-editor__stack">
+          {value.map((item, index) => (
+            <div key={`${item.resource_key}-${index}`} className="resource-row resource-row--wide">
+              <label className="field">
+                <span className="field__hint">资源</span>
+                <select
+                  aria-label={`概率产出资源${index + 1}`}
+                  value={item.resource_key}
+                  onChange={(event) => handleChange(index, "resource_key", event.target.value)}
+                >
+                  {options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                <span className="field__hint">概率</span>
+                <input
+                  aria-label={`概率产出概率${index + 1}`}
+                  max={1}
+                  min={0}
+                  step="0.01"
+                  type="number"
+                  value={item.chance}
+                  onChange={(event) => handleChange(index, "chance", event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span className="field__hint">产量</span>
+                <input
+                  aria-label={`概率产出产量${index + 1}`}
+                  min={0}
+                  type="number"
+                  value={item.amount}
+                  onChange={(event) => handleChange(index, "amount", event.target.value)}
+                />
+              </label>
+              <button
+                className="button-secondary resource-row__remove"
+                type="button"
+                onClick={() => handleRemove(index)}
+              >
+                删除
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="resource-editor__empty">当前等级还没有概率资源产出。</div>
+      )}
+    </div>
+  );
 }
 
 function formatFacilityType(value: string): string {

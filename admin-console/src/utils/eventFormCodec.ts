@@ -82,10 +82,13 @@ export type PayloadEditorState = {
   technique_exp: number;
   luck_delta: number;
   karma_delta: number;
+  alchemy_mastery_exp_delta: number;
   rebirth_progress_delta: number;
   statuses_add: string[];
   statuses_remove: string[];
   techniques_add: string[];
+  learned_alchemy_recipe_ids: string[];
+  unlocked_material_ids: string[];
   equipment_add: string[];
   equipment_remove: string[];
   death: boolean;
@@ -194,10 +197,17 @@ export function parsePayloadEditorState(
     technique_exp: Number(character.technique_exp ?? 0),
     luck_delta: Number(character.luck_delta ?? 0),
     karma_delta: Number(character.karma_delta ?? 0),
+    alchemy_mastery_exp_delta: Number(payload.alchemy_mastery_exp_delta ?? 0),
     rebirth_progress_delta: Number(payload.rebirth_progress_delta ?? 0),
     statuses_add: Array.isArray(payload.statuses_add) ? payload.statuses_add as string[] : [],
     statuses_remove: Array.isArray(payload.statuses_remove) ? payload.statuses_remove as string[] : [],
     techniques_add: Array.isArray(payload.techniques_add) ? payload.techniques_add as string[] : [],
+    learned_alchemy_recipe_ids: Array.isArray(payload.learned_alchemy_recipe_ids)
+      ? payload.learned_alchemy_recipe_ids as string[]
+      : [],
+    unlocked_material_ids: Array.isArray(payload.unlocked_material_ids)
+      ? payload.unlocked_material_ids as string[]
+      : [],
     equipment_add: Array.isArray(payload.equipment_add) ? payload.equipment_add as string[] : [],
     equipment_remove: Array.isArray(payload.equipment_remove) ? payload.equipment_remove as string[] : [],
     death: Boolean(payload.death),
@@ -249,6 +259,12 @@ export function buildPayloadFromEditorState(
   if (state.techniques_add.length > 0) {
     payload.techniques_add = state.techniques_add;
   }
+  if (state.learned_alchemy_recipe_ids.length > 0) {
+    payload.learned_alchemy_recipe_ids = state.learned_alchemy_recipe_ids;
+  }
+  if (state.unlocked_material_ids.length > 0) {
+    payload.unlocked_material_ids = state.unlocked_material_ids;
+  }
   if (state.equipment_add.length > 0) {
     payload.equipment_add = state.equipment_add;
   }
@@ -257,6 +273,9 @@ export function buildPayloadFromEditorState(
   }
   if (state.rebirth_progress_delta !== 0) {
     payload.rebirth_progress_delta = state.rebirth_progress_delta;
+  }
+  if (state.alchemy_mastery_exp_delta !== 0) {
+    payload.alchemy_mastery_exp_delta = state.alchemy_mastery_exp_delta;
   }
   if (state.death) {
     payload.death = true;

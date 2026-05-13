@@ -150,7 +150,7 @@ def test_start_and_consume_alchemy_round_trip() -> None:
     run_service.advance_time(run_id)
     consume_response = client.post(
         "/api/run/alchemy/consume",
-        json={"run_id": run_id, "item_id": "yang_qi_dan", "quality": "low"},
+        json={"run_id": run_id, "item_id": "yang_qi_dan", "quality": "low", "amount": 1},
     )
 
     assert start_response.status_code == 200

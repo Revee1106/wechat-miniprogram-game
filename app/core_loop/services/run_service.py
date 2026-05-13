@@ -183,9 +183,10 @@ class RunService:
         run_id: str,
         item_id: str,
         quality: str | None = None,
+        amount: int = 1,
     ) -> RunState:
         run = self._repo.get(run_id)
-        self._alchemy_service.consume(run, item_id, quality=quality)
+        self._alchemy_service.consume(run, item_id, quality=quality, amount=amount)
         self._hydrate_runtime_metadata(run)
         return self._repo.save(run)
 

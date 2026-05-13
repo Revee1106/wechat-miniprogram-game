@@ -63,6 +63,35 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
           }),
         };
       }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                material_id: "basic_herb",
+                display_name: "基础灵草",
+                category: "herb",
+                tier: 1,
+                rarity: "common",
+                source: "dwelling",
+                description: "",
+                tags: ["alchemy", "dwelling"],
+              },
+              {
+                material_id: "herb_ninglucao",
+                display_name: "凝露草",
+                category: "herb",
+                tier: 2,
+                rarity: "uncommon",
+                source: "dwelling",
+                description: "",
+                tags: ["alchemy", "dwelling"],
+              },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({ items: [] }),
@@ -74,9 +103,19 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
 
   expect(await screen.findByLabelText("当前丹方")).toBeInTheDocument();
   expect(await screen.findByDisplayValue("养气丹")).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "凝露草" })).toBeInTheDocument();
+  expect((screen.getByLabelText("分类") as HTMLSelectElement).selectedOptions[0].textContent).toBe(
+    "修炼类"
+  );
 
   fireEvent.change(screen.getByLabelText("丹方名称"), {
     target: { value: "养气丹·改" },
+  });
+  fireEvent.change(screen.getByLabelText("分类"), {
+    target: { value: "__custom_alchemy_category__" },
+  });
+  fireEvent.change(screen.getByLabelText("新增分类"), {
+    target: { value: "healing" },
   });
   fireEvent.change(screen.getByLabelText("成功熟练度"), {
     target: { value: "21" },
@@ -97,6 +136,7 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
   expect(savedRecipe).toMatchObject({
     recipe_id: "yang_qi_dan",
     display_name: "养气丹·改",
+    category: "healing",
     per_level_success_rate: 0.06,
     success_mastery_exp_gain: 21,
     quality_profiles: expect.objectContaining({
@@ -142,6 +182,25 @@ test("separates recipe and level editing with a single active level panel", asyn
                 effect_summary: "直接增加修为",
                 is_base_recipe: true,
                 usable_in_battle: false,
+              },
+            ],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                material_id: "basic_herb",
+                display_name: "基础灵草",
+                category: "herb",
+                tier: 1,
+                rarity: "common",
+                source: "dwelling",
+                description: "",
+                tags: ["alchemy", "dwelling"],
               },
             ],
           }),

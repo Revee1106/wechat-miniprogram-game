@@ -298,6 +298,14 @@ test("single outcome events use a default result editor instead of option orches
           }),
         };
       }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [{ material_id: "basic_herb", display_name: "基础灵草" }],
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({ items: [] }),
@@ -325,10 +333,10 @@ test("single outcome events use a default result editor instead of option orches
   fireEvent.change(within(dialog).getByLabelText("结果日志"), {
     target: { value: "榛樿缁撶畻" },
   });
-  fireEvent.change(within(dialog).getByLabelText("结果新增变化项"), {
-    target: { value: "resource:spirit_stone" },
+  fireEvent.change(within(dialog).getByLabelText("结果新增物品变化"), {
+    target: { value: "resource:basic_herb" },
   });
-  fireEvent.change(within(dialog).getByLabelText("结果变化数值-1"), {
+  fireEvent.change(within(dialog).getByLabelText("结果物品变化数值-1"), {
     target: { value: "5" },
   });
   fireEvent.click(screen.getByText("保存事件"));
@@ -350,7 +358,7 @@ test("single outcome events use a default result editor instead of option orches
     time_cost_months: 2,
     log_text_success: "榛樿缁撶畻",
     result_on_success: {
-      resources: { spirit_stone: 5 },
+      resources: { basic_herb: 5 },
     },
   });
 });
@@ -445,10 +453,10 @@ test("switching to single outcome clears hidden legacy rewards until they are ex
   expect(await screen.findByText("编辑单一结果")).toBeInTheDocument();
   fireEvent.click(screen.getByText("编辑单一结果"));
   dialog = await screen.findByRole("dialog", { name: "单一结果" });
-  fireEvent.change(within(dialog).getByLabelText("结果新增变化项"), {
+  fireEvent.change(within(dialog).getByLabelText("结果新增数值变化"), {
     target: { value: "stat:cultivation_exp" },
   });
-  fireEvent.change(within(dialog).getByLabelText("结果变化数值-1"), {
+  fireEvent.change(within(dialog).getByLabelText("结果数值变化数值-1"), {
     target: { value: "5" },
   });
 
@@ -524,6 +532,64 @@ test("saves advanced template and option fields through section panels", async (
           json: async () => savedOption,
         };
       }
+      if (url.endsWith("/admin/api/events") && !init?.method) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                event_id: "evt_existing",
+                event_name: "Existing Event",
+                event_type: "cultivation",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_existing"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_follow_up",
+                event_name: "Follow Up",
+                event_type: "material",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_follow_up"],
+                is_repeatable: true,
+              },
+              {
+                event_id: "evt_prereq",
+                event_name: "Prereq Event",
+                event_type: "encounter",
+                risk_level: "normal",
+                weight: 1,
+                option_ids: ["opt_prereq"],
+                is_repeatable: true,
+              },
+            ],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              { material_id: "basic_herb", display_name: "基础灵草" },
+              { material_id: "herb_ninglucao", display_name: "凝露草" },
+            ],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/alchemy/recipes")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [
+              { recipe_id: "ning_qi_dan", display_name: "凝气丹" },
+              { recipe_id: "huo_mai_dan", display_name: "火脉丹" },
+            ],
+          }),
+        };
+      }
       return {
         ok: true,
         json: async () => ({ items: [] }),
@@ -559,14 +625,14 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
   fireEvent.click(within(dialog).getByRole("button", { name: "新增资源" }));
   fireEvent.change(within(dialog).getByLabelText("所需资源-资源类型-1"), {
-    target: { value: "spirit_stone" },
+    target: { value: "basic_herb" },
   });
   fireEvent.change(within(dialog).getByLabelText("所需资源-数量-1"), {
     target: { value: "3" },
   });
   fireEvent.click(within(dialog).getByRole("button", { name: "新增资源" }));
   fireEvent.change(within(dialog).getByLabelText("所需资源-资源类型-2"), {
-    target: { value: "herb" },
+    target: { value: "herb_ninglucao" },
   });
   fireEvent.change(within(dialog).getByLabelText("所需资源-数量-2"), {
     target: { value: "2" },
@@ -588,6 +654,26 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
   fireEvent.change(within(dialog).getByLabelText("最低因果"), {
     target: { value: "5" },
+  });
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "required_completed_event_ids" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增事件" }));
+  fireEvent.change(within(dialog).getByLabelText("需要已完成事件-1"), {
+    target: { value: "evt_prereq" },
+  });
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(within(dialog).getByLabelText("前置条件类型"), {
+    target: { value: "excluded_learned_alchemy_recipe_ids" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "确认新增" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "新增丹方" }));
+  fireEvent.change(within(dialog).getByLabelText("排除已学丹方-1"), {
+    target: { value: "huo_mai_dan" },
   });
   fireEvent.click(within(dialog).getByText("完成编辑"));
 
@@ -614,16 +700,16 @@ test("saves advanced template and option fields through section panels", async (
   fireEvent.change(within(dialog).getByLabelText("后续事件"), {
     target: { value: "evt_follow_up" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功新增变化项"), {
-    target: { value: "resource:spirit_stone" },
+  fireEvent.change(within(dialog).getByLabelText("成功新增物品变化"), {
+    target: { value: "resource:basic_herb" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功变化数值-1"), {
+  fireEvent.change(within(dialog).getByLabelText("成功物品变化数值-1"), {
     target: { value: "2" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功新增变化项"), {
+  fireEvent.change(within(dialog).getByLabelText("成功新增数值变化"), {
     target: { value: "stat:cultivation_exp" },
   });
-  fireEvent.change(within(dialog).getByLabelText("成功变化数值-2"), {
+  fireEvent.change(within(dialog).getByLabelText("成功数值变化数值-1"), {
     target: { value: "6" },
   });
   fireEvent.change(within(dialog).getByLabelText("成功日志"), {
@@ -641,9 +727,11 @@ test("saves advanced template and option fields through section panels", async (
   expect(savedTemplate).toMatchObject({
     region: "starter-valley",
     cooldown_rounds: 4,
-    required_resources: { spirit_stone: 3, herb: 2 },
+    required_resources: { basic_herb: 3, herb_ninglucao: 2 },
     required_statuses: ["blessed", "focused"],
     required_karma_min: 5,
+    required_completed_event_ids: ["evt_prereq"],
+    excluded_learned_alchemy_recipe_ids: ["huo_mai_dan"],
   });
   expect(savedOption).toMatchObject({
     time_cost_months: 3,
@@ -652,7 +740,7 @@ test("saves advanced template and option fields through section panels", async (
     success_rate_formula: "base_success_rate + 0.1",
     next_event_id: "evt_follow_up",
     result_on_success: {
-      resources: { spirit_stone: 2 },
+      resources: { basic_herb: 2 },
       character: { cultivation_exp: 6 },
     },
     log_text_success: "Good result",
@@ -834,6 +922,22 @@ test("saves combat option enemy_template_id from enemy template selection", asyn
             reloaded: true,
             template_count: 1,
             option_count: 1,
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [{ material_id: "basic_herb", display_name: "基础灵草" }],
+          }),
+        };
+      }
+      if (url.endsWith("/admin/api/materials")) {
+        return {
+          ok: true,
+          json: async () => ({
+            items: [{ material_id: "basic_herb", display_name: "基础灵草" }],
           }),
         };
       }

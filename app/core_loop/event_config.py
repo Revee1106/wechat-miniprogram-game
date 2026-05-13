@@ -189,6 +189,11 @@ def _coerce_payload(
             statuses_add=list(payload.get("statuses_add", [])),
             statuses_remove=list(payload.get("statuses_remove", [])),
             techniques_add=list(payload.get("techniques_add", [])),
+            learned_alchemy_recipe_ids=list(
+                payload.get("learned_alchemy_recipe_ids", [])
+            ),
+            unlocked_material_ids=list(payload.get("unlocked_material_ids", [])),
+            alchemy_mastery_exp_delta=int(payload.get("alchemy_mastery_exp_delta", 0)),
             equipment_add=list(payload.get("equipment_add", [])),
             equipment_remove=list(payload.get("equipment_remove", [])),
             battle=payload.get("battle"),
@@ -253,6 +258,9 @@ def _has_meaningful_payload(
                 payload.statuses_add,
                 payload.statuses_remove,
                 payload.techniques_add,
+                payload.learned_alchemy_recipe_ids,
+                payload.unlocked_material_ids,
+                payload.alchemy_mastery_exp_delta,
                 payload.equipment_add,
                 payload.equipment_remove,
                 payload.battle,

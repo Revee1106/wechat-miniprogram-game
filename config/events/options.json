@@ -732,5 +732,143 @@
     "log_text_success": "",
     "log_text_failure": "",
     "event_id": "evt_encounter_1"
+  },
+  {
+    "option_id": "evt_alchemy_1_option_1",
+    "option_text": "拾起纸页，试着拼读残缺字句",
+    "sort_order": 1,
+    "is_default": true,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "learned_alchemy_recipe_ids": [
+        "ning_qi_dan"
+      ]
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你将几张残页小心摊开，反复比对焦痕与药名。许多字句已不可辨认，但其中一段关于药性调和的记载仍算完整。\n\n你照着残页推演许久，终于理清其中关窍。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_1"
+  },
+  {
+    "option_id": "evt_alchemy_1_option_2",
+    "option_text": "捻起药渣，细辨其中余味",
+    "sort_order": 2,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "alchemy_mastery_exp_delta": 10
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你取少许药渣置于掌心，仔细分辨其中气味。焦苦之中仍夹杂着一丝清润药性，似乎能看出炼制时火候曾有细微偏差。\n\n这番观察虽未让你彻底明白丹方，却也让你对药性变化多了些体会。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_1"
+  },
+  {
+    "option_id": "evt_alchemy_1_option_3",
+    "option_text": "绕炉观望片刻，确认并无危险",
+    "sort_order": 3,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {},
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你绕着丹炉查看一圈，发现炉身早已开裂，石亭中也没有留下其他有用之物。\n\n残香渐散，山风吹过，焦黑炉灰随之飘落。你不再停留，继续上路。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_1"
+  },
+  {
+    "option_id": "evt_alchemy_2_option_1",
+    "option_text": "细察叶纹，再行采摘",
+    "sort_order": 1,
+    "is_default": true,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "unlocked_material_ids": [
+        "herb_julingzhi"
+      ]
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你辨清芝草根须走向，小心取下几缕孢粉，并记下其生长环境。或许回到洞府后，可以尝试培育此物。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_2"
+  },
+  {
+    "option_id": "evt_alchemy_2_option_2",
+    "option_text": "趁灵气未散，先采一株",
+    "sort_order": 2,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "resources": {
+        "herb_julingzhi": 1
+      }
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你匆匆采下一株芝草，虽保住了些许药性，却未能完整取得根须与孢粉。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_2"
+  },
+  {
+    "option_id": "evt_alchemy_2_option_3",
+    "option_text": "只取周边伴生药草",
+    "sort_order": 3,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "resources": {
+        "herb_ninglucao": 3
+      }
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你没有贸然触碰那株芝草，只在附近采得几株灵气稍盛的草药，也算没有空手而归。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_2"
   }
 ]

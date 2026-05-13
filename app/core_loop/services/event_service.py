@@ -53,6 +53,11 @@ class EventService:
             config.key: index for index, config in enumerate(self._realm_configs)
         }
         self._rng = rng or random.Random()
+        self._next_event_ids = {
+            option.next_event_id
+            for option in self._registry.options.values()
+            if option.next_event_id
+        }
 
     def select_event(self, run: RunState, rebirth_count: int = 0) -> CurrentEvent:
         eligible = [
@@ -219,9 +224,17 @@ class EventService:
             and self._meets_required_techniques(run, template.required_techniques)
             and self._meets_required_equipment_tags(run, template.required_equipment_tags)
             and self._meets_required_resources(run, template.required_resources)
+            and self._meets_required_completed_events(
+                run, template.required_completed_event_ids
+            )
             and rebirth_count >= template.required_rebirth_count
             and self._meets_required_karma(run, template.required_karma_min)
             and run.character.luck >= template.required_luck_min
+            and run.alchemy_state.mastery_level >= template.required_alchemy_level
+            and self._excludes_learned_alchemy_recipes(
+                run, template.excluded_learned_alchemy_recipe_ids
+            )
+            and self._is_next_event_unlocked(template, run)
             and self._is_template_repeatable(template, run)
             and self._is_template_off_cooldown(template, run)
         )
@@ -292,6 +305,33 @@ class EventService:
 
     def _meets_required_karma(self, run: RunState, required_karma_min: int | None) -> bool:
         return required_karma_min is None or run.character.karma >= required_karma_min
+
+    def _meets_required_completed_events(
+        self,
+        run: RunState,
+        required_completed_event_ids: list[str],
+    ) -> bool:
+        return all(
+            run.event_trigger_counts.get(event_id, 0) > 0
+            for event_id in required_completed_event_ids
+        )
+
+    def _excludes_learned_alchemy_recipes(
+        self,
+        run: RunState,
+        excluded_recipe_ids: list[str],
+    ) -> bool:
+        learned_recipe_ids = set(run.alchemy_state.learned_recipe_ids)
+        return all(recipe_id not in learned_recipe_ids for recipe_id in excluded_recipe_ids)
+
+    def _is_next_event_unlocked(
+        self,
+        template: EventTemplateConfig,
+        run: RunState,
+    ) -> bool:
+        if template.event_id not in self._next_event_ids:
+            return True
+        return template.event_id in set(run.unlocked_event_ids)
 
     def _is_template_repeatable(
         self,

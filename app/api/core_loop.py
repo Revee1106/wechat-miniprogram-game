@@ -209,6 +209,7 @@ def consume_alchemy_item(payload: ConsumeAlchemyItemRequest) -> dict[str, object
                 payload.run_id,
                 payload.item_id,
                 quality=payload.quality,
+                amount=payload.amount,
             )
         )
     except Exception as error:  # pragma: no cover - centralized mapping

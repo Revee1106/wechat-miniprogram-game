@@ -64,6 +64,9 @@ def test_admin_dwelling_update_endpoint_persists_new_level(monkeypatch) -> None:
             "entry_cost": {"spirit_stone": 70},
             "maintenance_cost": {"spirit_stone": 5},
             "resource_yields": {"basic_herb": 7},
+            "random_resource_yields": [
+                {"resource_key": "herb_ninglucao", "chance": 0.35, "amount": 1}
+            ],
             "cultivation_exp_gain": 1,
             "special_effects": {},
         }
@@ -73,8 +76,10 @@ def test_admin_dwelling_update_endpoint_persists_new_level(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert response.json()["levels"][3]["level"] == 4
+    assert response.json()["levels"][3]["random_resource_yields"][0]["resource_key"] == "herb_ninglucao"
     reloaded = DwellingConfigRepository(base_path=base_path).load()
     assert reloaded["facilities"][0]["levels"][3]["entry_cost"] == {"spirit_stone": 70}
+    assert reloaded["facilities"][0]["levels"][3]["random_resource_yields"][0]["chance"] == 0.35
     rmtree(base_path)
 
 
@@ -110,6 +115,7 @@ def _sample_facility() -> dict[str, object]:
                 "entry_cost": {"spirit_stone": 50},
                 "maintenance_cost": {"spirit_stone": 2},
                 "resource_yields": {"basic_herb": 2},
+                "random_resource_yields": [],
                 "cultivation_exp_gain": 0,
                 "special_effects": {},
             },
@@ -118,6 +124,9 @@ def _sample_facility() -> dict[str, object]:
                 "entry_cost": {"spirit_stone": 40},
                 "maintenance_cost": {"spirit_stone": 3},
                 "resource_yields": {"basic_herb": 3},
+                "random_resource_yields": [
+                    {"resource_key": "herb_ninglucao", "chance": 0.25, "amount": 1}
+                ],
                 "cultivation_exp_gain": 0,
                 "special_effects": {},
             },
@@ -126,6 +135,9 @@ def _sample_facility() -> dict[str, object]:
                 "entry_cost": {"spirit_stone": 55},
                 "maintenance_cost": {"spirit_stone": 4},
                 "resource_yields": {"basic_herb": 5},
+                "random_resource_yields": [
+                    {"resource_key": "herb_ninglucao", "chance": 0.4, "amount": 1}
+                ],
                 "cultivation_exp_gain": 0,
                 "special_effects": {},
             },

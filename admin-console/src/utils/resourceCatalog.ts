@@ -6,13 +6,10 @@ export type ResourceOption = {
 export const resourceOptions: ResourceOption[] = [
   { value: "spirit_stone", label: "灵石" },
   { value: "herb", label: "药草" },
-  { value: "basic_herb", label: "基础灵草" },
   { value: "ore", label: "玄铁精华" },
-  { value: "basic_ore", label: "基础矿材" },
   { value: "beast_material", label: "妖兽材料" },
   { value: "pill", label: "丹药" },
   { value: "craft_material", label: "炼器材料" },
-  { value: "spirit_spring_water", label: "灵泉水" },
 ];
 
 const resourceAliasMap: Record<string, string> = {
@@ -33,6 +30,28 @@ const resourceOrder = resourceOptions.reduce<Record<string, number>>((map, optio
   map[option.value] = index;
   return map;
 }, {});
+
+export function buildConfiguredResourceOptions(
+  materials: Array<{ material_id: string; display_name?: string }>
+): ResourceOption[] {
+  const seen = new Set<string>();
+  return materials
+    .map((item) => ({
+      value: String(item.material_id ?? "").trim(),
+      label: String(item.display_name || item.material_id || "").trim(),
+    }))
+    .filter((item) => {
+      if (!item.value || seen.has(item.value)) {
+        return false;
+      }
+      seen.add(item.value);
+      return true;
+    })
+    .map((item) => ({
+      value: item.value,
+      label: item.label || item.value,
+    }));
+}
 
 export function normalizeResourceKey(value: string): string | null {
   const trimmed = value.trim();

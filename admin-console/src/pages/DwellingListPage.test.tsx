@@ -23,6 +23,9 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
                 entry_cost: { spirit_stone: 50 },
                 maintenance_cost: { spirit_stone: 2 },
                 resource_yields: { basic_herb: 2 },
+                random_resource_yields: [
+                  { resource_key: "herb_ninglucao", chance: 0.25, amount: 1 },
+                ],
                 cultivation_exp_gain: 0,
                 special_effects: {},
               },
@@ -45,6 +48,7 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
                 entry_cost: { spirit_stone: 100 },
                 maintenance_cost: { spirit_stone: 4 },
                 resource_yields: {},
+                random_resource_yields: [],
                 cultivation_exp_gain: 6,
                 special_effects: { breakthrough_bonus_rate: 0.02 },
               },
@@ -66,6 +70,16 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
                 source: "dwelling",
                 description: "",
                 tags: ["dwelling"],
+              },
+              {
+                material_id: "herb_ninglucao",
+                display_name: "凝露草",
+                category: "herb",
+                tier: 2,
+                rarity: "uncommon",
+                source: "dwelling",
+                description: "",
+                tags: ["dwelling", "alchemy"],
               },
             ],
           }),
@@ -119,4 +133,7 @@ test("renders dwelling toolbar and opens drawer editing", async () => {
   });
   fireEvent.click(await screen.findByRole("button", { name: "等级配置" }));
   expect((await screen.findAllByText("基础灵草")).length).toBeGreaterThan(0);
+  expect(await screen.findByText("概率资源产出")).toBeInTheDocument();
+  expect(await screen.findByDisplayValue("0.25")).toBeInTheDocument();
+  expect(await screen.findByDisplayValue("1")).toBeInTheDocument();
 });

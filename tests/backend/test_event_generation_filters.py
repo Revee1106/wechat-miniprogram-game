@@ -189,6 +189,124 @@ def test_event_selection_skips_luck_and_rebirth_blocked_templates() -> None:
     assert selected.event_id == "evt_fallback"
 
 
+def test_event_selection_skips_alchemy_level_blocked_templates() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_needs_alchemy",
+                event_name="Needs Alchemy",
+                event_type="alchemy",
+                option_ids=["opt_needs_alchemy"],
+                required_alchemy_level=2,
+            ),
+            EventTemplateConfig(
+                event_id="evt_fallback",
+                event_name="Fallback",
+                event_type="encounter",
+                option_ids=["opt_fallback"],
+            ),
+        )
+    )
+    run = _build_run()
+    run.alchemy_state.mastery_level = 1
+
+    selected = service.select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_fallback"
+
+
+def test_event_selection_skips_already_learned_alchemy_recipe_events() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_learn_known_recipe",
+                event_name="Known Recipe",
+                event_type="alchemy",
+                option_ids=["opt_learn_known_recipe"],
+                excluded_learned_alchemy_recipe_ids=["ning_qi_dan"],
+            ),
+            EventTemplateConfig(
+                event_id="evt_fallback",
+                event_name="Fallback",
+                event_type="encounter",
+                option_ids=["opt_fallback"],
+            ),
+        )
+    )
+    run = _build_run()
+    run.alchemy_state.learned_recipe_ids = ["ning_qi_dan"]
+
+    selected = service.select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_fallback"
+
+
+def test_event_selection_requires_completed_prerequisite_events() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_unlock_material",
+                event_name="Unlock Material",
+                event_type="material",
+                option_ids=["opt_unlock_material"],
+                required_completed_event_ids=["evt_find_clue"],
+            )
+        )
+    )
+    run = _build_run()
+
+    try:
+        service.select_event(run, rebirth_count=0)
+    except ConflictError:
+        pass
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected prerequisite event gate to block selection")
+
+    run.event_trigger_counts["evt_find_clue"] = 1
+    selected = service.select_event(run, rebirth_count=0)
+    assert selected.event_id == "evt_unlock_material"
+
+
+def test_event_selection_requires_option_unlocked_next_event() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_follow_up": EventTemplateConfig(
+                event_id="evt_follow_up",
+                event_name="Follow Up",
+                event_type="encounter",
+                option_ids=["opt_follow_up"],
+            ),
+        },
+        options={
+            "opt_unlock_follow_up": EventOptionConfig(
+                option_id="opt_unlock_follow_up",
+                event_id="evt_source",
+                option_text="Unlock follow up",
+                next_event_id="evt_follow_up",
+            ),
+            "opt_follow_up": EventOptionConfig(
+                option_id="opt_follow_up",
+                event_id="evt_follow_up",
+                option_text="Follow up option",
+                is_default=True,
+            ),
+        },
+    )
+    service = EventService(registry=registry)
+    run = _build_run()
+
+    try:
+        service.select_event(run, rebirth_count=0)
+    except ConflictError:
+        pass
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected locked follow-up event to be excluded")
+
+    run.unlocked_event_ids = ["evt_follow_up"]
+    selected = service.select_event(run, rebirth_count=0)
+    assert selected.event_id == "evt_follow_up"
+
+
 def test_event_selection_skips_status_technique_equipment_and_karma_blocked_templates() -> None:
     service = EventService(
         registry=_build_registry(

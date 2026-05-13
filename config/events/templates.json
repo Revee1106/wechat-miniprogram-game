@@ -379,5 +379,85 @@
       "evt_encounter_1_option_1",
       "evt_encounter_1_option_2"
     ]
+  },
+  {
+    "event_id": "evt_alchemy_1",
+    "event_name": "残炉余香",
+    "event_type": "alchemy",
+    "outcome_type": "alchemy",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "global",
+      "alchemy_based",
+      "realm_based"
+    ],
+    "choice_pattern": "multi_choice",
+    "title_text": "山道旁，一缕丹香自废弃石亭中缓缓散出。",
+    "body_text": "你途经一处荒僻山道，忽见路旁石亭中摆着一尊焦黑丹炉。炉火早已熄灭，四周却仍残留着淡淡药香。\n\n石桌上散落着几张被烟火燎过的纸页，旁边还有一小撮未燃尽的药渣。看痕迹，似乎有人曾在此仓促炼丹，又匆匆离去。\n\n你驻足片刻，隐约觉得这些残留之物中，或许藏着些门道。",
+    "realm_min": "qi_refining_early",
+    "realm_max": "qi_refining_peak",
+    "region": "",
+    "weight": 1,
+    "is_repeatable": true,
+    "cooldown_rounds": 0,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_completed_event_ids": [],
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "required_alchemy_level": 1,
+    "excluded_learned_alchemy_recipe_ids": [
+      "ning_qi_dan"
+    ],
+    "flags": [],
+    "option_ids": [
+      "evt_alchemy_1_option_1",
+      "evt_alchemy_1_option_2",
+      "evt_alchemy_1_option_3"
+    ]
+  },
+  {
+    "event_id": "evt_alchemy_2",
+    "event_name": "石隙芝影",
+    "event_type": "alchemy",
+    "outcome_type": "alchemy",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "global"
+    ],
+    "choice_pattern": "multi_choice",
+    "title_text": "山阴石隙间，有一株芝草半掩在青苔之下，叶纹隐隐聚成云气。",
+    "body_text": "你原本只是循着灵气波动入山采药，却在一处湿冷石壁旁发现了几株形貌奇异的芝草。其根须深扎石缝，四周灵气似被缓缓牵引而来。此物看似不凡，但若采摘不慎，或许会伤了药性。",
+    "realm_min": "qi_refining_early",
+    "realm_max": "qi_refining_peak",
+    "region": "",
+    "weight": 1,
+    "is_repeatable": true,
+    "cooldown_rounds": 0,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_completed_event_ids": [
+      "evt_alchemy_1"
+    ],
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "required_alchemy_level": 1,
+    "excluded_learned_alchemy_recipe_ids": [],
+    "flags": [],
+    "option_ids": [
+      "evt_alchemy_2_option_1",
+      "evt_alchemy_2_option_2",
+      "evt_alchemy_2_option_3"
+    ]
   }
 ]

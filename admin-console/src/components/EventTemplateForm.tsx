@@ -1,4 +1,5 @@
 import type { EventTemplateInput } from "../api/client";
+import type { ResourceOption } from "../utils/resourceCatalog";
 import {
   choicePatternOptions,
   eventTypeOptions,
@@ -27,6 +28,9 @@ type EventTemplateFormProps = {
   isNew: boolean;
   sections?: EventTemplateSection[];
   realmOptions?: Array<{ value: string; label: string }>;
+  eventOptions?: ResourceOption[];
+  alchemyRecipeOptions?: ResourceOption[];
+  resourceOptions?: ResourceOption[];
   onChange: <K extends keyof EventTemplateInput>(
     field: K,
     value: EventTemplateInput[K]
@@ -38,6 +42,9 @@ export function EventTemplateForm({
   isNew,
   sections,
   realmOptions = [],
+  eventOptions = [],
+  alchemyRecipeOptions = [],
+  resourceOptions,
   onChange,
 }: EventTemplateFormProps) {
   const visibleSections = sections ?? ["identity", "trigger", "requirements", "summary"];
@@ -64,6 +71,7 @@ export function EventTemplateForm({
           hideLabel
           label="所需资源"
           onChange={(value) => onChange("required_resources", value)}
+          resourceOptions={resourceOptions}
           value={template.required_resources}
         />
       ),
@@ -154,6 +162,23 @@ export function EventTemplateForm({
       ),
     },
     {
+      key: "required_completed_event_ids",
+      label: "需要已完成事件",
+      isActive: (template.required_completed_event_ids ?? []).length > 0,
+      onActivate: () => onChange("required_completed_event_ids", []),
+      onReset: () => onChange("required_completed_event_ids", []),
+      render: () => (
+        <SelectionListEditor
+          addLabel="新增事件"
+          ariaLabel="需要已完成事件"
+          emptyMessage="当前还没有已完成事件前置。"
+          options={eventOptions}
+          value={template.required_completed_event_ids ?? []}
+          onChange={(value) => onChange("required_completed_event_ids", value)}
+        />
+      ),
+    },
+    {
       key: "required_karma_min",
       label: "最低因果",
       isActive: template.required_karma_min !== null && template.required_karma_min !== undefined,
@@ -185,6 +210,42 @@ export function EventTemplateForm({
           onChange={(event) =>
             onChange("required_luck_min", parseNumberInput(event.target.value, 0))
           }
+        />
+      ),
+    },
+    {
+      key: "required_alchemy_level",
+      label: "所需丹道等级",
+      isActive: (template.required_alchemy_level ?? 0) > 0,
+      onActivate: () => onChange("required_alchemy_level", 1),
+      onReset: () => onChange("required_alchemy_level", 0),
+      render: () => (
+        <input
+          aria-label="所需丹道等级"
+          className="requirement-field__input"
+          min={0}
+          type="number"
+          value={template.required_alchemy_level ?? 0}
+          onChange={(event) =>
+            onChange("required_alchemy_level", parseNumberInput(event.target.value, 0))
+          }
+        />
+      ),
+    },
+    {
+      key: "excluded_learned_alchemy_recipe_ids",
+      label: "排除已学丹方",
+      isActive: (template.excluded_learned_alchemy_recipe_ids ?? []).length > 0,
+      onActivate: () => onChange("excluded_learned_alchemy_recipe_ids", []),
+      onReset: () => onChange("excluded_learned_alchemy_recipe_ids", []),
+      render: () => (
+        <SelectionListEditor
+          addLabel="新增丹方"
+          ariaLabel="排除已学丹方"
+          emptyMessage="当前还没有配置要排除的已学丹方。"
+          options={alchemyRecipeOptions}
+          value={template.excluded_learned_alchemy_recipe_ids ?? []}
+          onChange={(value) => onChange("excluded_learned_alchemy_recipe_ids", value)}
         />
       ),
     },
@@ -473,4 +534,98 @@ export function EventTemplateForm({
       ) : null}
     </div>
   );
+}
+
+function SelectionListEditor({
+  addLabel,
+  ariaLabel,
+  emptyMessage,
+  options,
+  value,
+  onChange,
+}: {
+  addLabel: string;
+  ariaLabel: string;
+  emptyMessage: string;
+  options: ResourceOption[];
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  const selected = value.filter(Boolean);
+  const used = new Set(selected);
+  const mergedOptions = mergeSelectionOptions(options, selected);
+  const canAdd = mergedOptions.some((option) => !used.has(option.value));
+
+  function handleAdd() {
+    const nextOption = mergedOptions.find((option) => !used.has(option.value));
+    if (!nextOption) {
+      return;
+    }
+    onChange([...selected, nextOption.value]);
+  }
+
+  function handleChange(index: number, nextValue: string) {
+    onChange(selected.map((item, itemIndex) => (itemIndex === index ? nextValue : item)));
+  }
+
+  function handleRemove(index: number) {
+    onChange(selected.filter((_, itemIndex) => itemIndex !== index));
+  }
+
+  return (
+    <div className="selection-list-editor">
+      <div className="field__label field__label--end">
+        <button
+          className="button-secondary"
+          disabled={!canAdd}
+          type="button"
+          onClick={handleAdd}
+        >
+          {addLabel}
+        </button>
+      </div>
+      <div className="resource-editor__stack">
+        {selected.length > 0 ? (
+          selected.map((item, index) => (
+            <div key={`${item}-${index}`} className="result-payload-editor__select-row">
+              <label className="field">
+                <span className="field__hint">选择项</span>
+                <select
+                  aria-label={`${ariaLabel}-${index + 1}`}
+                  value={item}
+                  onChange={(event) => handleChange(index, event.target.value)}
+                >
+                  {mergedOptions.map((option) => {
+                    const disabled = used.has(option.value) && option.value !== item;
+                    return (
+                      <option key={option.value} disabled={disabled} value={option.value}>
+                        {option.label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </label>
+              <button
+                className="button-secondary result-payload-editor__resource-remove"
+                type="button"
+                onClick={() => handleRemove(index)}
+              >
+                删除
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="resource-editor__empty">{emptyMessage}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function mergeSelectionOptions(options: ResourceOption[], value: string[]): ResourceOption[] {
+  const known = new Set(options.map((option) => option.value));
+  const missingOptions = value
+    .filter((item) => item && !known.has(item))
+    .map((item) => ({ value: item, label: item }));
+  return [...options, ...missingOptions];
 }

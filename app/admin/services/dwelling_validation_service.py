@@ -74,6 +74,13 @@ def validate_dwelling_config(*, facilities: list[dict[str, object]]) -> ConfigVa
                     value=level.get("resource_yields"),
                 )
             )
+            errors.extend(
+                _validate_random_resource_yields(
+                    facility_id=facility_id,
+                    level=level_number,
+                    value=level.get("random_resource_yields", []),
+                )
+            )
 
             cultivation_exp_gain = _coerce_int(level.get("cultivation_exp_gain"))
             if cultivation_exp_gain < 0:
@@ -165,3 +172,58 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
         seen.add(value)
     return duplicates
 
+
+def _validate_random_resource_yields(
+    *,
+    facility_id: str,
+    level: int,
+    value: object,
+) -> list[str]:
+    errors: list[str] = []
+    if value in (None, ""):
+        return errors
+    if not isinstance(value, list):
+        return [f"facility '{facility_id}' level {level} has invalid random_resource_yields"]
+
+    for index, item in enumerate(value, start=1):
+        if not isinstance(item, dict):
+            errors.append(
+                f"facility '{facility_id}' level {level} random_resource_yields item {index} is invalid"
+            )
+            continue
+        resource_key = str(item.get("resource_key", "")).strip()
+        if not resource_key:
+            errors.append(
+                f"facility '{facility_id}' level {level} random_resource_yields item {index} has empty resource_key"
+            )
+        if isinstance(item.get("chance"), bool):
+            errors.append(
+                f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid chance"
+            )
+        else:
+            try:
+                chance = float(item.get("chance"))
+                if chance < 0 or chance > 1:
+                    errors.append(
+                        f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid chance"
+                    )
+            except (TypeError, ValueError):
+                errors.append(
+                    f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid chance"
+                )
+        if isinstance(item.get("amount"), bool):
+            errors.append(
+                f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid amount"
+            )
+            continue
+        try:
+            amount = int(item.get("amount"))
+            if amount < 0:
+                errors.append(
+                    f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid amount"
+                )
+        except (TypeError, ValueError):
+            errors.append(
+                f"facility '{facility_id}' level {level} random_resource_yields item {index} has invalid amount"
+            )
+    return errors

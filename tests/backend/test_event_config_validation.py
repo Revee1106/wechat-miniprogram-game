@@ -26,6 +26,80 @@ def test_validation_rejects_missing_option_reference() -> None:
     assert any("opt_missing" in error for error in result.errors)
 
 
+def test_validation_accepts_alchemy_event_fields() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_alchemy_scroll",
+                "event_name": "Alchemy Scroll",
+                "event_type": "alchemy",
+                "outcome_type": "alchemy",
+                "risk_level": "normal",
+                "trigger_sources": ["alchemy_based"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Alchemy Scroll",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": False,
+                "required_alchemy_level": 1,
+                "excluded_learned_alchemy_recipe_ids": ["ning_qi_dan"],
+                "required_completed_event_ids": [],
+                "option_ids": ["opt_learn_recipe"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_learn_recipe",
+                "event_id": "evt_alchemy_scroll",
+                "option_text": "参悟丹方",
+                "sort_order": 1,
+                "result_on_success": {
+                    "learned_alchemy_recipe_ids": ["ning_qi_dan"],
+                    "alchemy_mastery_exp_delta": 9,
+                },
+            }
+        ],
+    )
+
+    assert result.is_valid is True
+
+
+def test_validation_rejects_invalid_event_prerequisite_fields() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_unlock",
+                "event_name": "Unlock",
+                "event_type": "material",
+                "outcome_type": "material",
+                "risk_level": "normal",
+                "trigger_sources": ["global"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Unlock",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "required_completed_event_ids": ["evt_missing"],
+                "excluded_learned_alchemy_recipe_ids": [123],
+                "option_ids": ["opt_unlock"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_unlock",
+                "event_id": "evt_unlock",
+                "option_text": "Unlock",
+                "sort_order": 1,
+                "is_default": True,
+            }
+        ],
+    )
+
+    assert result.is_valid is False
+    assert any("required_completed_event_id" in error for error in result.errors)
+    assert any("excluded_learned_alchemy_recipe_ids" in error for error in result.errors)
+
+
 def test_validation_rejects_conflicting_equipment_mutation() -> None:
     result = validate_event_config(
         templates=[

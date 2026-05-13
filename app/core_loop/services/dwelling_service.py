@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from copy import deepcopy
 from dataclasses import dataclass, field
 
@@ -15,11 +16,19 @@ from app.economy.services.run_resource_service import RunResourceService
 
 
 @dataclass(frozen=True)
+class DwellingRandomYieldSpec:
+    resource_key: str
+    chance: float
+    amount: int
+
+
+@dataclass(frozen=True)
 class DwellingLevelSpec:
     level: int
     entry_cost: dict[str, int]
     maintenance_cost: dict[str, int]
     resource_yields: dict[str, int]
+    random_resource_yields: list[DwellingRandomYieldSpec] = field(default_factory=list)
     cultivation_exp_gain: int = 0
     special_effects: dict[str, float] = field(default_factory=dict)
 
@@ -346,6 +355,16 @@ class DwellingService:
         level_spec: DwellingLevelSpec,
     ) -> dict[str, int]:
         yields = dict(level_spec.resource_yields)
+        for random_yield in level_spec.random_resource_yields:
+            if random_yield.amount <= 0 or random_yield.chance <= 0:
+                continue
+            if not self._is_random_yield_unlocked(run, random_yield.resource_key):
+                continue
+            if random.random() <= min(1.0, random_yield.chance):
+                yields[random_yield.resource_key] = (
+                    yields.get(random_yield.resource_key, 0) + random_yield.amount
+                )
+
         if facility.facility_id != "mine_cave":
             return yields
 
@@ -359,6 +378,9 @@ class DwellingService:
             int(spirit_stone_gain * (1 + bonus_rate)),
         )
         return yields
+
+    def _is_random_yield_unlocked(self, run: RunState, resource_key: str) -> bool:
+        return resource_key in set(run.unlocked_material_ids)
 
     def _active_status_for_level(self, level: int, max_level: int) -> str:
         if level >= max_level:
@@ -387,6 +409,9 @@ def _load_facility_specs(facilities: list[dict[str, object]]) -> list[DwellingFa
                     entry_cost=_coerce_int_map(level_payload.get("entry_cost")),
                     maintenance_cost=_coerce_int_map(level_payload.get("maintenance_cost")),
                     resource_yields=_coerce_int_map(level_payload.get("resource_yields")),
+                    random_resource_yields=_coerce_random_yields(
+                        level_payload.get("random_resource_yields")
+                    ),
                     cultivation_exp_gain=_coerce_int(
                         level_payload.get("cultivation_exp_gain"),
                         default=0,
@@ -441,3 +466,34 @@ def _coerce_float_map(value: object) -> dict[str, float]:
         except (TypeError, ValueError):
             continue
     return result
+
+
+def _coerce_random_yields(value: object) -> list[DwellingRandomYieldSpec]:
+    if not isinstance(value, list):
+        return []
+    result: list[DwellingRandomYieldSpec] = []
+    for item in value:
+        if not isinstance(item, dict):
+            continue
+        resource_key = str(item.get("resource_key", "")).strip()
+        if not resource_key:
+            continue
+        chance = _coerce_float(item.get("chance"), default=0.0)
+        amount = _coerce_int(item.get("amount"), default=0)
+        result.append(
+            DwellingRandomYieldSpec(
+                resource_key=resource_key,
+                chance=max(0.0, min(1.0, chance)),
+                amount=max(0, amount),
+            )
+        )
+    return result
+
+
+def _coerce_float(value: object, *, default: float) -> float:
+    if isinstance(value, bool):
+        return default
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default

@@ -193,3 +193,24 @@ def test_consume_supreme_quality_pill_uses_configured_effect_multiplier() -> Non
 
     assert updated.character.cultivation_exp == 24
     assert updated.result_summary == "已服用 养气丹（极品）。"
+
+
+def test_consume_multiple_pills_applies_effect_and_reduces_inventory() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    run.character.cultivation_exp = 0
+    run.alchemy_state.inventory = [
+        AlchemyInventoryItem(
+            item_id="yang_qi_dan",
+            display_name="养气丹",
+            quality="low",
+            amount=3,
+            effect_summary="直接增加修为",
+        )
+    ]
+
+    updated = service.consume_alchemy_item(run.run_id, "yang_qi_dan", "low", amount=2)
+
+    assert updated.character.cultivation_exp == 24
+    assert updated.alchemy_state.inventory[0].amount == 1
+    assert updated.result_summary == "已服用 养气丹（下品） x2。"

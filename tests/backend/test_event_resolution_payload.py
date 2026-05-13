@@ -62,6 +62,8 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
                     statuses_add=["focused"],
                     techniques_add=["cloud_step"],
                     learned_alchemy_recipe_ids=["ju_ling_dan"],
+                    unlocked_material_ids=["herb_julingzhi"],
+                    alchemy_mastery_exp_delta=12,
                     equipment_add=["jade_token"],
                     rebirth_progress_delta=2,
                 ),
@@ -88,6 +90,8 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
     assert resolved.character.statuses == ["focused"]
     assert resolved.character.techniques == ["cloud_step"]
     assert resolved.alchemy_state.learned_recipe_ids == ["ju_ling_dan"]
+    assert resolved.unlocked_material_ids == ["herb_julingzhi"]
+    assert resolved.alchemy_state.mastery_exp == 12
     assert resolved.character.equipment_tags == ["jade_token"]
     assert resolved.result_summary == "success log"
 
@@ -125,6 +129,48 @@ def test_direct_resolution_mode_always_uses_single_result_without_formula() -> N
     assert resolved.character.cultivation_exp == 6
     assert resolved.character.is_dead is False
     assert resolved.result_summary == "direct log"
+
+
+def test_resolve_event_unlocks_configured_next_event() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_source": EventTemplateConfig(
+                event_id="evt_source",
+                event_name="Source Event",
+                event_type="encounter",
+                option_ids=["opt_unlock_next"],
+            ),
+            "evt_next": EventTemplateConfig(
+                event_id="evt_next",
+                event_name="Next Event",
+                event_type="encounter",
+                option_ids=["opt_next"],
+            ),
+        },
+        options={
+            "opt_unlock_next": EventOptionConfig(
+                option_id="opt_unlock_next",
+                event_id="evt_source",
+                option_text="Unlock next",
+                is_default=True,
+                resolution_mode="direct",
+                next_event_id="evt_next",
+                log_text_success="unlocked",
+            ),
+            "opt_next": EventOptionConfig(
+                option_id="opt_next",
+                event_id="evt_next",
+                option_text="Next option",
+                is_default=True,
+            ),
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_unlock_next")
+
+    assert resolved.unlocked_event_ids == ["evt_next"]
 
 
 def test_resolve_event_applies_failure_death_payload() -> None:

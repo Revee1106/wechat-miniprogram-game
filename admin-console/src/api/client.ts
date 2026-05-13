@@ -41,9 +41,12 @@ export type EventTemplateInput = {
   required_techniques?: string[];
   required_equipment_tags?: string[];
   required_resources?: Record<string, number>;
+  required_completed_event_ids?: string[];
   required_rebirth_count?: number;
   required_karma_min?: number | null;
   required_luck_min?: number;
+  required_alchemy_level?: number;
+  excluded_learned_alchemy_recipe_ids?: string[];
   flags?: string[];
   option_ids: string[];
 };
@@ -160,8 +163,15 @@ export type DwellingLevelInput = {
   entry_cost: Record<string, number>;
   maintenance_cost: Record<string, number>;
   resource_yields: Record<string, number>;
+  random_resource_yields?: DwellingRandomYieldInput[];
   cultivation_exp_gain: number;
   special_effects: Record<string, number>;
+};
+
+export type DwellingRandomYieldInput = {
+  resource_key: string;
+  chance: number;
+  amount: number;
 };
 
 export type DwellingFacilityInput = {

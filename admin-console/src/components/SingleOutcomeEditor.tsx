@@ -1,4 +1,5 @@
 import type { EventOptionInput } from "../api/client";
+import type { ResourceOption } from "../utils/resourceCatalog";
 import { ResultPayloadEditor } from "./ResultPayloadEditor";
 import { SectionCard } from "./SectionCard";
 
@@ -8,11 +9,15 @@ type SingleOutcomeEditorProps = {
     field: K,
     value: EventOptionInput[K]
   ) => void;
+  resourceOptions?: ResourceOption[];
+  alchemyRecipeOptions?: ResourceOption[];
 };
 
 export function SingleOutcomeEditor({
   option,
   onChange,
+  alchemyRecipeOptions,
+  resourceOptions,
 }: SingleOutcomeEditorProps) {
   return (
     <SectionCard
@@ -65,6 +70,8 @@ export function SingleOutcomeEditor({
         labelPrefix="结果"
         payload={option.result_on_success}
         onChange={(value) => onChange("result_on_success", value)}
+        alchemyRecipeOptions={alchemyRecipeOptions}
+        resourceOptions={resourceOptions}
       />
     </SectionCard>
   );

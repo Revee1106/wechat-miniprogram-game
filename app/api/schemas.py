@@ -53,6 +53,7 @@ class ConsumeAlchemyItemRequest(BaseModel):
     run_id: str
     item_id: str
     quality: str | None = None
+    amount: int = 1
 
 
 class ResolveEventRequest(BaseModel):

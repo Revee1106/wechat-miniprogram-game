@@ -17,6 +17,7 @@
         "resource_yields": {
           "basic_herb": 2
         },
+        "random_resource_yields": [],
         "cultivation_exp_gain": 0,
         "special_effects": {}
       },
@@ -31,6 +32,18 @@
         "resource_yields": {
           "basic_herb": 3
         },
+        "random_resource_yields": [
+          {
+            "resource_key": "herb_ninglucao",
+            "chance": 0.25,
+            "amount": 1
+          },
+          {
+            "resource_key": "herb_julingzhi",
+            "chance": 0.12,
+            "amount": 1
+          }
+        ],
         "cultivation_exp_gain": 0,
         "special_effects": {}
       },
@@ -45,6 +58,18 @@
         "resource_yields": {
           "basic_herb": 5
         },
+        "random_resource_yields": [
+          {
+            "resource_key": "herb_ninglucao",
+            "chance": 0.4,
+            "amount": 1
+          },
+          {
+            "resource_key": "herb_julingzhi",
+            "chance": 0.22,
+            "amount": 1
+          }
+        ],
         "cultivation_exp_gain": 0,
         "special_effects": {}
       }

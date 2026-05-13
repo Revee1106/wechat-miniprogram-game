@@ -8,6 +8,7 @@ ALLOWED_EVENT_TYPES = {
     "material",
     "technique",
     "equipment",
+    "alchemy",
     "encounter",
     "survival",
 }
@@ -19,6 +20,7 @@ ALLOWED_OUTCOME_TYPES = {
     "lifespan",
     "status",
     "breakthrough",
+    "alchemy",
     "karma",
     "luck",
     "mixed",
@@ -41,6 +43,7 @@ ALLOWED_TRIGGER_SOURCES = {
     "karma_based",
     "luck_based",
     "rebirth_based",
+    "alchemy_based",
     "global",
 }
 ALLOWED_RESOLUTION_MODES = {"direct", "combat"}
@@ -95,6 +98,18 @@ def validate_event_config(
             errors.append(f"template '{event_id}' has invalid trigger_sources")
         if int(template.get("weight", 0) or 0) <= 0:
             errors.append(f"template '{event_id}' must have positive weight")
+        if int(template.get("required_alchemy_level", 0) or 0) < 0:
+            errors.append(f"template '{event_id}' has invalid required_alchemy_level")
+        _validate_string_list(
+            template.get("required_completed_event_ids", []),
+            f"template '{event_id}' has invalid required_completed_event_ids",
+            errors,
+        )
+        _validate_string_list(
+            template.get("excluded_learned_alchemy_recipe_ids", []),
+            f"template '{event_id}' has invalid excluded_learned_alchemy_recipe_ids",
+            errors,
+        )
         option_refs = template.get("option_ids", [])
         if not isinstance(option_refs, list) or not option_refs:
             errors.append(f"template '{event_id}' must include option_ids")
@@ -104,6 +119,11 @@ def validate_event_config(
                     errors.append(
                         f"template '{event_id}' references missing option_id '{option_id}'"
                     )
+        for required_event_id in template.get("required_completed_event_ids", []) or []:
+            if str(required_event_id) not in template_map:
+                errors.append(
+                    f"template '{event_id}' references missing required_completed_event_id '{required_event_id}'"
+                )
 
     for option in options:
         option_id = str(option.get("option_id", ""))
@@ -157,6 +177,11 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _validate_string_list(value: object, error_message: str, errors: list[str]) -> None:
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        errors.append(error_message)
 
 
 def _validate_battle_config(

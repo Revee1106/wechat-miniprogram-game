@@ -1,5 +1,6 @@
 import type { EventOptionInput } from "../api/client";
 import { formatLineList, parseLineList } from "../utils/eventFormCodec";
+import type { ResourceOption } from "../utils/resourceCatalog";
 import { RequirementFieldGroup } from "./RequirementFieldGroup";
 import { ResourceRecordEditor } from "./ResourceRecordEditor";
 import { ResultPayloadEditor } from "./ResultPayloadEditor";
@@ -25,6 +26,8 @@ type EventOptionEditorProps = {
   onSelectOption?: (index: number) => void;
   eventOptions?: SelectOption[];
   enemyTemplateOptions?: SelectOption[];
+  resourceOptions?: ResourceOption[];
+  alchemyRecipeOptions?: ResourceOption[];
 };
 
 export function EventOptionEditor({
@@ -38,6 +41,8 @@ export function EventOptionEditor({
   onSelectOption,
   eventOptions = [],
   enemyTemplateOptions = [],
+  resourceOptions,
+  alchemyRecipeOptions,
 }: EventOptionEditorProps) {
   if (!compact) {
     return (
@@ -61,6 +66,8 @@ export function EventOptionEditor({
               onChangeOption={onChangeOption}
               onRemoveOption={onRemoveOption}
               option={option}
+              alchemyRecipeOptions={alchemyRecipeOptions}
+              resourceOptions={resourceOptions}
             />
           ))}
         </div>
@@ -109,6 +116,8 @@ export function EventOptionEditor({
             onChangeOption={onChangeOption}
             onRemoveOption={onRemoveOption}
             option={currentOption}
+            alchemyRecipeOptions={alchemyRecipeOptions}
+            resourceOptions={resourceOptions}
           />
         ) : (
           <div className="empty-state">当前没有选项，可先新增一条。</div>
@@ -127,6 +136,8 @@ function OptionDetailCard({
   compact = false,
   eventOptions,
   enemyTemplateOptions,
+  alchemyRecipeOptions,
+  resourceOptions,
 }: {
   option: EventOptionInput;
   index: number;
@@ -140,6 +151,8 @@ function OptionDetailCard({
   compact?: boolean;
   eventOptions: SelectOption[];
   enemyTemplateOptions: SelectOption[];
+  alchemyRecipeOptions?: ResourceOption[];
+  resourceOptions?: ResourceOption[];
 }) {
   void existingOptionIds;
 
@@ -162,6 +175,7 @@ function OptionDetailCard({
           hideLabel
           label="选项所需资源"
           onChange={(value) => onChangeOption(index, "requires_resources", value)}
+          resourceOptions={resourceOptions}
           value={option.requires_resources}
         />
       ),
@@ -430,7 +444,9 @@ function OptionDetailCard({
                 <ResultPayloadEditor
                   labelPrefix="成功"
                   onChange={(value) => onChangeOption(index, "result_on_success", value)}
+                  alchemyRecipeOptions={alchemyRecipeOptions}
                   payload={option.result_on_success}
+                  resourceOptions={resourceOptions}
                 />
               )}
             </SectionCard>
@@ -452,7 +468,9 @@ function OptionDetailCard({
               <ResultPayloadEditor
                 labelPrefix="失败"
                 onChange={(value) => onChangeOption(index, "result_on_failure", value)}
+                alchemyRecipeOptions={alchemyRecipeOptions}
                 payload={option.result_on_failure}
+                resourceOptions={resourceOptions}
               />
             </SectionCard>
           </div>
@@ -474,7 +492,9 @@ function OptionDetailCard({
             <ResultPayloadEditor
               labelPrefix="结果"
               onChange={(value) => onChangeOption(index, "result_on_success", value)}
+              alchemyRecipeOptions={alchemyRecipeOptions}
               payload={option.result_on_success}
+              resourceOptions={resourceOptions}
             />
           </SectionCard>
         )}

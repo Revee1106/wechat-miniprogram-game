@@ -39,5 +39,32 @@
       "dwelling",
       "auxiliary"
     ]
+  },
+  {
+    "material_id": "herb_ninglucao",
+    "display_name": "凝露草",
+    "category": "herb",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "一级灵草，叶尖凝露，灵气清润，可用于炼制凝气丹。",
+    "tags": [
+      "dwelling",
+      "basic",
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_julingzhi",
+    "display_name": "聚灵芝",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "uncommon",
+    "source": "dwelling",
+    "description": "根生灵脉，叶凝云纹的二品芝草，蕴含较为精纯的灵气，常用于炼制进阶修为丹药。",
+    "tags": [
+      "dwelling",
+      "alchemy"
+    ]
   }
 ]

@@ -5,15 +5,19 @@ import {
   createOption,
   deleteEvent,
   deleteOption,
+  fetchAlchemyRecipes,
   fetchBattleEnemies,
   fetchEventDetail,
   fetchEvents,
+  fetchMaterials,
   fetchRealms,
   reloadEvents,
   updateEvent,
   updateOption,
   type EventListItem,
+  type AlchemyRecipeInput,
   type EventOptionInput,
+  type MaterialInput,
   type RealmConfig,
   type EventTemplateInput,
 } from "../api/client";
@@ -30,6 +34,7 @@ import {
 import { EventTemplateForm } from "../components/EventTemplateForm";
 import { SingleOutcomeEditor } from "../components/SingleOutcomeEditor";
 import { getEventTypeTotalWeight } from "../utils/eventTypeWeight";
+import { buildConfiguredResourceOptions } from "../utils/resourceCatalog";
 
 const DRAFT_EVENT_ID = "__draft_event__";
 const SINGLE_OUTCOME_TEXT = "完成事件";
@@ -55,6 +60,8 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
   const [enemyTemplateOptions, setEnemyTemplateOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
+  const [materials, setMaterials] = useState<MaterialInput[]>([]);
+  const [alchemyRecipes, setAlchemyRecipes] = useState<AlchemyRecipeInput[]>([]);
   const [drawerPanel, setDrawerPanel] = useState<EventPanel | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -67,9 +74,19 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     ? normalizeSingleOutcomeOption(options[0], template?.event_id || "event")
     : null;
   const currentTypeTotalWeight = template ? getEventTypeTotalWeight(allItems, template) : 0;
+  const resourceOptions = buildConfiguredResourceOptions(materials);
+  const alchemyRecipeOptions = alchemyRecipes.map((recipe) => ({
+    value: recipe.recipe_id,
+    label: recipe.display_name
+      ? `${recipe.display_name} / ${recipe.recipe_id}`
+      : recipe.recipe_id,
+  }));
   const linkedEventOptions = allItems
     .filter((item) => item.event_id !== template?.event_id)
-    .map((item) => ({ value: item.event_id, label: item.event_name }));
+    .map((item) => ({
+      value: item.event_id,
+      label: `${item.event_name || item.event_id} / ${item.event_id}`,
+    }));
   const defaultOptionCount = options.filter((option) => option.is_default).length;
 
   useEffect(() => {
@@ -78,7 +95,14 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     async function loadLibrary() {
       setIsLoading(true);
       try {
-        const [filteredResponse, fullResponse, realmsResponse, enemyResponse] = await Promise.all([
+        const [
+          filteredResponse,
+          fullResponse,
+          realmsResponse,
+          enemyResponse,
+          materialResponse,
+          alchemyRecipeResponse,
+        ] = await Promise.all([
           fetchEvents({
             eventType: eventTypeFilter,
             riskLevel: riskLevelFilter,
@@ -86,6 +110,8 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           fetchEvents(),
           fetchRealms(),
           fetchBattleEnemies(),
+          fetchMaterials(),
+          fetchAlchemyRecipes(),
         ]);
         if (!isMounted) {
           return;
@@ -94,6 +120,8 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         const nextAllItems = fullResponse.items ?? [];
         setItems(nextItems);
         setAllItems(nextAllItems);
+        setMaterials(materialResponse.items ?? []);
+        setAlchemyRecipes(alchemyRecipeResponse.items ?? []);
         setRealmOptions(mapRealmOptions(realmsResponse.items ?? []));
         setEnemyTemplateOptions(
           (enemyResponse.items ?? []).map((enemy) => ({
@@ -578,6 +606,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           {drawerPanel === "identity" ? (
             <EventTemplateForm
               isNew={isDraft}
+              alchemyRecipeOptions={alchemyRecipeOptions}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
               sections={["identity"]}
@@ -586,6 +615,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           ) : drawerPanel === "trigger" ? (
             <EventTemplateForm
               isNew={isDraft}
+              alchemyRecipeOptions={alchemyRecipeOptions}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
               sections={["trigger"]}
@@ -594,13 +624,21 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           ) : drawerPanel === "requirements" ? (
             <EventTemplateForm
               isNew={isDraft}
+              alchemyRecipeOptions={alchemyRecipeOptions}
+              eventOptions={linkedEventOptions}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
+              resourceOptions={resourceOptions}
               sections={["requirements"]}
               template={template}
             />
           ) : isSingleOutcome && singleOutcomeOption ? (
-            <SingleOutcomeEditor onChange={handleSingleOutcomeChange} option={singleOutcomeOption} />
+            <SingleOutcomeEditor
+              onChange={handleSingleOutcomeChange}
+              option={singleOutcomeOption}
+              alchemyRecipeOptions={alchemyRecipeOptions}
+              resourceOptions={resourceOptions}
+            />
           ) : (
             <EventOptionEditor
               activeIndex={activeOptionIndex}
@@ -613,6 +651,8 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
               onRemoveOption={handleRemoveOption}
               onSelectOption={setActiveOptionIndex}
               options={options}
+              alchemyRecipeOptions={alchemyRecipeOptions}
+              resourceOptions={resourceOptions}
             />
           )}
         </EventEditorDrawer>
@@ -910,9 +950,12 @@ function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemp
     required_techniques: [],
     required_equipment_tags: [],
     required_resources: {},
+    required_completed_event_ids: [],
     required_rebirth_count: 0,
     required_karma_min: null,
     required_luck_min: 0,
+    required_alchemy_level: 0,
+    excluded_learned_alchemy_recipe_ids: [],
     flags: [],
     option_ids: [],
   };
@@ -994,6 +1037,9 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
     required_techniques: template.required_techniques ?? [],
     required_equipment_tags: template.required_equipment_tags ?? [],
     required_resources: template.required_resources ?? {},
+    required_completed_event_ids: template.required_completed_event_ids ?? [],
+    required_alchemy_level: Math.max(0, Number(template.required_alchemy_level ?? 0) || 0),
+    excluded_learned_alchemy_recipe_ids: template.excluded_learned_alchemy_recipe_ids ?? [],
     flags: template.flags ?? [],
   };
 }

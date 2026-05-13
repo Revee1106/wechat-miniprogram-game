@@ -63,10 +63,10 @@ test("loads enemy detail and saves rewards through admin api", async () => {
   fireEvent.change(screen.getByLabelText("敌人名称"), {
     target: { value: "山匪头目" },
   });
-  fireEvent.change(screen.getByLabelText("奖励新增变化项"), {
+  fireEvent.change(screen.getByLabelText("奖励新增物品变化"), {
     target: { value: "resource:spirit_stone" },
   });
-  fireEvent.change(screen.getByLabelText("奖励变化数值-1"), {
+  fireEvent.change(screen.getByLabelText("奖励物品变化数值-1"), {
     target: { value: "9" },
   });
   fireEvent.click(screen.getByRole("button", { name: "保存敌人模板" }));
