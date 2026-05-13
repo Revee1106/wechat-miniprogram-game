@@ -33,7 +33,10 @@ import {
 } from "../components/FieldLabelMap";
 import { EventTemplateForm } from "../components/EventTemplateForm";
 import { SingleOutcomeEditor } from "../components/SingleOutcomeEditor";
-import { getEventTypeTotalWeight } from "../utils/eventTypeWeight";
+import {
+  buildEventDrawChanceEstimate,
+  getEventTypeTotalWeight,
+} from "../utils/eventTypeWeight";
 import { buildConfiguredResourceOptions } from "../utils/resourceCatalog";
 
 const DRAFT_EVENT_ID = "__draft_event__";
@@ -74,6 +77,9 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     ? normalizeSingleOutcomeOption(options[0], template?.event_id || "event")
     : null;
   const currentTypeTotalWeight = template ? getEventTypeTotalWeight(allItems, template) : 0;
+  const drawChanceEstimate = template
+    ? buildEventDrawChanceEstimate(allItems, template)
+    : undefined;
   const resourceOptions = buildConfiguredResourceOptions(materials);
   const alchemyRecipeOptions = alchemyRecipes.map((recipe) => ({
     value: recipe.recipe_id,
@@ -616,6 +622,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              drawChanceEstimate={drawChanceEstimate}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
               sections={["trigger"]}

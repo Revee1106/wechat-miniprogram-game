@@ -1081,6 +1081,16 @@ textarea:focus {
   font-weight: 600;
 }
 
+.event-draw-estimate {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.event-draw-estimate .event-detail-chip {
+  min-width: 120px;
+}
+
 .event-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

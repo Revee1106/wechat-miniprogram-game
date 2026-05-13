@@ -30,7 +30,10 @@ import {
 } from "../components/FieldLabelMap";
 import { SingleOutcomeEditor } from "../components/SingleOutcomeEditor";
 import { StatusPanel } from "../components/StatusPanel";
-import { getEventTypeTotalWeight } from "../utils/eventTypeWeight";
+import {
+  buildEventDrawChanceEstimate,
+  getEventTypeTotalWeight,
+} from "../utils/eventTypeWeight";
 import { buildConfiguredResourceOptions } from "../utils/resourceCatalog";
 
 type EventEditorPageProps = {
@@ -76,6 +79,7 @@ export function EventEditorPage({
   const isSingleOutcome = template.choice_pattern === "single_outcome";
   const singleOutcomeOption = normalizeSingleOutcomeOption(options[0], template.event_id || "event");
   const currentTypeTotalWeight = getEventTypeTotalWeight(eventLibrary, template);
+  const drawChanceEstimate = buildEventDrawChanceEstimate(eventLibrary, template);
   const resourceOptions = useMemo(() => buildConfiguredResourceOptions(materials), [materials]);
   const alchemyRecipeOptions = useMemo(
     () =>
@@ -516,6 +520,7 @@ export function EventEditorPage({
                   isNew={!eventId}
                   onChange={handleTemplateChange}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  drawChanceEstimate={drawChanceEstimate}
                   sections={["trigger"]}
                   template={template}
                 />

@@ -1,4 +1,5 @@
 import type { EventTemplateInput } from "../api/client";
+import { formatChance, type EventDrawChanceEstimate } from "../utils/eventTypeWeight";
 import type { ResourceOption } from "../utils/resourceCatalog";
 import {
   choicePatternOptions,
@@ -31,6 +32,7 @@ type EventTemplateFormProps = {
   eventOptions?: ResourceOption[];
   alchemyRecipeOptions?: ResourceOption[];
   resourceOptions?: ResourceOption[];
+  drawChanceEstimate?: EventDrawChanceEstimate;
   onChange: <K extends keyof EventTemplateInput>(
     field: K,
     value: EventTemplateInput[K]
@@ -45,6 +47,7 @@ export function EventTemplateForm({
   eventOptions = [],
   alchemyRecipeOptions = [],
   resourceOptions,
+  drawChanceEstimate,
   onChange,
 }: EventTemplateFormProps) {
   const visibleSections = sections ?? ["identity", "trigger", "requirements", "summary"];
@@ -487,6 +490,35 @@ export function EventTemplateForm({
                 }
               />
             </label>
+
+            {drawChanceEstimate ? (
+              <div className="field field--full">
+                <span className="field__label">预估抽取概率</span>
+                <div className="event-draw-estimate" aria-label="预估抽取概率">
+                  <span className="event-detail-chip">
+                    <small>当前事件</small>
+                    <strong>{formatChance(drawChanceEstimate.finalChance)}</strong>
+                  </span>
+                  <span className="event-detail-chip">
+                    <small>事件类型</small>
+                    <strong>{formatChance(drawChanceEstimate.typeChance)}</strong>
+                  </span>
+                  <span className="event-detail-chip">
+                    <small>同类占比</small>
+                    <strong>{formatChance(drawChanceEstimate.withinTypeChance)}</strong>
+                  </span>
+                  <span className="event-detail-chip">
+                    <small>权重</small>
+                    <strong>
+                      {drawChanceEstimate.currentWeight} / {drawChanceEstimate.allTotalWeight}
+                    </strong>
+                  </span>
+                </div>
+                <span className="field__hint">
+                  估算基于当前控制台事件库的权重：先按事件类型总权重抽类型，再在同类型内按事件权重抽具体事件；未计入境界、前置条件、冷却和后续事件解锁等运行时过滤。
+                </span>
+              </div>
+            ) : null}
 
             <label className="switch-field field--full">
               <span>

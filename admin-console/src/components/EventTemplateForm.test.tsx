@@ -86,6 +86,43 @@ test("trigger section uses realm dropdowns for min and max realm", () => {
   expect(screen.getAllByRole("option", { name: "无限制" })).toHaveLength(2);
 });
 
+test("trigger section shows estimated draw chance when provided", () => {
+  render(
+    <EventTemplateForm
+      isNew
+      onChange={vi.fn()}
+      drawChanceEstimate={{
+        currentWeight: 7,
+        typeTotalWeight: 8,
+        allTotalWeight: 10,
+        typeChance: 0.8,
+        withinTypeChance: 0.875,
+        finalChance: 0.7,
+      }}
+      sections={["trigger"]}
+      template={{
+        event_id: "evt_material_heavy",
+        event_name: "Material Heavy",
+        event_type: "material",
+        outcome_type: "material",
+        risk_level: "normal",
+        trigger_sources: ["global"],
+        choice_pattern: "binary_choice",
+        title_text: "",
+        body_text: "",
+        weight: 7,
+        is_repeatable: true,
+        option_ids: [],
+      }}
+    />
+  );
+
+  expect(screen.getByLabelText("预估抽取概率")).toBeInTheDocument();
+  expect(screen.getByText("当前事件")).toBeInTheDocument();
+  expect(screen.getByText("70%")).toBeInTheDocument();
+  expect(screen.getByText("7 / 10")).toBeInTheDocument();
+});
+
 test("identity section shows a disabled event id field", () => {
   render(
     <EventTemplateForm
