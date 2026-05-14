@@ -96,6 +96,75 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
     assert resolved.result_summary == "success log 你学会了凝气丹丹方。 你解锁了聚灵芝材料。"
 
 
+def test_resolve_event_applies_progress_counter_deltas() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_progress": EventTemplateConfig(
+                event_id="evt_progress",
+                event_name="Progress Event",
+                event_type="alchemy",
+                option_ids=["opt_progress"],
+            )
+        },
+        options={
+            "opt_progress": EventOptionConfig(
+                option_id="opt_progress",
+                event_id="evt_progress",
+                option_text="Record progress",
+                is_default=True,
+                resolution_mode="direct",
+                result_on_success=EventResultPayload(
+                    progress_counter_deltas={
+                        "alchemy.ning_qi_dan_clue": 1,
+                        "alchemy.npc_lingyao_approval": 20,
+                    }
+                ),
+                log_text_success="progress log",
+            )
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_progress")
+
+    assert resolved.progress_counters["alchemy.ning_qi_dan_clue"] == 1
+    assert resolved.progress_counters["alchemy.npc_lingyao_approval"] == 20
+
+
+def test_resolve_event_clamps_progress_counter_deltas_at_zero() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_progress": EventTemplateConfig(
+                event_id="evt_progress",
+                event_name="Progress Event",
+                event_type="alchemy",
+                option_ids=["opt_progress"],
+            )
+        },
+        options={
+            "opt_progress": EventOptionConfig(
+                option_id="opt_progress",
+                event_id="evt_progress",
+                option_text="Spend progress",
+                is_default=True,
+                resolution_mode="direct",
+                result_on_success=EventResultPayload(
+                    progress_counter_deltas={"alchemy.ning_qi_dan_clue": -5}
+                ),
+                log_text_success="progress log",
+            )
+        },
+    )
+    run = _build_run()
+    run.progress_counters = {"alchemy.ning_qi_dan_clue": 1}
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry).resolve(run, "opt_progress")
+
+    assert resolved.progress_counters["alchemy.ning_qi_dan_clue"] == 0
+
+
 def test_direct_resolution_mode_always_uses_single_result_without_formula() -> None:
     registry = EventRegistry(
         templates={

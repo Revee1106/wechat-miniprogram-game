@@ -243,6 +243,52 @@ def test_event_selection_skips_already_learned_alchemy_recipe_events() -> None:
     assert selected.event_id == "evt_fallback"
 
 
+def test_event_selection_requires_progress_counters() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_needs_progress",
+                event_name="Needs Progress",
+                event_type="alchemy",
+                option_ids=["opt_needs_progress"],
+                required_progress_counters={"alchemy.ning_qi_dan_clue": 3},
+            ),
+            EventTemplateConfig(
+                event_id="evt_fallback",
+                event_name="Fallback",
+                event_type="alchemy",
+                option_ids=["opt_fallback"],
+            ),
+        )
+    )
+    run = _build_run()
+    run.progress_counters = {"alchemy.ning_qi_dan_clue": 2}
+
+    selected = service.select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_fallback"
+
+
+def test_event_selection_allows_progress_counter_requirement_when_met() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_needs_progress",
+                event_name="Needs Progress",
+                event_type="alchemy",
+                option_ids=["opt_needs_progress"],
+                required_progress_counters={"alchemy.ning_qi_dan_clue": 3},
+            ),
+        )
+    )
+    run = _build_run()
+    run.progress_counters = {"alchemy.ning_qi_dan_clue": 3}
+
+    selected = service.select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_needs_progress"
+
+
 def test_event_selection_requires_completed_prerequisite_events() -> None:
     service = EventService(
         registry=_build_registry(

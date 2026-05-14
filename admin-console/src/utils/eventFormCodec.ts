@@ -52,6 +52,23 @@ export function formatKeyValueMap(values?: Record<string, number>): string {
     .join("\n");
 }
 
+export function normalizeNumericRecord(
+  values?: Record<string, unknown>
+): Record<string, number> {
+  const normalized: Record<string, number> = {};
+  for (const [key, value] of Object.entries(values ?? {})) {
+    const trimmedKey = key.trim();
+    const numericValue = Number(value);
+    if (!trimmedKey || !Number.isFinite(numericValue) || numericValue === 0) {
+      continue;
+    }
+    normalized[trimmedKey] = numericValue;
+  }
+  return Object.fromEntries(
+    Object.entries(normalized).sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
 export function parseStructuredPayload(value: string): Record<string, unknown> | string {
   const normalized = value.trim();
   if (!normalized) {
@@ -89,6 +106,7 @@ export type PayloadEditorState = {
   techniques_add: string[];
   learned_alchemy_recipe_ids: string[];
   unlocked_material_ids: string[];
+  progress_counter_deltas: Record<string, number>;
   equipment_add: string[];
   equipment_remove: string[];
   death: boolean;
@@ -208,6 +226,10 @@ export function parsePayloadEditorState(
     unlocked_material_ids: Array.isArray(payload.unlocked_material_ids)
       ? payload.unlocked_material_ids as string[]
       : [],
+    progress_counter_deltas:
+      typeof payload.progress_counter_deltas === "object" && payload.progress_counter_deltas
+        ? normalizeNumericRecord(payload.progress_counter_deltas as Record<string, unknown>)
+        : {},
     equipment_add: Array.isArray(payload.equipment_add) ? payload.equipment_add as string[] : [],
     equipment_remove: Array.isArray(payload.equipment_remove) ? payload.equipment_remove as string[] : [],
     death: Boolean(payload.death),
@@ -264,6 +286,12 @@ export function buildPayloadFromEditorState(
   }
   if (state.unlocked_material_ids.length > 0) {
     payload.unlocked_material_ids = state.unlocked_material_ids;
+  }
+  if (Object.keys(state.progress_counter_deltas).length > 0) {
+    const progressCounterDeltas = normalizeNumericRecord(state.progress_counter_deltas);
+    if (Object.keys(progressCounterDeltas).length > 0) {
+      payload.progress_counter_deltas = progressCounterDeltas;
+    }
   }
   if (state.equipment_add.length > 0) {
     payload.equipment_add = state.equipment_add;

@@ -775,6 +775,7 @@ function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemp
     required_luck_min: 0,
     required_alchemy_level: 0,
     excluded_learned_alchemy_recipe_ids: [],
+    required_progress_counters: {},
     flags: [],
     option_ids: [],
   };
@@ -860,6 +861,7 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
     required_dwelling_facility_levels: template.required_dwelling_facility_levels ?? {},
     required_alchemy_level: Math.max(0, Number(template.required_alchemy_level ?? 0) || 0),
     excluded_learned_alchemy_recipe_ids: template.excluded_learned_alchemy_recipe_ids ?? [],
+    required_progress_counters: template.required_progress_counters ?? {},
     flags: template.flags ?? [],
   };
 }

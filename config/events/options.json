@@ -870,5 +870,27 @@
     "log_text_success": "你没有贸然触碰那株芝草，只在附近采得几株灵气稍盛的草药，也算没有空手而归。",
     "log_text_failure": "",
     "event_id": "evt_alchemy_2"
+  },
+  {
+    "option_id": "evt_alchemy_3_option_1",
+    "option_text": "细看残纸",
+    "sort_order": 1,
+    "is_default": true,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "alchemy_mastery_exp_delta": 15
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你辨认了许久，只看懂几处药性配伍，虽未得完整丹方，却隐约觉得这不是寻常丹药的记载。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_3"
   }
 ]

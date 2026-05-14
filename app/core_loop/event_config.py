@@ -194,6 +194,10 @@ def _coerce_payload(
             ),
             unlocked_material_ids=list(payload.get("unlocked_material_ids", [])),
             alchemy_mastery_exp_delta=int(payload.get("alchemy_mastery_exp_delta", 0)),
+            progress_counter_deltas={
+                str(key): int(value)
+                for key, value in payload.get("progress_counter_deltas", {}).items()
+            },
             equipment_add=list(payload.get("equipment_add", [])),
             equipment_remove=list(payload.get("equipment_remove", [])),
             battle=payload.get("battle"),
@@ -261,6 +265,7 @@ def _has_meaningful_payload(
                 payload.learned_alchemy_recipe_ids,
                 payload.unlocked_material_ids,
                 payload.alchemy_mastery_exp_delta,
+                payload.progress_counter_deltas,
                 payload.equipment_add,
                 payload.equipment_remove,
                 payload.battle,

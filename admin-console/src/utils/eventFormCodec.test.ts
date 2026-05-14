@@ -41,6 +41,9 @@ test("builds compact structured payloads from editor state", () => {
     techniques_add: [],
     learned_alchemy_recipe_ids: ["ning_qi_dan"],
     unlocked_material_ids: ["herb_julingzhi"],
+    progress_counter_deltas: {
+      "alchemy.ning_qi_dan_clue": 1,
+    },
     equipment_add: [],
     equipment_remove: [],
     death: false,
@@ -53,6 +56,23 @@ test("builds compact structured payloads from editor state", () => {
     statuses_add: ["blessed"],
     learned_alchemy_recipe_ids: ["ning_qi_dan"],
     unlocked_material_ids: ["herb_julingzhi"],
+    progress_counter_deltas: {
+      "alchemy.ning_qi_dan_clue": 1,
+    },
+  });
+});
+
+test("parses progress counter deltas from structured payloads", () => {
+  const state = parsePayloadEditorState({
+    progress_counter_deltas: {
+      "alchemy.ning_qi_dan_clue": 1,
+      "alchemy.npc_lingyao_approval": 20,
+    },
+  });
+
+  expect(state.progress_counter_deltas).toEqual({
+    "alchemy.ning_qi_dan_clue": 1,
+    "alchemy.npc_lingyao_approval": 20,
   });
 });
 

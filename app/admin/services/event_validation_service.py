@@ -116,6 +116,12 @@ def validate_event_config(
             f"template '{event_id}' has invalid excluded_learned_alchemy_recipe_ids",
             errors,
         )
+        _validate_integer_mapping(
+            template.get("required_progress_counters", {}),
+            f"template '{event_id}' has invalid required_progress_counters",
+            errors,
+            min_value=0,
+        )
         option_refs = template.get("option_ids", [])
         if not isinstance(option_refs, list) or not option_refs:
             errors.append(f"template '{event_id}' must include option_ids")
@@ -162,6 +168,11 @@ def validate_event_config(
             payload = option.get(payload_name) or {}
             if not isinstance(payload, dict):
                 continue
+            _validate_integer_mapping(
+                payload.get("progress_counter_deltas", {}),
+                f"option '{option_id}' has invalid progress_counter_deltas in {payload_name}",
+                errors,
+            )
             equipment_add = set(payload.get("equipment_add", []) or [])
             equipment_remove = set(payload.get("equipment_remove", []) or [])
             if equipment_add & equipment_remove:
@@ -205,6 +216,27 @@ def _validate_numeric_mapping(
             errors.append(label)
             continue
         if parsed_amount < min_value:
+            errors.append(label)
+
+
+def _validate_integer_mapping(
+    value: object,
+    label: str,
+    errors: list[str],
+    *,
+    min_value: int | None = None,
+) -> None:
+    if not isinstance(value, dict):
+        errors.append(label)
+        return
+    for key, amount in value.items():
+        if not str(key).strip():
+            errors.append(label)
+            continue
+        if isinstance(amount, bool) or not isinstance(amount, int):
+            errors.append(label)
+            continue
+        if min_value is not None and amount < min_value:
             errors.append(label)
 
 

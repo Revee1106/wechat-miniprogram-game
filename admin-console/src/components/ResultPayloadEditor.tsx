@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   buildPayloadFromEditorState,
+  formatKeyValueMap,
   formatLineList,
+  parseKeyValueMap,
   parseLineList,
   parseNumberInput,
   parsePayloadEditorState,
@@ -63,6 +65,13 @@ type ExtraFieldDefinition =
       label: string;
       placeholder: string;
       emptyValue: string[];
+    }
+  | {
+      key: "progress_counter_deltas";
+      type: "record";
+      label: string;
+      placeholder: string;
+      emptyValue: Record<string, number>;
     }
   | {
       key: "death";
@@ -138,6 +147,13 @@ const extraFieldDefinitions: ExtraFieldDefinition[] = [
     label: "移除装备标签",
     placeholder: "每行一个装备标签",
     emptyValue: [],
+  },
+  {
+    key: "progress_counter_deltas",
+    type: "record",
+    label: "进度变化",
+    placeholder: "每行一个进度变化，例如 alchemy.ning_qi_dan_clue:1",
+    emptyValue: {},
   },
   {
     key: "death",
@@ -290,6 +306,10 @@ export function ResultPayloadEditor({
     );
     if (definition.type === "boolean") {
       update({ death: true });
+      return;
+    }
+    if (definition.type === "record") {
+      update({ [definition.key]: {} } as Partial<PayloadEditorState>);
       return;
     }
     update({ [definition.key]: [] } as Partial<PayloadEditorState>);
@@ -464,7 +484,19 @@ export function ResultPayloadEditor({
                       移除
                     </button>
                   </div>
-                  {field.key === "learned_alchemy_recipe_ids" ? (
+                  {field.type === "record" ? (
+                    <textarea
+                      aria-label={`${labelPrefix}${field.label}`}
+                      className="requirement-field__input"
+                      placeholder={field.placeholder}
+                      value={formatKeyValueMap(state[field.key])}
+                      onChange={(event) =>
+                        update({
+                          [field.key]: parseKeyValueMap(event.target.value),
+                        } as Partial<PayloadEditorState>)
+                      }
+                    />
+                  ) : field.key === "learned_alchemy_recipe_ids" ? (
                     <SelectionListEditor
                       addLabel="新增丹方"
                       ariaLabel={`${labelPrefix}${field.label}`}
@@ -711,6 +743,9 @@ function isExtraFieldVisible(
   }
   if (field.type === "boolean") {
     return state.death;
+  }
+  if (field.type === "record") {
+    return Object.keys(state[field.key]).length > 0;
   }
   return state[field.key].length > 0;
 }

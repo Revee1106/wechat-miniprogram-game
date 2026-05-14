@@ -462,5 +462,44 @@
       "evt_alchemy_2_option_2",
       "evt_alchemy_2_option_3"
     ]
+  },
+  {
+    "event_id": "evt_alchemy_3",
+    "event_name": "旧炉余温",
+    "event_type": "alchemy",
+    "outcome_type": "alchemy",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "alchemy_based"
+    ],
+    "choice_pattern": "multi_choice",
+    "title_text": "山脚废观中，残炉尚温。",
+    "body_text": "你途经一座荒废多年的小观，殿中蛛网密布，却有一尊丹炉仍带着淡淡余温。炉旁散落着几页残纸，上面的字迹多已焦黑，只剩几句关于“固本”“冲关”“护脉”的记载。",
+    "realm_min": "qi_refining_mid",
+    "realm_max": null,
+    "region": "",
+    "weight": 1,
+    "is_repeatable": true,
+    "cooldown_rounds": 0,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_completed_event_ids": [
+      "evt_alchemy_1",
+      "evt_alchemy_2"
+    ],
+    "required_dwelling_facility_levels": {},
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "required_alchemy_level": 3,
+    "excluded_learned_alchemy_recipe_ids": [],
+    "flags": [],
+    "option_ids": [
+      "evt_alchemy_3_option_1"
+    ]
   }
 ]

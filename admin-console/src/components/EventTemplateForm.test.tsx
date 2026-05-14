@@ -110,6 +110,60 @@ test("requirements section can add dwelling facility minimum level", () => {
   });
 });
 
+test("requirements section can add progress counter thresholds", () => {
+  const onChange = vi.fn();
+
+  render(
+    <EventTemplateForm
+      isNew
+      onChange={onChange}
+      sections={["requirements"]}
+      template={{
+        event_id: "evt_progress_gate",
+        event_name: "Progress Gate",
+        event_type: "alchemy",
+        outcome_type: "alchemy",
+        risk_level: "normal",
+        trigger_sources: ["alchemy_based"],
+        choice_pattern: "binary_choice",
+        title_text: "",
+        body_text: "",
+        weight: 1,
+        is_repeatable: true,
+        option_ids: [],
+        required_resources: {},
+        required_statuses: [],
+        excluded_statuses: [],
+        required_techniques: [],
+        required_equipment_tags: [],
+        required_rebirth_count: 0,
+        required_completed_event_ids: [],
+        required_dwelling_facility_levels: {},
+        required_progress_counters: {},
+        required_karma_min: null,
+        required_luck_min: 0,
+        flags: [],
+      }}
+    />
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "新增前置条件" }));
+  fireEvent.change(screen.getByLabelText("前置条件类型"), {
+    target: { value: "required_progress_counters" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "确认新增" }));
+
+  expect(onChange).toHaveBeenCalledWith("required_progress_counters", {});
+
+  fireEvent.change(screen.getByLabelText("所需进度"), {
+    target: { value: "alchemy.ning_qi_dan_clue:3" },
+  });
+
+  expect(onChange).toHaveBeenLastCalledWith("required_progress_counters", {
+    "alchemy.ning_qi_dan_clue": 3,
+  });
+});
+
 test("trigger section uses realm dropdowns for min and max realm", () => {
   render(
     <EventTemplateForm

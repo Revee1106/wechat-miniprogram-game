@@ -71,6 +71,8 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   required_completed_event_ids: "需要已完成事件",
   required_dwelling_facility_levels: "洞府设施最低等级",
   excluded_learned_alchemy_recipe_ids: "排除已学丹方",
+  required_progress_counters: "所需进度",
+  progress_counter_deltas: "进度变化",
   duration_months: "炼制时长（月）",
   success_mastery_exp_gain: "成功熟练度",
   quality_profiles: "品级配置",

@@ -319,6 +319,12 @@ class EventResolutionService:
                 alchemy_mastery_exp_delta=int(
                     payload_config.get("alchemy_mastery_exp_delta", 0)
                 ),
+                progress_counter_deltas={
+                    str(key): int(value)
+                    for key, value in payload_config.get(
+                        "progress_counter_deltas", {}
+                    ).items()
+                },
                 equipment_add=list(payload_config.get("equipment_add", [])),
                 equipment_remove=list(payload_config.get("equipment_remove", [])),
                 battle=payload_config.get("battle"),
@@ -423,6 +429,11 @@ class EventResolutionService:
             0,
             run.alchemy_state.mastery_exp + payload.alchemy_mastery_exp_delta,
         )
+        for counter_key, delta in payload.progress_counter_deltas.items():
+            run.progress_counters[counter_key] = max(
+                0,
+                int(run.progress_counters.get(counter_key, 0)) + int(delta),
+            )
         run.character.equipment_tags = self._merge_tags(
             run.character.equipment_tags,
             payload.equipment_add,

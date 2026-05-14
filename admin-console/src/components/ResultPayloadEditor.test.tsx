@@ -255,3 +255,33 @@ test("edits unlocked material ids as an extra payload field", () => {
     "\"unlocked_material_ids\":[\"herb_julingzhi\"]"
   );
 });
+
+test("edits progress counter deltas as an extra payload field", () => {
+  function Harness() {
+    const [payload, setPayload] = useState<Record<string, unknown>>({});
+
+    return (
+      <>
+        <ResultPayloadEditor
+          labelPrefix="成功"
+          onChange={setPayload}
+          payload={payload}
+        />
+        <pre data-testid="payload">{JSON.stringify(payload)}</pre>
+      </>
+    );
+  }
+
+  render(<Harness />);
+
+  fireEvent.change(screen.getByLabelText("成功新增附加变化"), {
+    target: { value: "progress_counter_deltas" },
+  });
+  fireEvent.change(screen.getByLabelText("成功进度变化"), {
+    target: { value: "alchemy.ning_qi_dan_clue:1" },
+  });
+
+  expect(screen.getByTestId("payload").textContent).toContain(
+    "\"progress_counter_deltas\":{\"alchemy.ning_qi_dan_clue\":1}"
+  );
+});

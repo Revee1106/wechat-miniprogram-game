@@ -107,6 +107,7 @@ class EventTemplateConfig:
     required_luck_min: int = 0
     required_alchemy_level: int = 0
     excluded_learned_alchemy_recipe_ids: list[str] = field(default_factory=list)
+    required_progress_counters: dict[str, int] = field(default_factory=dict)
     flags: list[str] = field(default_factory=list)
 
 
@@ -142,6 +143,7 @@ class EventResultPayload:
     learned_alchemy_recipe_ids: list[str] = field(default_factory=list)
     unlocked_material_ids: list[str] = field(default_factory=list)
     alchemy_mastery_exp_delta: int = 0
+    progress_counter_deltas: dict[str, int] = field(default_factory=dict)
     equipment_add: list[str] = field(default_factory=list)
     equipment_remove: list[str] = field(default_factory=list)
     battle: dict[str, object] | None = None
@@ -415,6 +417,7 @@ class RunState:
     last_event_resolution: EventResolutionLog | None = None
     result_summary: str | None = None
     unlocked_material_ids: list[str] = field(default_factory=list)
+    progress_counters: dict[str, int] = field(default_factory=dict)
     unlocked_event_ids: list[str] = field(default_factory=list)
     event_trigger_counts: dict[str, int] = field(default_factory=dict)
     event_cooldowns: dict[str, int] = field(default_factory=dict)

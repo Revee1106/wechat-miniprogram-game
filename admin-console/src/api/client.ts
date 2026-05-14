@@ -48,6 +48,7 @@ export type EventTemplateInput = {
   required_luck_min?: number;
   required_alchemy_level?: number;
   excluded_learned_alchemy_recipe_ids?: string[];
+  required_progress_counters?: Record<string, number>;
   flags?: string[];
   option_ids: string[];
 };

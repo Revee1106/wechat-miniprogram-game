@@ -237,6 +237,9 @@ class EventService:
             and self._excludes_learned_alchemy_recipes(
                 run, template.excluded_learned_alchemy_recipe_ids
             )
+            and self._meets_required_progress_counters(
+                run, template.required_progress_counters
+            )
             and self._is_next_event_unlocked(template, run)
             and self._is_material_unlock_event_relevant(template, run)
             and self._is_template_repeatable(template, run)
@@ -343,6 +346,16 @@ class EventService:
     ) -> bool:
         learned_recipe_ids = set(run.alchemy_state.learned_recipe_ids)
         return all(recipe_id not in learned_recipe_ids for recipe_id in excluded_recipe_ids)
+
+    def _meets_required_progress_counters(
+        self,
+        run: RunState,
+        required_progress_counters: dict[str, int],
+    ) -> bool:
+        return all(
+            int(run.progress_counters.get(counter_key, 0)) >= int(required_value)
+            for counter_key, required_value in required_progress_counters.items()
+        )
 
     def _is_next_event_unlocked(
         self,

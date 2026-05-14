@@ -12,7 +12,9 @@ import { RequirementFieldGroup } from "./RequirementFieldGroup";
 import { ResourceRecordEditor } from "./ResourceRecordEditor";
 import { SectionCard } from "./SectionCard";
 import {
+  formatKeyValueMap,
   formatLineList,
+  parseKeyValueMap,
   parseLineList,
   parseNumberInput,
   parseOptionalNumber,
@@ -271,6 +273,24 @@ export function EventTemplateForm({
           options={alchemyRecipeOptions}
           value={template.excluded_learned_alchemy_recipe_ids ?? []}
           onChange={(value) => onChange("excluded_learned_alchemy_recipe_ids", value)}
+        />
+      ),
+    },
+    {
+      key: "required_progress_counters",
+      label: "所需进度",
+      isActive: Object.keys(template.required_progress_counters ?? {}).length > 0,
+      onActivate: () => onChange("required_progress_counters", {}),
+      onReset: () => onChange("required_progress_counters", {}),
+      render: () => (
+        <textarea
+          aria-label="所需进度"
+          className="requirement-field__input"
+          placeholder="每行一个进度，例如 alchemy.ning_qi_dan_clue:3"
+          value={formatKeyValueMap(template.required_progress_counters)}
+          onChange={(event) =>
+            onChange("required_progress_counters", parseKeyValueMap(event.target.value))
+          }
         />
       ),
     },

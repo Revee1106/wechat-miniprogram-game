@@ -65,6 +65,106 @@ def test_validation_accepts_alchemy_event_fields() -> None:
     assert result.is_valid is True
 
 
+def test_validation_rejects_invalid_progress_counter_requirements() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_progress",
+                "event_name": "Progress",
+                "event_type": "alchemy",
+                "outcome_type": "alchemy",
+                "risk_level": "normal",
+                "trigger_sources": ["alchemy_based"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Progress",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "required_progress_counters": {"": 1, "alchemy.clue": -1},
+                "option_ids": ["opt_progress"],
+            },
+            {
+                "event_id": "evt_progress_shape",
+                "event_name": "Progress Shape",
+                "event_type": "alchemy",
+                "outcome_type": "alchemy",
+                "risk_level": "normal",
+                "trigger_sources": ["alchemy_based"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Progress Shape",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "required_progress_counters": ["alchemy.clue"],
+                "option_ids": ["opt_progress_shape"],
+            },
+        ],
+        options=[
+            {
+                "option_id": "opt_progress",
+                "event_id": "evt_progress",
+                "option_text": "Progress",
+                "sort_order": 1,
+                "is_default": True,
+            },
+            {
+                "option_id": "opt_progress_shape",
+                "event_id": "evt_progress_shape",
+                "option_text": "Progress Shape",
+                "sort_order": 1,
+                "is_default": True,
+            },
+        ],
+    )
+
+    assert result.is_valid is False
+    assert any("required_progress_counters" in error for error in result.errors)
+
+
+def test_validation_rejects_invalid_progress_counter_deltas() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_progress",
+                "event_name": "Progress",
+                "event_type": "alchemy",
+                "outcome_type": "alchemy",
+                "risk_level": "normal",
+                "trigger_sources": ["alchemy_based"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Progress",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "option_ids": ["opt_progress", "opt_progress_shape"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_progress",
+                "event_id": "evt_progress",
+                "option_text": "Progress",
+                "sort_order": 1,
+                "result_on_success": {
+                    "progress_counter_deltas": {"": 1, "alchemy.clue": "many"}
+                },
+            },
+            {
+                "option_id": "opt_progress_shape",
+                "event_id": "evt_progress",
+                "option_text": "Progress Shape",
+                "sort_order": 2,
+                "result_on_failure": {
+                    "progress_counter_deltas": ["alchemy.clue"]
+                },
+            },
+        ],
+    )
+
+    assert result.is_valid is False
+    assert any("progress_counter_deltas" in error for error in result.errors)
+
+
 def test_validation_rejects_invalid_event_prerequisite_fields() -> None:
     result = validate_event_config(
         templates=[
