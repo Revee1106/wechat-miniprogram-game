@@ -4,7 +4,9 @@ from app.core_loop.services.time_advance_service import TimeAdvanceService
 from app.core_loop.types import ConflictError
 from app.core_loop.types import (
     CharacterState,
+    DwellingFacilityState,
     EventOptionConfig,
+    EventResultPayload,
     EventTemplateConfig,
     ResourceState,
     RunState,
@@ -267,6 +269,41 @@ def test_event_selection_requires_completed_prerequisite_events() -> None:
     assert selected.event_id == "evt_unlock_material"
 
 
+def test_event_selection_requires_dwelling_facility_level() -> None:
+    service = EventService(
+        registry=_build_registry(
+            EventTemplateConfig(
+                event_id="evt_spirit_field_level_two",
+                event_name="Spirit Field Level Two",
+                event_type="encounter",
+                option_ids=["opt_spirit_field_level_two"],
+                required_dwelling_facility_levels={"spirit_field": 2},
+            ),
+        )
+    )
+    run = _build_run()
+    run.dwelling_facilities = [
+        DwellingFacilityState(
+            facility_id="spirit_field",
+            display_name="Spirit Field",
+            facility_type="garden",
+            summary="Grows herbs.",
+            level=1,
+        )
+    ]
+
+    try:
+        service.select_event(run, rebirth_count=0)
+    except ConflictError:
+        pass
+    else:  # pragma: no cover - defensive
+        raise AssertionError("expected dwelling facility level gate to block selection")
+
+    run.dwelling_facilities[0].level = 2
+    selected = service.select_event(run, rebirth_count=0)
+    assert selected.event_id == "evt_spirit_field_level_two"
+
+
 def test_event_selection_requires_option_unlocked_next_event() -> None:
     registry = EventRegistry(
         templates={
@@ -305,6 +342,90 @@ def test_event_selection_requires_option_unlocked_next_event() -> None:
     run.unlocked_event_ids = ["evt_follow_up"]
     selected = service.select_event(run, rebirth_count=0)
     assert selected.event_id == "evt_follow_up"
+
+
+def test_event_selection_skips_material_unlock_events_after_material_is_unlocked() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_unlock_julingzhi": EventTemplateConfig(
+                event_id="evt_unlock_julingzhi",
+                event_name="Unlock Julingzhi",
+                event_type="material",
+                option_ids=["opt_unlock_julingzhi"],
+            ),
+            "evt_fallback": EventTemplateConfig(
+                event_id="evt_fallback",
+                event_name="Fallback",
+                event_type="material",
+                option_ids=["opt_fallback"],
+            ),
+        },
+        options={
+            "opt_unlock_julingzhi": EventOptionConfig(
+                option_id="opt_unlock_julingzhi",
+                event_id="evt_unlock_julingzhi",
+                option_text="Unlock Julingzhi",
+                is_default=True,
+                result_on_success=EventResultPayload(
+                    unlocked_material_ids=["herb_julingzhi"],
+                ),
+            ),
+            "opt_fallback": EventOptionConfig(
+                option_id="opt_fallback",
+                event_id="evt_fallback",
+                option_text="Fallback option",
+                is_default=True,
+            ),
+        },
+    )
+    run = _build_run()
+    service = EventService(registry=registry)
+
+    selected_before_unlock = service.select_event(run, rebirth_count=0)
+    assert selected_before_unlock.event_id in {"evt_unlock_julingzhi", "evt_fallback"}
+
+    run.unlocked_material_ids = ["herb_julingzhi"]
+    selected_after_unlock = service.select_event(run, rebirth_count=0)
+
+    assert selected_after_unlock.event_id == "evt_fallback"
+
+
+def test_event_selection_keeps_material_unlock_event_when_some_targets_are_locked() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_unlock_herbs": EventTemplateConfig(
+                event_id="evt_unlock_herbs",
+                event_name="Unlock Herbs",
+                event_type="material",
+                option_ids=["opt_unlock_julingzhi", "opt_unlock_ninglucao"],
+            ),
+        },
+        options={
+            "opt_unlock_julingzhi": EventOptionConfig(
+                option_id="opt_unlock_julingzhi",
+                event_id="evt_unlock_herbs",
+                option_text="Unlock Julingzhi",
+                is_default=True,
+                result_on_success=EventResultPayload(
+                    unlocked_material_ids=["herb_julingzhi"],
+                ),
+            ),
+            "opt_unlock_ninglucao": EventOptionConfig(
+                option_id="opt_unlock_ninglucao",
+                event_id="evt_unlock_herbs",
+                option_text="Unlock Ninglucao",
+                result_on_success=EventResultPayload(
+                    unlocked_material_ids=["herb_ninglucao"],
+                ),
+            ),
+        },
+    )
+    run = _build_run()
+    run.unlocked_material_ids = ["herb_julingzhi"]
+
+    selected = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    assert selected.event_id == "evt_unlock_herbs"
 
 
 def test_event_selection_skips_status_technique_equipment_and_karma_blocked_templates() -> None:

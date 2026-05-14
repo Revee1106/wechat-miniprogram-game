@@ -7,6 +7,7 @@ import {
   deleteOption,
   fetchAlchemyRecipes,
   fetchBattleEnemies,
+  fetchDwellingFacilities,
   fetchEventDetail,
   fetchEvents,
   fetchMaterials,
@@ -15,6 +16,7 @@ import {
   updateOption,
   type EventListItem,
   type AlchemyRecipeInput,
+  type DwellingFacilityListItem,
   type EventOptionInput,
   type EventTemplateInput,
   type MaterialInput,
@@ -71,6 +73,7 @@ export function EventEditorPage({
   >([]);
   const [materials, setMaterials] = useState<MaterialInput[]>([]);
   const [alchemyRecipes, setAlchemyRecipes] = useState<AlchemyRecipeInput[]>([]);
+  const [dwellingFacilities, setDwellingFacilities] = useState<DwellingFacilityListItem[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -101,17 +104,28 @@ export function EventEditorPage({
         })),
     [eventLibrary, template.event_id]
   );
+  const dwellingFacilityOptions = useMemo(
+    () =>
+      dwellingFacilities.map((facility) => ({
+        value: facility.facility_id,
+        label: facility.display_name
+          ? `${facility.display_name} / ${facility.facility_id}`
+          : facility.facility_id,
+      })),
+    [dwellingFacilities]
+  );
 
   useEffect(() => {
     let isMounted = true;
 
     async function load() {
       if (!eventId) {
-        const [library, enemyLibrary, materialLibrary, alchemyRecipeLibrary] = await Promise.all([
+        const [library, enemyLibrary, materialLibrary, alchemyRecipeLibrary, dwellingLibrary] = await Promise.all([
           fetchEvents(),
           fetchBattleEnemies(),
           fetchMaterials(),
           fetchAlchemyRecipes(),
+          fetchDwellingFacilities(),
         ]);
         if (!isMounted) {
           return;
@@ -124,6 +138,7 @@ export function EventEditorPage({
         setEventLibrary(library.items ?? []);
         setMaterials(materialLibrary.items ?? []);
         setAlchemyRecipes(alchemyRecipeLibrary.items ?? []);
+        setDwellingFacilities(dwellingLibrary.items ?? []);
         setEnemyTemplateOptions(
           (enemyLibrary.items ?? []).map((enemy) => ({
             value: enemy.enemy_id,
@@ -144,12 +159,14 @@ export function EventEditorPage({
           enemyLibrary,
           materialLibrary,
           alchemyRecipeLibrary,
+          dwellingLibrary,
         ] = await Promise.all([
           fetchEventDetail(eventId),
           fetchEvents(),
           fetchBattleEnemies(),
           fetchMaterials(),
           fetchAlchemyRecipes(),
+          fetchDwellingFacilities(),
         ]);
         if (!isMounted) {
           return;
@@ -165,6 +182,7 @@ export function EventEditorPage({
         setEventLibrary(library.items ?? []);
         setMaterials(materialLibrary.items ?? []);
         setAlchemyRecipes(alchemyRecipeLibrary.items ?? []);
+        setDwellingFacilities(dwellingLibrary.items ?? []);
         setEnemyTemplateOptions(
           (enemyLibrary.items ?? []).map((enemy) => ({
             value: enemy.enemy_id,
@@ -511,6 +529,7 @@ export function EventEditorPage({
                   isNew={!eventId}
                   onChange={handleTemplateChange}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  dwellingFacilityOptions={dwellingFacilityOptions}
                   sections={["identity"]}
                   template={template}
                 />
@@ -520,6 +539,7 @@ export function EventEditorPage({
                   isNew={!eventId}
                   onChange={handleTemplateChange}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  dwellingFacilityOptions={dwellingFacilityOptions}
                   drawChanceEstimate={drawChanceEstimate}
                   sections={["trigger"]}
                   template={template}
@@ -530,6 +550,7 @@ export function EventEditorPage({
                   isNew={!eventId}
                   onChange={handleTemplateChange}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  dwellingFacilityOptions={dwellingFacilityOptions}
                   eventOptions={linkedEventOptions}
                   resourceOptions={resourceOptions}
                   sections={["requirements"]}
@@ -748,6 +769,7 @@ function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemp
     required_equipment_tags: [],
     required_resources: {},
     required_completed_event_ids: [],
+    required_dwelling_facility_levels: {},
     required_rebirth_count: 0,
     required_karma_min: null,
     required_luck_min: 0,
@@ -835,6 +857,7 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
     required_equipment_tags: template.required_equipment_tags ?? [],
     required_resources: template.required_resources ?? {},
     required_completed_event_ids: template.required_completed_event_ids ?? [],
+    required_dwelling_facility_levels: template.required_dwelling_facility_levels ?? {},
     required_alchemy_level: Math.max(0, Number(template.required_alchemy_level ?? 0) || 0),
     excluded_learned_alchemy_recipe_ids: template.excluded_learned_alchemy_recipe_ids ?? [],
     flags: template.flags ?? [],

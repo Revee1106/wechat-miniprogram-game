@@ -100,6 +100,12 @@ def validate_event_config(
             errors.append(f"template '{event_id}' must have positive weight")
         if int(template.get("required_alchemy_level", 0) or 0) < 0:
             errors.append(f"template '{event_id}' has invalid required_alchemy_level")
+        _validate_numeric_mapping(
+            template.get("required_dwelling_facility_levels", {}),
+            f"template '{event_id}' has invalid required_dwelling_facility_levels",
+            errors,
+            min_value=1,
+        )
         _validate_string_list(
             template.get("required_completed_event_ids", []),
             f"template '{event_id}' has invalid required_completed_event_ids",
@@ -177,6 +183,29 @@ def _find_duplicates(values: list[str], label: str) -> list[str]:
             continue
         seen.add(value)
     return duplicates
+
+
+def _validate_numeric_mapping(
+    value: object,
+    label: str,
+    errors: list[str],
+    *,
+    min_value: int,
+) -> None:
+    if not isinstance(value, dict):
+        errors.append(label)
+        return
+    for key, amount in value.items():
+        if not str(key).strip():
+            errors.append(label)
+            continue
+        try:
+            parsed_amount = int(amount)
+        except (TypeError, ValueError):
+            errors.append(label)
+            continue
+        if parsed_amount < min_value:
+            errors.append(label)
 
 
 def _validate_string_list(value: object, error_message: str, errors: list[str]) -> None:

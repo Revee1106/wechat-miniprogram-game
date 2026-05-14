@@ -279,6 +279,8 @@ class RunService:
             registry=self._event_registry,
             realm_configs=self._realm_configs,
             economy_base_path=self._event_config_base_path,
+            alchemy_config_base_path=self._alchemy_config_base_path,
+            material_config_base_path=self._material_config_base_path,
             enemy_templates=self._enemy_templates,
         )
         self._time_advance_service = TimeAdvanceService(

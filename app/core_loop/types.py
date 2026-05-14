@@ -101,6 +101,7 @@ class EventTemplateConfig:
     required_equipment_tags: list[str] = field(default_factory=list)
     required_resources: dict[str, int] = field(default_factory=dict)
     required_completed_event_ids: list[str] = field(default_factory=list)
+    required_dwelling_facility_levels: dict[str, int] = field(default_factory=dict)
     required_rebirth_count: int = 0
     required_karma_min: int | None = None
     required_luck_min: int = 0
@@ -265,6 +266,10 @@ class DwellingFacilityState:
     monthly_cultivation_exp_gain: int = 0
     function_unlock_text: str = ""
     is_function_unlocked: bool = False
+    can_build: bool = False
+    can_upgrade: bool = False
+    build_disabled_reason: str | None = None
+    upgrade_disabled_reason: str | None = None
 
 
 @dataclass

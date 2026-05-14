@@ -7,6 +7,7 @@ import {
   deleteOption,
   fetchAlchemyRecipes,
   fetchBattleEnemies,
+  fetchDwellingFacilities,
   fetchEventDetail,
   fetchEvents,
   fetchMaterials,
@@ -16,6 +17,7 @@ import {
   updateOption,
   type EventListItem,
   type AlchemyRecipeInput,
+  type DwellingFacilityListItem,
   type EventOptionInput,
   type MaterialInput,
   type RealmConfig,
@@ -65,6 +67,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
   >([]);
   const [materials, setMaterials] = useState<MaterialInput[]>([]);
   const [alchemyRecipes, setAlchemyRecipes] = useState<AlchemyRecipeInput[]>([]);
+  const [dwellingFacilities, setDwellingFacilities] = useState<DwellingFacilityListItem[]>([]);
   const [drawerPanel, setDrawerPanel] = useState<EventPanel | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -93,6 +96,12 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
       value: item.event_id,
       label: `${item.event_name || item.event_id} / ${item.event_id}`,
     }));
+  const dwellingFacilityOptions = dwellingFacilities.map((facility) => ({
+    value: facility.facility_id,
+    label: facility.display_name
+      ? `${facility.display_name} / ${facility.facility_id}`
+      : facility.facility_id,
+  }));
   const defaultOptionCount = options.filter((option) => option.is_default).length;
 
   useEffect(() => {
@@ -108,6 +117,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           enemyResponse,
           materialResponse,
           alchemyRecipeResponse,
+          dwellingResponse,
         ] = await Promise.all([
           fetchEvents({
             eventType: eventTypeFilter,
@@ -118,6 +128,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           fetchBattleEnemies(),
           fetchMaterials(),
           fetchAlchemyRecipes(),
+          fetchDwellingFacilities(),
         ]);
         if (!isMounted) {
           return;
@@ -128,6 +139,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         setAllItems(nextAllItems);
         setMaterials(materialResponse.items ?? []);
         setAlchemyRecipes(alchemyRecipeResponse.items ?? []);
+        setDwellingFacilities(dwellingResponse.items ?? []);
         setRealmOptions(mapRealmOptions(realmsResponse.items ?? []));
         setEnemyTemplateOptions(
           (enemyResponse.items ?? []).map((enemy) => ({
@@ -613,6 +625,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              dwellingFacilityOptions={dwellingFacilityOptions}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
               sections={["identity"]}
@@ -622,6 +635,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              dwellingFacilityOptions={dwellingFacilityOptions}
               drawChanceEstimate={drawChanceEstimate}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
@@ -632,6 +646,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
             <EventTemplateForm
               isNew={isDraft}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              dwellingFacilityOptions={dwellingFacilityOptions}
               eventOptions={linkedEventOptions}
               onChange={handleTemplateChange}
               realmOptions={realmOptions}
@@ -958,6 +973,7 @@ function createEmptyTemplate(eventId = "", eventType = "cultivation"): EventTemp
     required_equipment_tags: [],
     required_resources: {},
     required_completed_event_ids: [],
+    required_dwelling_facility_levels: {},
     required_rebirth_count: 0,
     required_karma_min: null,
     required_luck_min: 0,
@@ -1045,6 +1061,7 @@ function normalizeTemplate(template: EventTemplateInput): EventTemplateInput {
     required_equipment_tags: template.required_equipment_tags ?? [],
     required_resources: template.required_resources ?? {},
     required_completed_event_ids: template.required_completed_event_ids ?? [],
+    required_dwelling_facility_levels: template.required_dwelling_facility_levels ?? {},
     required_alchemy_level: Math.max(0, Number(template.required_alchemy_level ?? 0) || 0),
     excluded_learned_alchemy_recipe_ids: template.excluded_learned_alchemy_recipe_ids ?? [],
     flags: template.flags ?? [],

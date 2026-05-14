@@ -397,7 +397,7 @@
     "realm_min": "qi_refining_early",
     "realm_max": "qi_refining_peak",
     "region": "",
-    "weight": 1,
+    "weight": 25,
     "is_repeatable": true,
     "cooldown_rounds": 0,
     "max_trigger_per_run": 999999,
@@ -436,7 +436,7 @@
     "realm_min": "qi_refining_early",
     "realm_max": "qi_refining_peak",
     "region": "",
-    "weight": 1,
+    "weight": 20,
     "is_repeatable": true,
     "cooldown_rounds": 0,
     "max_trigger_per_run": 999999,
@@ -448,6 +448,9 @@
     "required_completed_event_ids": [
       "evt_alchemy_1"
     ],
+    "required_dwelling_facility_levels": {
+      "spirit_field": 2
+    },
     "required_rebirth_count": 0,
     "required_karma_min": null,
     "required_luck_min": 0,

@@ -227,6 +227,9 @@ class EventService:
             and self._meets_required_completed_events(
                 run, template.required_completed_event_ids
             )
+            and self._meets_required_dwelling_facility_levels(
+                run, template.required_dwelling_facility_levels
+            )
             and rebirth_count >= template.required_rebirth_count
             and self._meets_required_karma(run, template.required_karma_min)
             and run.character.luck >= template.required_luck_min
@@ -235,6 +238,7 @@ class EventService:
                 run, template.excluded_learned_alchemy_recipe_ids
             )
             and self._is_next_event_unlocked(template, run)
+            and self._is_material_unlock_event_relevant(template, run)
             and self._is_template_repeatable(template, run)
             and self._is_template_off_cooldown(template, run)
         )
@@ -316,6 +320,22 @@ class EventService:
             for event_id in required_completed_event_ids
         )
 
+    def _meets_required_dwelling_facility_levels(
+        self,
+        run: RunState,
+        required_facility_levels: dict[str, int],
+    ) -> bool:
+        if not required_facility_levels:
+            return True
+        facility_levels = {
+            facility.facility_id: int(facility.level or 0)
+            for facility in run.dwelling_facilities
+        }
+        return all(
+            facility_levels.get(facility_id, 0) >= int(required_level)
+            for facility_id, required_level in required_facility_levels.items()
+        )
+
     def _excludes_learned_alchemy_recipes(
         self,
         run: RunState,
@@ -332,6 +352,30 @@ class EventService:
         if template.event_id not in self._next_event_ids:
             return True
         return template.event_id in set(run.unlocked_event_ids)
+
+    def _is_material_unlock_event_relevant(
+        self,
+        template: EventTemplateConfig,
+        run: RunState,
+    ) -> bool:
+        unlockable_material_ids = self._collect_unlockable_material_ids(template)
+        if not unlockable_material_ids:
+            return True
+        return not unlockable_material_ids.issubset(set(run.unlocked_material_ids))
+
+    def _collect_unlockable_material_ids(
+        self,
+        template: EventTemplateConfig,
+    ) -> set[str]:
+        material_ids: set[str] = set()
+        for option in self._registry.get_options_for_event(template.event_id):
+            for payload in (option.result_on_success, option.result_on_failure):
+                material_ids.update(
+                    material_id
+                    for material_id in getattr(payload, "unlocked_material_ids", [])
+                    if material_id
+                )
+        return material_ids
 
     def _is_template_repeatable(
         self,

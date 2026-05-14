@@ -61,7 +61,7 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
                     },
                     statuses_add=["focused"],
                     techniques_add=["cloud_step"],
-                    learned_alchemy_recipe_ids=["ju_ling_dan"],
+                    learned_alchemy_recipe_ids=["ning_qi_dan"],
                     unlocked_material_ids=["herb_julingzhi"],
                     alchemy_mastery_exp_delta=12,
                     equipment_add=["jade_token"],
@@ -89,11 +89,11 @@ def test_resolve_event_applies_success_payload_and_summary() -> None:
     assert resolved.character.rebirth_progress == 2
     assert resolved.character.statuses == ["focused"]
     assert resolved.character.techniques == ["cloud_step"]
-    assert resolved.alchemy_state.learned_recipe_ids == ["ju_ling_dan"]
+    assert resolved.alchemy_state.learned_recipe_ids == ["ning_qi_dan"]
     assert resolved.unlocked_material_ids == ["herb_julingzhi"]
     assert resolved.alchemy_state.mastery_exp == 12
     assert resolved.character.equipment_tags == ["jade_token"]
-    assert resolved.result_summary == "success log"
+    assert resolved.result_summary == "success log 你学会了凝气丹丹方。 你解锁了聚灵芝材料。"
 
 
 def test_direct_resolution_mode_always_uses_single_result_without_formula() -> None:

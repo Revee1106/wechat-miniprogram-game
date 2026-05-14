@@ -52,6 +52,64 @@ test("requirements section starts with only add button when event has no precond
   expect(screen.getByRole("button", { name: "新增资源" })).toBeInTheDocument();
 });
 
+test("requirements section can add dwelling facility minimum level", () => {
+  const onChange = vi.fn();
+
+  render(
+    <EventTemplateForm
+      isNew
+      dwellingFacilityOptions={[
+        { value: "spirit_field", label: "灵田 / spirit_field" },
+        { value: "alchemy_room", label: "炼丹房 / alchemy_room" },
+      ]}
+      onChange={onChange}
+      sections={["requirements"]}
+      template={{
+        event_id: "evt_facility_gate",
+        event_name: "Facility Gate",
+        event_type: "cultivation",
+        outcome_type: "cultivation",
+        risk_level: "normal",
+        trigger_sources: ["global"],
+        choice_pattern: "binary_choice",
+        title_text: "",
+        body_text: "",
+        weight: 1,
+        is_repeatable: true,
+        option_ids: [],
+        required_resources: {},
+        required_statuses: [],
+        excluded_statuses: [],
+        required_techniques: [],
+        required_equipment_tags: [],
+        required_rebirth_count: 0,
+        required_completed_event_ids: [],
+        required_dwelling_facility_levels: {},
+        required_karma_min: null,
+        required_luck_min: 0,
+        flags: [],
+      }}
+    />
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "新增前置条件" }));
+  expect(screen.getByRole("option", { name: "洞府设施最低等级" })).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("前置条件类型"), {
+    target: { value: "required_dwelling_facility_levels" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "确认新增" }));
+
+  expect(onChange).toHaveBeenCalledWith("required_dwelling_facility_levels", {});
+  expect(screen.getByText("当前还没有洞府设施等级前置。")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "新增设施等级" }));
+
+  expect(onChange).toHaveBeenLastCalledWith("required_dwelling_facility_levels", {
+    spirit_field: 1,
+  });
+});
+
 test("trigger section uses realm dropdowns for min and max realm", () => {
   render(
     <EventTemplateForm

@@ -34,6 +34,50 @@ def test_build_and_upgrade_dwelling_facility_updates_state_and_costs() -> None:
     assert facility.monthly_resource_yields == {"basic_herb": 3}
 
 
+def test_dwelling_facility_action_flags_explain_resource_shortage() -> None:
+    service = RunService()
+    run = service.create_run(player_id="dwelling-action-flags")
+    run.resources.spirit_stone = 0
+
+    hydrated = service.get_run(run.run_id)
+    spirit_field = next(
+        item for item in hydrated.dwelling_facilities if item.facility_id == "spirit_field"
+    )
+
+    assert spirit_field.can_build is False
+    assert spirit_field.build_disabled_reason == "资源不足"
+    assert spirit_field.can_upgrade is False
+    assert spirit_field.upgrade_disabled_reason == "尚未建造"
+
+    hydrated.resources.spirit_stone = 200
+    refreshed = service.get_run(run.run_id)
+    spirit_field = next(
+        item for item in refreshed.dwelling_facilities if item.facility_id == "spirit_field"
+    )
+
+    assert spirit_field.can_build is True
+    assert spirit_field.build_disabled_reason is None
+
+    built = service.build_dwelling_facility(run.run_id, "spirit_field")
+    spirit_field = next(
+        item for item in built.dwelling_facilities if item.facility_id == "spirit_field"
+    )
+
+    assert spirit_field.can_build is False
+    assert spirit_field.build_disabled_reason == "已建造"
+    assert spirit_field.can_upgrade is True
+    assert spirit_field.upgrade_disabled_reason is None
+
+    built.resources.spirit_stone = 0
+    refreshed = service.get_run(run.run_id)
+    spirit_field = next(
+        item for item in refreshed.dwelling_facilities if item.facility_id == "spirit_field"
+    )
+
+    assert spirit_field.can_upgrade is False
+    assert spirit_field.upgrade_disabled_reason == "资源不足"
+
+
 def test_advance_time_settles_dwelling_outputs_before_event_selection() -> None:
     service = RunService()
     run = service.create_run(player_id="p1")

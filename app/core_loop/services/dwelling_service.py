@@ -84,7 +84,7 @@ class DwellingService:
                 facility_type=spec.facility_type,
                 summary=spec.summary,
             )
-            self._hydrate_facility_state(facility, spec)
+            self._hydrate_facility_state(facility, spec, run)
             hydrated_facilities.append(facility)
 
         run.dwelling_facilities = hydrated_facilities
@@ -103,7 +103,7 @@ class DwellingService:
         self._spend_cost(run, spec.build_cost)
         facility.level = 1
         facility.status = self._active_status_for_level(facility.level, spec.max_level)
-        self._hydrate_facility_state(facility, spec)
+        self._hydrate_facility_state(facility, spec, run)
         run.dwelling_level = self._calculate_dwelling_level(run)
 
     def upgrade_facility(self, run: RunState, facility_id: str) -> None:
@@ -126,7 +126,7 @@ class DwellingService:
         self._spend_cost(run, next_level_spec.entry_cost)
         facility.level += 1
         facility.status = self._active_status_for_level(facility.level, spec.max_level)
-        self._hydrate_facility_state(facility, spec)
+        self._hydrate_facility_state(facility, spec, run)
         run.dwelling_level = self._calculate_dwelling_level(run)
 
     def settle_month(self, run: RunState) -> DwellingSettlement:
@@ -252,6 +252,7 @@ class DwellingService:
         self,
         facility: DwellingFacilityState,
         spec: DwellingFacilitySpec,
+        run: RunState,
     ) -> None:
         facility.display_name = spec.display_name
         facility.facility_type = spec.facility_type
@@ -260,6 +261,10 @@ class DwellingService:
         facility.build_cost = spec.build_cost
         facility.function_unlock_text = spec.function_unlock_text
         facility.is_function_unlocked = facility.level > 0 and bool(spec.function_unlock_text)
+        facility.can_build = False
+        facility.can_upgrade = False
+        facility.build_disabled_reason = None
+        facility.upgrade_disabled_reason = None
 
         if facility.level <= 0:
             facility.status = "unbuilt"
@@ -267,6 +272,9 @@ class DwellingService:
             facility.maintenance_cost = {}
             facility.monthly_resource_yields = {}
             facility.monthly_cultivation_exp_gain = 0
+            facility.can_build = self._can_afford(run, spec.build_cost)
+            facility.build_disabled_reason = None if facility.can_build else "资源不足"
+            facility.upgrade_disabled_reason = "尚未建造"
             return
 
         level_spec = spec.levels[facility.level]
@@ -277,6 +285,12 @@ class DwellingService:
         facility.next_upgrade_cost = (
             dict(next_level_spec.entry_cost) if next_level_spec is not None else {}
         )
+        facility.build_disabled_reason = "已建造"
+        if next_level_spec is None:
+            facility.upgrade_disabled_reason = "已达最高等级"
+        else:
+            facility.can_upgrade = self._can_afford(run, next_level_spec.entry_cost)
+            facility.upgrade_disabled_reason = None if facility.can_upgrade else "资源不足"
         if facility.status != "stalled":
             facility.status = self._active_status_for_level(facility.level, spec.max_level)
 

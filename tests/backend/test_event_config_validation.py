@@ -42,6 +42,7 @@ def test_validation_accepts_alchemy_event_fields() -> None:
                 "weight": 1,
                 "is_repeatable": False,
                 "required_alchemy_level": 1,
+                "required_dwelling_facility_levels": {"alchemy_room": 1},
                 "excluded_learned_alchemy_recipe_ids": ["ning_qi_dan"],
                 "required_completed_event_ids": [],
                 "option_ids": ["opt_learn_recipe"],
@@ -80,6 +81,7 @@ def test_validation_rejects_invalid_event_prerequisite_fields() -> None:
                 "weight": 1,
                 "is_repeatable": True,
                 "required_completed_event_ids": ["evt_missing"],
+                "required_dwelling_facility_levels": {"spirit_field": 0},
                 "excluded_learned_alchemy_recipe_ids": [123],
                 "option_ids": ["opt_unlock"],
             }
@@ -97,6 +99,7 @@ def test_validation_rejects_invalid_event_prerequisite_fields() -> None:
 
     assert result.is_valid is False
     assert any("required_completed_event_id" in error for error in result.errors)
+    assert any("required_dwelling_facility_levels" in error for error in result.errors)
     assert any("excluded_learned_alchemy_recipe_ids" in error for error in result.errors)
 
 

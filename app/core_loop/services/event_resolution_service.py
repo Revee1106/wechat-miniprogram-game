@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from app.admin.repositories.alchemy_config_repository import AlchemyConfigRepository
+from app.admin.repositories.material_config_repository import MaterialConfigRepository
 from app.core_loop.realm_config import resolve_realm_key
 from app.core_loop.event_config import EventRegistry, load_event_registry
 from app.core_loop.seeds import get_realm_configs
@@ -32,6 +34,8 @@ class EventResolutionService:
         registry: EventRegistry | None = None,
         realm_configs: list[RealmConfig] | None = None,
         economy_base_path: str | None = None,
+        alchemy_config_base_path: str | None = None,
+        material_config_base_path: str | None = None,
         enemy_templates: dict[str, dict[str, object]] | None = None,
     ) -> None:
         self._registry = registry or load_event_registry()
@@ -47,6 +51,8 @@ class EventResolutionService:
             realm_configs=list(self._realm_configs.values())
         )
         self._run_resource_service = RunResourceService(base_path=economy_base_path)
+        self._recipe_names = self._load_recipe_names(alchemy_config_base_path)
+        self._material_names = self._load_material_names(material_config_base_path)
 
     def resolve(
         self,
@@ -121,6 +127,8 @@ class EventResolutionService:
             else option_config.log_text_failure
         )
 
+        learned_recipe_ids_before = set(run.alchemy_state.learned_recipe_ids)
+        unlocked_material_ids_before = set(run.unlocked_material_ids)
         self._apply_payload(run, payload)
         self._apply_time_cost(run, option_config.time_cost_months)
         run.event_trigger_counts[template.event_id] = (
@@ -141,7 +149,12 @@ class EventResolutionService:
             option_config.option_text,
         )
         run.result_summary = self._build_result_summary(
-            base_summary,
+            self._append_payload_unlock_summary(
+                base_summary,
+                payload,
+                learned_recipe_ids_before=learned_recipe_ids_before,
+                unlocked_material_ids_before=unlocked_material_ids_before,
+            ),
             option_config.time_cost_months,
         )
         run.last_event_resolution = EventResolutionLog(
@@ -522,6 +535,8 @@ class EventResolutionService:
             run.character.hp_max,
             max(0, int(battle.player.hp_current)),
         )
+        learned_recipe_ids_before = set(run.alchemy_state.learned_recipe_ids)
+        unlocked_material_ids_before = set(run.unlocked_material_ids)
         self._apply_payload(run, payload)
         self._apply_time_cost(run, option_config.time_cost_months)
         run.event_trigger_counts[template.event_id] = (
@@ -540,7 +555,15 @@ class EventResolutionService:
         run.result_summary = (
             base_summary
             if outcome == "flee_success"
-            else self._build_result_summary(base_summary, option_config.time_cost_months)
+            else self._build_result_summary(
+                self._append_payload_unlock_summary(
+                    base_summary,
+                    payload,
+                    learned_recipe_ids_before=learned_recipe_ids_before,
+                    unlocked_material_ids_before=unlocked_material_ids_before,
+                ),
+                option_config.time_cost_months,
+            )
         )
         run.last_event_resolution = EventResolutionLog(
             event_id=template.event_id,
@@ -714,6 +737,64 @@ class EventResolutionService:
         if time_cost_months <= 0:
             return base_summary
         return f"{base_summary}（额外耗时{time_cost_months}个月）"
+
+    def _append_payload_unlock_summary(
+        self,
+        base_summary: str,
+        payload: EventResultPayload,
+        *,
+        learned_recipe_ids_before: set[str],
+        unlocked_material_ids_before: set[str],
+    ) -> str:
+        messages: list[str] = []
+        learned_recipe_ids = [
+            recipe_id
+            for recipe_id in payload.learned_alchemy_recipe_ids
+            if recipe_id and recipe_id not in learned_recipe_ids_before
+        ]
+        unlocked_material_ids = [
+            material_id
+            for material_id in payload.unlocked_material_ids
+            if material_id and material_id not in unlocked_material_ids_before
+        ]
+        if learned_recipe_ids:
+            messages.append(
+                f"你学会了{self._format_names(learned_recipe_ids, self._recipe_names)}丹方。"
+            )
+        if unlocked_material_ids:
+            messages.append(
+                f"你解锁了{self._format_names(unlocked_material_ids, self._material_names)}材料。"
+            )
+        if not messages:
+            return base_summary
+        return " ".join([base_summary, *messages])
+
+    def _format_names(self, ids: list[str], display_names: dict[str, str]) -> str:
+        return "、".join(display_names.get(item_id, item_id) for item_id in ids)
+
+    def _load_recipe_names(self, base_path: str | None) -> dict[str, str]:
+        try:
+            recipes = AlchemyConfigRepository(base_path=base_path).load().get("recipes", [])
+        except Exception:
+            return {}
+        return {
+            str(recipe.get("recipe_id", "")): str(recipe.get("display_name", "")).strip()
+            or str(recipe.get("recipe_id", ""))
+            for recipe in recipes
+            if recipe.get("recipe_id")
+        }
+
+    def _load_material_names(self, base_path: str | None) -> dict[str, str]:
+        try:
+            materials = MaterialConfigRepository(base_path=base_path).load().get("items", [])
+        except Exception:
+            return {}
+        return {
+            str(material.get("material_id", "")): str(material.get("display_name", "")).strip()
+            or str(material.get("material_id", ""))
+            for material in materials
+            if material.get("material_id")
+        }
 
     def _merge_tags(
         self,

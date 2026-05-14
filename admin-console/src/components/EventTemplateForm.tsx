@@ -31,6 +31,7 @@ type EventTemplateFormProps = {
   realmOptions?: Array<{ value: string; label: string }>;
   eventOptions?: ResourceOption[];
   alchemyRecipeOptions?: ResourceOption[];
+  dwellingFacilityOptions?: ResourceOption[];
   resourceOptions?: ResourceOption[];
   drawChanceEstimate?: EventDrawChanceEstimate;
   onChange: <K extends keyof EventTemplateInput>(
@@ -46,6 +47,7 @@ export function EventTemplateForm({
   realmOptions = [],
   eventOptions = [],
   alchemyRecipeOptions = [],
+  dwellingFacilityOptions = [],
   resourceOptions,
   drawChanceEstimate,
   onChange,
@@ -178,6 +180,26 @@ export function EventTemplateForm({
           options={eventOptions}
           value={template.required_completed_event_ids ?? []}
           onChange={(value) => onChange("required_completed_event_ids", value)}
+        />
+      ),
+    },
+    {
+      key: "required_dwelling_facility_levels",
+      label: "洞府设施最低等级",
+      isActive: Object.keys(template.required_dwelling_facility_levels ?? {}).length > 0,
+      onActivate: () => onChange("required_dwelling_facility_levels", {}),
+      onReset: () => onChange("required_dwelling_facility_levels", {}),
+      render: () => (
+        <ResourceRecordEditor
+          addLabel="新增设施等级"
+          amountLabel="最低等级"
+          emptyMessage="当前还没有洞府设施等级前置。"
+          hideLabel
+          keyLabel="洞府设施"
+          label="洞府设施最低等级"
+          onChange={(value) => onChange("required_dwelling_facility_levels", value)}
+          resourceOptions={dwellingFacilityOptions}
+          value={template.required_dwelling_facility_levels}
         />
       ),
     },

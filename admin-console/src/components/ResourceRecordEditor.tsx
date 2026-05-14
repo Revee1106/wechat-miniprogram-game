@@ -9,6 +9,8 @@ type ResourceRecordEditorProps = {
   hint?: string;
   hideLabel?: boolean;
   resourceOptions?: ResourceOption[];
+  keyLabel?: string;
+  amountLabel?: string;
 };
 
 export function ResourceRecordEditor({
@@ -20,6 +22,8 @@ export function ResourceRecordEditor({
   hint,
   hideLabel = false,
   resourceOptions = defaultResourceOptions,
+  keyLabel = "资源类型",
+  amountLabel = "数量",
 }: ResourceRecordEditorProps) {
   const configuredOptions = mergeResourceOptions(resourceOptions, value ?? {});
   const entries = Object.entries(sortResourceRecord(value ?? {}));
@@ -81,9 +85,9 @@ export function ResourceRecordEditor({
           entries.map(([resourceKey, amount], index) => (
             <div key={`${resourceKey}-${index}`} className="resource-row">
               <label className="field">
-                <span className="field__hint">资源类型</span>
+                <span className="field__hint">{keyLabel}</span>
                 <select
-                  aria-label={`${label}-资源类型-${index + 1}`}
+                  aria-label={`${label}-${keyLabel}-${index + 1}`}
                   value={resourceKey}
                   onChange={(event) => handleKeyChange(index, event.target.value)}
                 >
@@ -100,9 +104,9 @@ export function ResourceRecordEditor({
               </label>
 
               <label className="field">
-                <span className="field__hint">数量</span>
+                <span className="field__hint">{amountLabel}</span>
                 <input
-                  aria-label={`${label}-数量-${index + 1}`}
+                  aria-label={`${label}-${amountLabel}-${index + 1}`}
                   type="number"
                   value={amount}
                   onChange={(event) => handleAmountChange(index, event.target.value)}

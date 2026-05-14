@@ -42,6 +42,7 @@ export type EventTemplateInput = {
   required_equipment_tags?: string[];
   required_resources?: Record<string, number>;
   required_completed_event_ids?: string[];
+  required_dwelling_facility_levels?: Record<string, number>;
   required_rebirth_count?: number;
   required_karma_min?: number | null;
   required_luck_min?: number;

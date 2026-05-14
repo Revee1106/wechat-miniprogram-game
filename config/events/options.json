@@ -753,7 +753,7 @@
     },
     "result_on_failure": {},
     "next_event_id": null,
-    "log_text_success": "你将几张残页小心摊开，反复比对焦痕与药名。许多字句已不可辨认，但其中一段关于药性调和的记载仍算完整。\n\n你照着残页推演许久，终于理清其中关窍。",
+    "log_text_success": "你照着残页推演许久，终于理清其中关窍。",
     "log_text_failure": "",
     "event_id": "evt_alchemy_1"
   },

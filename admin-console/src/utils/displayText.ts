@@ -69,6 +69,7 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   required_mastery_exp: "所需熟练度",
   required_alchemy_level: "所需丹道等级",
   required_completed_event_ids: "需要已完成事件",
+  required_dwelling_facility_levels: "洞府设施最低等级",
   excluded_learned_alchemy_recipe_ids: "排除已学丹方",
   duration_months: "炼制时长（月）",
   success_mastery_exp_gain: "成功熟练度",

@@ -115,6 +115,7 @@ def test_build_and_upgrade_dwelling_facility_round_trip() -> None:
     run_id = create_response.json()["run_id"]
     run = run_service.get_run(run_id)
     run.resources.spirit_stone = 300
+    create_facility = create_response.json()["dwelling_facilities"][0]
 
     build_response = client.post(
         "/api/run/dwelling/build",
@@ -126,10 +127,14 @@ def test_build_and_upgrade_dwelling_facility_round_trip() -> None:
     )
 
     assert build_response.status_code == 200
+    assert create_facility["can_build"] is True
+    assert create_facility["build_disabled_reason"] is None
     assert (
         build_response.json()["dwelling_facilities"][0]["facility_id"] == "spirit_field"
     )
     assert build_response.json()["dwelling_facilities"][0]["level"] == 1
+    assert build_response.json()["dwelling_facilities"][0]["can_build"] is False
+    assert build_response.json()["dwelling_facilities"][0]["build_disabled_reason"] == "已建造"
     assert upgrade_response.status_code == 200
     assert upgrade_response.json()["dwelling_facilities"][0]["level"] == 2
 
