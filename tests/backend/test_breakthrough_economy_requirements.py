@@ -37,6 +37,25 @@ def test_breakthrough_requirement_shape_supports_future_material_keys() -> None:
     assert result.success is True
 
 
+def test_breakthrough_success_raises_character_hp_max_to_target_realm_value() -> None:
+    current_realm, next_realm = _build_realm_chain(target_hp_max=68)
+    run = _build_run()
+    run.character.cultivation_exp = 100
+    run.character.hp_current = 50
+    run.character.hp_max = 60
+    run.resources.spirit_stone = 20
+
+    result = ProgressionService(
+        DwellingService(),
+        realm_configs=[current_realm, next_realm],
+        rng=lambda: 0.0,
+    ).try_breakthrough(run)
+
+    assert result.success is True
+    assert result.character.hp_max == 68
+    assert result.character.hp_current == 58
+
+
 def test_breakthrough_failure_applies_target_realm_penalty_to_cultivation() -> None:
     current_realm, next_realm = _build_realm_chain(
         target_success_rate=0.1,
@@ -64,6 +83,7 @@ def _build_realm_chain(
     required_materials: dict[str, int] | None = None,
     target_success_rate: float = 0.95,
     failure_penalty: dict[str, dict[str, int]] | None = None,
+    target_hp_max: int = 0,
 ) -> tuple[RealmConfig, RealmConfig]:
     return (
         RealmConfig(
@@ -87,6 +107,7 @@ def _build_realm_chain(
             base_success_rate=target_success_rate,
             required_exp=100,
             required_spirit_stone=20,
+            hp_max=target_hp_max,
             required_materials=required_materials or {},
             failure_penalty=failure_penalty or {},
         ),

@@ -84,6 +84,7 @@ class ProgressionService:
                 run.character.lifespan_max,
                 run.character.lifespan_current + target_realm.lifespan_bonus,
             )
+            self._apply_target_realm_hp(run, target_realm)
             run.result_summary = (
                 f"breakthrough success: {current_realm.display_name} -> {target_realm.display_name}"
             )
@@ -122,4 +123,16 @@ class ProgressionService:
         return sum(
             max(0, int(config.required_exp))
             for config in self._realm_configs[: target_index + 1]
+        )
+
+    def _apply_target_realm_hp(self, run: RunState, target_realm: RealmConfig) -> None:
+        target_hp_max = max(0, int(target_realm.hp_max))
+        if target_hp_max <= run.character.hp_max:
+            return
+
+        hp_delta = target_hp_max - run.character.hp_max
+        run.character.hp_max = target_hp_max
+        run.character.hp_current = min(
+            run.character.hp_max,
+            run.character.hp_current + hp_delta,
         )

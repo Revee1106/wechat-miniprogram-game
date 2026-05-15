@@ -33,12 +33,17 @@ class CombatStatService:
             realm_label=realm_config.display_name,
             hp_current=hp_current,
             hp_max=hp_max,
-            attack=8 + realm_config.order_index + progress_bonus + equipment_bonus["attack"],
-            defense=(
-                2
-                + realm_config.stage_index
+            attack=(
+                10
+                + realm_config.order_index * 2
                 + progress_bonus
-                + realm_config.order_index // 5
+                + equipment_bonus["attack"]
+            ),
+            defense=(
+                3
+                + realm_config.stage_index * 2
+                + progress_bonus
+                + realm_config.order_index // 4
                 + equipment_bonus["defense"]
             ),
             speed=(
@@ -74,10 +79,7 @@ class CombatStatService:
             0,
             run.character.cultivation_exp - self._get_stage_entry_exp(current_index),
         )
-        progress_bonus = local_progress // 15
-        if self._get_stage_progress_target(current_index) >= 180:
-            return min(2, progress_bonus)
-        return min(3, progress_bonus)
+        return min(6, local_progress // 30)
 
     def _get_stage_entry_exp(self, current_index: int) -> int:
         return sum(

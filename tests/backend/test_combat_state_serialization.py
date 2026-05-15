@@ -99,9 +99,9 @@ def test_serialize_run_state_includes_computed_character_combat_stats() -> None:
 
     assert serialized["character"]["hp_current"] == 100
     assert serialized["character"]["hp_max"] == 100
-    assert serialized["character"]["attack"] == 11
-    assert serialized["character"]["defense"] == 5
-    assert serialized["character"]["speed"] == 8
+    assert serialized["character"]["attack"] == 13
+    assert serialized["character"]["defense"] == 6
+    assert serialized["character"]["speed"] == 7
 
 
 def test_serialize_breakthrough_result_includes_computed_character_combat_stats() -> None:

@@ -8,6 +8,7 @@
     "base_success_rate": 0,
     "required_cultivation_exp": 0,
     "required_spirit_stone": 0,
+    "hp_max": 60,
     "lifespan_bonus": 0,
     "failure_penalty": {},
     "is_enabled": true,
@@ -23,6 +24,7 @@
     "base_success_rate": 0.8,
     "required_cultivation_exp": 180,
     "required_spirit_stone": 15,
+    "hp_max": 68,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
@@ -42,6 +44,7 @@
     "base_success_rate": 0.8,
     "required_cultivation_exp": 260,
     "required_spirit_stone": 20,
+    "hp_max": 78,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
@@ -61,6 +64,7 @@
     "base_success_rate": 0.7,
     "required_cultivation_exp": 320,
     "required_spirit_stone": 20,
+    "hp_max": 90,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
@@ -80,6 +84,7 @@
     "base_success_rate": 0.6,
     "required_cultivation_exp": 440,
     "required_spirit_stone": 80,
+    "hp_max": 120,
     "lifespan_bonus": 360,
     "failure_penalty": {
       "character": {
@@ -99,6 +104,7 @@
     "base_success_rate": 1,
     "required_cultivation_exp": 180,
     "required_spirit_stone": 35,
+    "hp_max": 140,
     "lifespan_bonus": 0,
     "failure_penalty": {},
     "is_enabled": true,
@@ -114,6 +120,7 @@
     "base_success_rate": 0.95,
     "required_cultivation_exp": 260,
     "required_spirit_stone": 45,
+    "hp_max": 160,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
@@ -133,6 +140,7 @@
     "base_success_rate": 0.9,
     "required_cultivation_exp": 360,
     "required_spirit_stone": 60,
+    "hp_max": 180,
     "lifespan_bonus": 0,
     "failure_penalty": {
       "character": {
@@ -152,6 +160,7 @@
     "base_success_rate": 0.55,
     "required_cultivation_exp": 700,
     "required_spirit_stone": 260,
+    "hp_max": 220,
     "lifespan_bonus": 720,
     "failure_penalty": {
       "character": {
@@ -171,6 +180,7 @@
     "base_success_rate": 0.58,
     "required_cultivation_exp": 2200,
     "required_spirit_stone": 180,
+    "hp_max": 250,
     "lifespan_bonus": 24,
     "failure_penalty": {},
     "is_enabled": true,
@@ -186,6 +196,7 @@
     "base_success_rate": 0.52,
     "required_cultivation_exp": 3000,
     "required_spirit_stone": 220,
+    "hp_max": 280,
     "lifespan_bonus": 24,
     "failure_penalty": {},
     "is_enabled": true,
@@ -201,6 +212,7 @@
     "base_success_rate": 0.46,
     "required_cultivation_exp": 3900,
     "required_spirit_stone": 260,
+    "hp_max": 320,
     "lifespan_bonus": 24,
     "failure_penalty": {},
     "is_enabled": true,
@@ -216,6 +228,7 @@
     "base_success_rate": 0.4,
     "required_cultivation_exp": 5000,
     "required_spirit_stone": 300,
+    "hp_max": 380,
     "lifespan_bonus": 40,
     "failure_penalty": {},
     "is_enabled": true,
@@ -231,6 +244,7 @@
     "base_success_rate": 0.38,
     "required_cultivation_exp": 6500,
     "required_spirit_stone": 360,
+    "hp_max": 430,
     "lifespan_bonus": 40,
     "failure_penalty": {},
     "is_enabled": true,
@@ -246,6 +260,7 @@
     "base_success_rate": 0.34,
     "required_cultivation_exp": 8000,
     "required_spirit_stone": 420,
+    "hp_max": 480,
     "lifespan_bonus": 40,
     "failure_penalty": {},
     "is_enabled": true,
@@ -261,6 +276,7 @@
     "base_success_rate": 0.3,
     "required_cultivation_exp": 9800,
     "required_spirit_stone": 480,
+    "hp_max": 540,
     "lifespan_bonus": 40,
     "failure_penalty": {},
     "is_enabled": true,

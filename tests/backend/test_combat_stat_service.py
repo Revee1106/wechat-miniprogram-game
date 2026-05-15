@@ -55,9 +55,9 @@ def test_build_player_combat_state_uses_realm_progress_and_hp() -> None:
     assert state.realm_label == "炼气初期"
     assert state.hp_current == 88
     assert state.hp_max == 100
-    assert state.attack == 12
+    assert state.attack == 13
     assert state.defense == 6
-    assert state.speed == 8
+    assert state.speed == 7
 
 
 def test_build_player_combat_state_uses_stage_local_progress_for_later_realms() -> None:
@@ -188,12 +188,12 @@ def test_build_player_combat_state_uses_stage_local_progress_for_later_realms() 
     state = service.build_player_state(run)
 
     assert state.realm_label == "筑基大圆满"
-    assert state.attack == 18
-    assert state.defense == 9
-    assert state.speed == 12
+    assert state.attack == 32
+    assert state.defense == 19
+    assert state.speed == 14
 
 
-def test_build_player_combat_state_caps_later_realm_progress_bonus() -> None:
+def test_build_player_combat_state_caps_progress_bonus_at_six() -> None:
     service = CombatStatService(
         realm_configs=[
             RealmConfig(
@@ -336,9 +336,9 @@ def test_build_player_combat_state_caps_later_realm_progress_bonus() -> None:
     low_progress_state = service.build_player_state(low_progress_run)
     high_progress_state = service.build_player_state(high_progress_run)
 
-    assert high_progress_state.attack - low_progress_state.attack == 2
-    assert high_progress_state.defense - low_progress_state.defense == 2
-    assert high_progress_state.speed - low_progress_state.speed == 1
+    assert high_progress_state.attack - low_progress_state.attack == 6
+    assert high_progress_state.defense - low_progress_state.defense == 6
+    assert high_progress_state.speed - low_progress_state.speed == 3
 
 
 def test_build_player_combat_state_rejects_unknown_realm() -> None:

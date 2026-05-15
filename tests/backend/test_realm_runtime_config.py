@@ -3,6 +3,7 @@ from shutil import rmtree
 from uuid import uuid4
 
 from app.admin.repositories.realm_config_repository import RealmConfigRepository
+from app.core_loop.repository_state import build_initial_run
 from app.core_loop.realm_config import load_realm_configs, resolve_realm_key
 from app.core_loop.seeds import get_realm_configs
 
@@ -99,6 +100,7 @@ def test_runtime_loader_maps_config_fields_to_realm_config() -> None:
                     "base_success_rate": 0.9,
                     "required_cultivation_exp": 200,
                     "required_spirit_stone": 30,
+                    "hp_max": 90,
                     "lifespan_bonus": 6,
                     "failure_penalty": {"character": {"cultivation_exp": -30}},
                     "is_enabled": True,
@@ -118,6 +120,7 @@ def test_runtime_loader_maps_config_fields_to_realm_config() -> None:
     assert realm.order_index == 2
     assert realm.required_exp == 200
     assert realm.required_spirit_stone == 30
+    assert realm.hp_max == 90
     assert realm.lifespan_bonus == 6
     assert realm.base_success_rate == 0.9
     assert realm.failure_penalty == {"character": {"cultivation_exp": -30}}
@@ -161,6 +164,13 @@ def test_seed_realms_starts_with_qi_refining_chain() -> None:
         "qi_refining_late",
         "qi_refining_peak",
     ]
+
+
+def test_initial_run_uses_seed_realm_hp_max() -> None:
+    run = build_initial_run("run-realm-hp", "player-1")
+
+    assert run.character.hp_max == 60
+    assert run.character.hp_current == 60
 
 
 def test_resolve_realm_key_boundary_falls_back_to_available_major_realm_stage() -> None:

@@ -50,6 +50,16 @@ def test_enemy_config_repository_persists_enemy_templates() -> None:
     rmtree(base_path)
 
 
+def test_seed_enemy_config_includes_zhujidan_battle_templates() -> None:
+    payload = EnemyConfigRepository().load()
+    enemies = {item["enemy_id"]: item for item in payload["items"]}
+
+    assert enemies["enemy_herb_field_beast"]["enemy_hp"] == 55
+    assert enemies["enemy_herb_field_beast"]["enemy_attack"] == 16
+    assert enemies["enemy_zhujidan_xiexiu"]["enemy_hp"] == 85
+    assert enemies["enemy_zhujidan_xiexiu"]["enemy_attack"] == 22
+
+
 def _make_test_base_path(label: str) -> Path:
     base_path = Path.cwd() / ".pytest_tmp" / f"{label}-{uuid4().hex}"
     base_path.mkdir(parents=True, exist_ok=True)

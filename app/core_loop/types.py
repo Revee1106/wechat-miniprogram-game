@@ -38,6 +38,7 @@ class RealmConfig:
     base_success_rate: float
     required_exp: int
     required_spirit_stone: int
+    hp_max: int = 0
     base_cultivation_gain_per_advance: int = 0
     base_spirit_stone_cost_per_advance: int = 0
     required_materials: dict[str, int] = field(default_factory=dict)

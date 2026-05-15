@@ -66,6 +66,28 @@ def test_validation_collects_errors_for_non_numeric_string_fields() -> None:
     assert any("lifespan_bonus" in error for error in result.errors)
 
 
+def test_validation_rejects_negative_hp_max() -> None:
+    result = validate_realm_config(
+        realms=[
+            {
+                "key": "qi_refining_early",
+                "display_name": "Qi Refining Early",
+                "major_realm": "qi_refining",
+                "stage_index": 1,
+                "order_index": 1,
+                "base_success_rate": 0.85,
+                "required_cultivation_exp": 0,
+                "required_spirit_stone": 0,
+                "lifespan_bonus": 0,
+                "hp_max": -1,
+            }
+        ]
+    )
+
+    assert result.is_valid is False
+    assert any("hp_max" in error for error in result.errors)
+
+
 def test_validation_rejects_invalid_failure_penalty_shape() -> None:
     result = validate_realm_config(
         realms=[

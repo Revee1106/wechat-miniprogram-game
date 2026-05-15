@@ -36,6 +36,7 @@ def validate_realm_config(*, realms: list[dict[str, object]]) -> ConfigValidatio
             realm.get("base_spirit_stone_cost_per_advance", 0)
         )
         lifespan_bonus, lifespan_bonus_valid = _coerce_int(realm.get("lifespan_bonus"))
+        hp_max, hp_max_valid = _coerce_int(realm.get("hp_max", 0))
 
         if not display_name.strip():
             errors.append(f"realm '{key}' has empty display_name")
@@ -61,6 +62,8 @@ def validate_realm_config(*, realms: list[dict[str, object]]) -> ConfigValidatio
             errors.append(f"realm '{key}' has invalid base_spirit_stone_cost_per_advance")
         if not lifespan_bonus_valid or lifespan_bonus < 0:
             errors.append(f"realm '{key}' has invalid lifespan_bonus")
+        if not hp_max_valid or hp_max < 0:
+            errors.append(f"realm '{key}' has invalid hp_max")
         failure_penalty_error = _validate_failure_penalty(key, realm.get("failure_penalty"))
         if failure_penalty_error is not None:
             errors.append(failure_penalty_error)
