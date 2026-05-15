@@ -26,6 +26,8 @@ test("parses legacy payload strings into editor state", () => {
 
 test("builds compact structured payloads from editor state", () => {
   const payload = buildPayloadFromEditorState({
+    change_chance: 1,
+    change_chances: { "resources.spirit_stone": 0.5 },
     resources: { spirit_stone: 2 },
     cultivation_exp: 6,
     lifespan_delta: 0,
@@ -50,6 +52,7 @@ test("builds compact structured payloads from editor state", () => {
   });
 
   expect(payload).toEqual({
+    change_chances: { "resources.spirit_stone": 0.5 },
     resources: { spirit_stone: 2 },
     character: { cultivation_exp: 6 },
     alchemy_mastery_exp_delta: 8,
@@ -64,6 +67,7 @@ test("builds compact structured payloads from editor state", () => {
 
 test("parses progress counter deltas from structured payloads", () => {
   const state = parsePayloadEditorState({
+    change_chances: { "character.lifespan_delta": 0.5 },
     progress_counter_deltas: {
       "alchemy.ning_qi_dan_clue": 1,
       "alchemy.npc_lingyao_approval": 20,
@@ -74,6 +78,7 @@ test("parses progress counter deltas from structured payloads", () => {
     "alchemy.ning_qi_dan_clue": 1,
     "alchemy.npc_lingyao_approval": 20,
   });
+  expect(state.change_chances).toEqual({ "character.lifespan_delta": 0.5 });
 });
 
 test("normalizes structured resource payload aliases into canonical editor keys", () => {

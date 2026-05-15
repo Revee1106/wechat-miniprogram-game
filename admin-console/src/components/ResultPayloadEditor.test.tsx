@@ -266,6 +266,10 @@ test("edits progress counter deltas as an extra payload field", () => {
           labelPrefix="成功"
           onChange={setPayload}
           payload={payload}
+          progressCounterOptions={[
+            { value: "alchemy.ning_qi_dan_clue", label: "alchemy.ning_qi_dan_clue" },
+            { value: "alchemy.npc_lingyao_approval", label: "alchemy.npc_lingyao_approval" },
+          ]}
         />
         <pre data-testid="payload">{JSON.stringify(payload)}</pre>
       </>
@@ -277,11 +281,105 @@ test("edits progress counter deltas as an extra payload field", () => {
   fireEvent.change(screen.getByLabelText("成功新增附加变化"), {
     target: { value: "progress_counter_deltas" },
   });
-  fireEvent.change(screen.getByLabelText("成功进度变化"), {
-    target: { value: "alchemy.ning_qi_dan_clue:1" },
+  fireEvent.click(screen.getByRole("button", { name: "新增进度" }));
+  expect(screen.getByLabelText("成功进度变化进度项-1")).toHaveValue(
+    "alchemy.ning_qi_dan_clue"
+  );
+  fireEvent.change(screen.getByLabelText("成功进度变化数值-1"), {
+    target: { value: "3" },
   });
 
   expect(screen.getByTestId("payload").textContent).toContain(
-    "\"progress_counter_deltas\":{\"alchemy.ning_qi_dan_clue\":1}"
+    "\"progress_counter_deltas\":{\"alchemy.ning_qi_dan_clue\":3}"
   );
+});
+
+test("edits per-change chance for numeric and item deltas", () => {
+  function Harness() {
+    const [payload, setPayload] = useState<Record<string, unknown>>({
+      resources: { spirit_stone: 2 },
+    });
+
+    return (
+      <>
+        <ResultPayloadEditor
+          labelPrefix="结果"
+          onChange={setPayload}
+          payload={payload}
+        />
+        <pre data-testid="payload">{JSON.stringify(payload)}</pre>
+      </>
+    );
+  }
+
+  render(<Harness />);
+
+  fireEvent.change(screen.getByLabelText("结果物品变化概率-1"), {
+    target: { value: "0.25" },
+  });
+
+  expect(screen.getByTestId("payload").textContent).toContain(
+    "\"change_chances\":{\"resources.spirit_stone\":0.25}"
+  );
+});
+
+test("allows adding a new progress counter key when it is not in suggestions", () => {
+  function Harness() {
+    const [payload, setPayload] = useState<Record<string, unknown>>({});
+
+    return (
+      <>
+        <ResultPayloadEditor
+          labelPrefix="成功"
+          onChange={setPayload}
+          payload={payload}
+          progressCounterOptions={[]}
+        />
+        <pre data-testid="payload">{JSON.stringify(payload)}</pre>
+      </>
+    );
+  }
+
+  render(<Harness />);
+
+  fireEvent.change(screen.getByLabelText("成功新增附加变化"), {
+    target: { value: "progress_counter_deltas" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "新增进度" }));
+  const progressKeyInput = screen.getByLabelText("成功进度变化进度项-1");
+  fireEvent.change(progressKeyInput, {
+    target: { value: "a" },
+  });
+  expect(progressKeyInput).toHaveValue("a");
+  fireEvent.change(progressKeyInput, {
+    target: { value: "alchemy.custom_progress" },
+  });
+  fireEvent.change(screen.getByLabelText("成功进度变化数值-1"), {
+    target: { value: "2" },
+  });
+
+  expect(screen.getByTestId("payload").textContent).toContain(
+    "\"progress_counter_deltas\":{\"alchemy.custom_progress\":2}"
+  );
+});
+
+test("shows all configured progress counters in the row dropdown", () => {
+  render(
+    <ResultPayloadEditor
+      labelPrefix="成功"
+      onChange={() => {}}
+      payload={{ progress_counter_deltas: { zhu_ji_dan_xiansuo: 1 } }}
+      progressCounterOptions={[
+        { value: "zhu_ji_dan_xiansuo", label: "zhu_ji_dan_xiansuo" },
+        { value: "zhu_ji_dan_npc", label: "zhu_ji_dan_npc" },
+      ]}
+    />
+  );
+
+  const progressSelect = screen.getByLabelText("成功进度变化进度项-1");
+
+  expect(progressSelect).toHaveValue("zhu_ji_dan_xiansuo");
+  expect(screen.getByRole("option", { name: "zhu_ji_dan_xiansuo" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "zhu_ji_dan_npc" })).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "新增自定义进度项..." })).toBeInTheDocument();
 });

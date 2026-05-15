@@ -69,6 +69,23 @@ export function normalizeNumericRecord(
   );
 }
 
+export function normalizeChanceRecord(
+  values?: Record<string, unknown>
+): Record<string, number> {
+  const normalized: Record<string, number> = {};
+  for (const [key, value] of Object.entries(values ?? {})) {
+    const trimmedKey = key.trim();
+    const numericValue = Math.max(0, Math.min(1, Number(value)));
+    if (!trimmedKey || !Number.isFinite(numericValue) || numericValue >= 1) {
+      continue;
+    }
+    normalized[trimmedKey] = numericValue;
+  }
+  return Object.fromEntries(
+    Object.entries(normalized).sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
 export function parseStructuredPayload(value: string): Record<string, unknown> | string {
   const normalized = value.trim();
   if (!normalized) {
@@ -91,6 +108,8 @@ export function formatStructuredPayload(value: Record<string, unknown> | string 
 }
 
 export type PayloadEditorState = {
+  change_chance: number;
+  change_chances: Record<string, number>;
   resources: Record<string, number>;
   cultivation_exp: number;
   lifespan_delta: number;
@@ -204,6 +223,11 @@ export function parsePayloadEditorState(
       : {};
 
   return {
+    change_chance: Number(payload.change_chance ?? 1),
+    change_chances:
+      typeof payload.change_chances === "object" && payload.change_chances
+        ? normalizeChanceRecord(payload.change_chances as Record<string, unknown>)
+        : {},
     resources:
       typeof payload.resources === "object" && payload.resources
         ? normalizeResourceRecord(payload.resources as Record<string, number>)
@@ -263,6 +287,12 @@ export function buildPayloadFromEditorState(
   }
 
   const payload: Record<string, unknown> = {};
+  if (state.change_chance < 1) {
+    payload.change_chance = Math.max(0, Math.min(1, state.change_chance));
+  }
+  if (Object.keys(state.change_chances).length > 0) {
+    payload.change_chances = normalizeChanceRecord(state.change_chances);
+  }
   if (Object.keys(state.resources).length > 0) {
     const normalizedResources = normalizeResourceRecord(state.resources);
     if (Object.keys(normalizedResources).length > 0) {

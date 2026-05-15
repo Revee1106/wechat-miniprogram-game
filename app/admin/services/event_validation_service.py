@@ -168,6 +168,19 @@ def validate_event_config(
             payload = option.get(payload_name) or {}
             if not isinstance(payload, dict):
                 continue
+            change_chance = payload.get("change_chance", 1)
+            try:
+                parsed_change_chance = float(change_chance)
+            except (TypeError, ValueError):
+                errors.append(f"option '{option_id}' has invalid change_chance in {payload_name}")
+            else:
+                if parsed_change_chance < 0 or parsed_change_chance > 1:
+                    errors.append(f"option '{option_id}' has invalid change_chance in {payload_name}")
+            _validate_chance_mapping(
+                payload.get("change_chances", {}),
+                f"option '{option_id}' has invalid change_chances in {payload_name}",
+                errors,
+            )
             _validate_integer_mapping(
                 payload.get("progress_counter_deltas", {}),
                 f"option '{option_id}' has invalid progress_counter_deltas in {payload_name}",
@@ -216,6 +229,23 @@ def _validate_numeric_mapping(
             errors.append(label)
             continue
         if parsed_amount < min_value:
+            errors.append(label)
+
+
+def _validate_chance_mapping(value: object, label: str, errors: list[str]) -> None:
+    if not isinstance(value, dict):
+        errors.append(label)
+        return
+    for key, chance in value.items():
+        if not str(key).strip():
+            errors.append(label)
+            continue
+        try:
+            parsed_chance = float(chance)
+        except (TypeError, ValueError):
+            errors.append(label)
+            continue
+        if parsed_chance < 0 or parsed_chance > 1:
             errors.append(label)
 
 

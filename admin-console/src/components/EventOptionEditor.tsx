@@ -28,6 +28,7 @@ type EventOptionEditorProps = {
   enemyTemplateOptions?: SelectOption[];
   resourceOptions?: ResourceOption[];
   alchemyRecipeOptions?: ResourceOption[];
+  progressCounterOptions?: ResourceOption[];
 };
 
 export function EventOptionEditor({
@@ -43,6 +44,7 @@ export function EventOptionEditor({
   enemyTemplateOptions = [],
   resourceOptions,
   alchemyRecipeOptions,
+  progressCounterOptions,
 }: EventOptionEditorProps) {
   if (!compact) {
     return (
@@ -67,6 +69,7 @@ export function EventOptionEditor({
               onRemoveOption={onRemoveOption}
               option={option}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              progressCounterOptions={progressCounterOptions}
               resourceOptions={resourceOptions}
             />
           ))}
@@ -117,6 +120,7 @@ export function EventOptionEditor({
             onRemoveOption={onRemoveOption}
             option={currentOption}
             alchemyRecipeOptions={alchemyRecipeOptions}
+            progressCounterOptions={progressCounterOptions}
             resourceOptions={resourceOptions}
           />
         ) : (
@@ -137,6 +141,7 @@ function OptionDetailCard({
   eventOptions,
   enemyTemplateOptions,
   alchemyRecipeOptions,
+  progressCounterOptions,
   resourceOptions,
 }: {
   option: EventOptionInput;
@@ -152,6 +157,7 @@ function OptionDetailCard({
   eventOptions: SelectOption[];
   enemyTemplateOptions: SelectOption[];
   alchemyRecipeOptions?: ResourceOption[];
+  progressCounterOptions?: ResourceOption[];
   resourceOptions?: ResourceOption[];
 }) {
   void existingOptionIds;
@@ -442,10 +448,12 @@ function OptionDetailCard({
                 </div>
               ) : (
                 <ResultPayloadEditor
+                  key={`${option.option_id}:success`}
                   labelPrefix="成功"
                   onChange={(value) => onChangeOption(index, "result_on_success", value)}
                   alchemyRecipeOptions={alchemyRecipeOptions}
                   payload={option.result_on_success}
+                  progressCounterOptions={progressCounterOptions}
                   resourceOptions={resourceOptions}
                 />
               )}
@@ -466,10 +474,12 @@ function OptionDetailCard({
                 </label>
               </div>
               <ResultPayloadEditor
+                key={`${option.option_id}:failure`}
                 labelPrefix="失败"
                 onChange={(value) => onChangeOption(index, "result_on_failure", value)}
                 alchemyRecipeOptions={alchemyRecipeOptions}
                 payload={option.result_on_failure}
+                progressCounterOptions={progressCounterOptions}
                 resourceOptions={resourceOptions}
               />
             </SectionCard>
@@ -490,10 +500,12 @@ function OptionDetailCard({
               </label>
             </div>
             <ResultPayloadEditor
+              key={`${option.option_id}:result`}
               labelPrefix="结果"
               onChange={(value) => onChangeOption(index, "result_on_success", value)}
               alchemyRecipeOptions={alchemyRecipeOptions}
               payload={option.result_on_success}
+              progressCounterOptions={progressCounterOptions}
               resourceOptions={resourceOptions}
             />
           </SectionCard>

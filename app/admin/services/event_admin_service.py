@@ -57,6 +57,32 @@ class EventAdminService:
         response = EventDetailResponse(template=template, options=options)
         return {"template": response.template, "options": response.options}
 
+    def list_progress_counters(self) -> dict[str, list[dict[str, str]]]:
+        payload = self._repository.load()
+        counter_keys: set[str] = set()
+
+        for template in payload["templates"]:
+            counter_keys.update(
+                str(key).strip()
+                for key in dict(template.get("required_progress_counters", {}) or {}).keys()
+                if str(key).strip()
+            )
+
+        for option in payload["options"]:
+            self._collect_payload_progress_counters(
+                counter_keys, option.get("result_on_success", {})
+            )
+            self._collect_payload_progress_counters(
+                counter_keys, option.get("result_on_failure", {})
+            )
+
+        return {
+            "items": [
+                {"value": counter_key, "label": counter_key}
+                for counter_key in sorted(counter_keys)
+            ]
+        }
+
     def create_event(self, template_payload: dict[str, object]) -> dict[str, object]:
         payload = self._repository.load()
         if any(
@@ -218,6 +244,22 @@ class EventAdminService:
             if keyword.lower() not in haystack:
                 return False
         return True
+
+    def _collect_payload_progress_counters(
+        self,
+        counter_keys: set[str],
+        payload: object,
+    ) -> None:
+        if not isinstance(payload, dict):
+            return
+        progress_counter_deltas = payload.get("progress_counter_deltas", {})
+        if not isinstance(progress_counter_deltas, dict):
+            return
+        counter_keys.update(
+            str(key).strip()
+            for key in progress_counter_deltas.keys()
+            if str(key).strip()
+        )
 
     def _repair_blank_option_record(
         self,

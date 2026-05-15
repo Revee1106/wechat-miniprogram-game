@@ -82,7 +82,7 @@ def test_admin_alchemy_recipe_crud_endpoint_persists_changes(monkeypatch) -> Non
                 "supreme": {
                     "display_name": "极品",
                     "color": "purple",
-                    "base_weight": 1,
+                    "base_weight": -1,
                     "per_level_weight": 3,
                     "effect_multiplier": 2.5,
                 },
@@ -97,6 +97,7 @@ def test_admin_alchemy_recipe_crud_endpoint_persists_changes(monkeypatch) -> Non
     assert update_response.json()["duration_months"] == 2
     assert update_response.json()["per_level_success_rate"] == 0.06
     assert update_response.json()["success_mastery_exp_gain"] == 18
+    assert update_response.json()["quality_profiles"]["supreme"]["base_weight"] == -1
     assert (
         update_response.json()["quality_profiles"]["supreme"]["effect_multiplier"]
         == 2.5

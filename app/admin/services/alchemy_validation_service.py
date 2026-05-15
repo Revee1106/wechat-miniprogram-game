@@ -73,6 +73,9 @@ def validate_alchemy_config(
         success_mastery_exp_gain = _coerce_int(
             recipe.get("success_mastery_exp_gain", 10)
         )
+        recipe_mastery_exp_gain = _coerce_int(
+            recipe.get("recipe_mastery_exp_gain", 1)
+        )
         effect_value = _coerce_float(recipe.get("effect_value"))
         base_success_rate = _coerce_float(recipe.get("base_success_rate"))
         per_level_success_rate = _coerce_float(
@@ -98,6 +101,8 @@ def validate_alchemy_config(
             errors.append(f"alchemy recipe '{recipe_id}' has invalid duration_months")
         if success_mastery_exp_gain < 0:
             errors.append(f"alchemy recipe '{recipe_id}' has invalid success_mastery_exp_gain")
+        if recipe_mastery_exp_gain < 0:
+            errors.append(f"alchemy recipe '{recipe_id}' has invalid recipe_mastery_exp_gain")
         if not 0 <= base_success_rate <= 1:
             errors.append(f"alchemy recipe '{recipe_id}' has invalid base_success_rate")
         if not -1 <= per_level_success_rate <= 1:
@@ -169,7 +174,7 @@ def _validate_quality_profiles(recipe_id: str, raw_profiles: object) -> list[str
             errors.append(
                 f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has empty display_name"
             )
-        if _coerce_float(profile.get("base_weight")) < 0:
+        if not _is_float_like(profile.get("base_weight")):
             errors.append(
                 f"alchemy recipe '{recipe_id}' quality '{normalized_quality}' has invalid base_weight"
             )
@@ -200,3 +205,13 @@ def _coerce_float(value: object) -> float:
         return float(value)
     except (TypeError, ValueError):
         return -1.0
+
+
+def _is_float_like(value: object) -> bool:
+    if isinstance(value, bool):
+        return False
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False

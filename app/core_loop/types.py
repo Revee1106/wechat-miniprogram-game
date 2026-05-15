@@ -135,6 +135,8 @@ class EventOptionConfig:
 
 @dataclass(frozen=True)
 class EventResultPayload:
+    change_chance: float = 1.0
+    change_chances: dict[str, float] = field(default_factory=dict)
     resources: dict[str, int] = field(default_factory=dict)
     character: dict[str, int] = field(default_factory=dict)
     statuses_add: list[str] = field(default_factory=list)
@@ -310,6 +312,8 @@ class AlchemyRecipeState:
     per_level_success_rate: float
     current_success_rate: float
     success_mastery_exp_gain: int
+    recipe_mastery_exp: int = 0
+    recipe_mastery_exp_gain: int = 0
     ingredients: dict[str, int] = field(default_factory=dict)
     quality_chances: list[dict[str, object]] = field(default_factory=list)
     can_start: bool = False
@@ -350,6 +354,7 @@ class AlchemyResult:
     amount: int
     mastery_exp_gained: int
     summary: str
+    recipe_mastery_exp_gained: int = 0
 
 
 @dataclass
@@ -358,6 +363,7 @@ class AlchemyState:
     mastery_level: int = 0
     mastery_title: str = "丹道未入门"
     learned_recipe_ids: list[str] = field(default_factory=list)
+    recipe_mastery: dict[str, int] = field(default_factory=dict)
     available_recipes: list[AlchemyRecipeState] = field(default_factory=list)
     inventory: list[AlchemyInventoryItem] = field(default_factory=list)
     active_job: AlchemyJob | None = None

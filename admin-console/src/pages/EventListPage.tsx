@@ -9,6 +9,7 @@ import {
   fetchBattleEnemies,
   fetchDwellingFacilities,
   fetchEventDetail,
+  fetchEventProgressCounters,
   fetchEvents,
   fetchMaterials,
   fetchRealms,
@@ -22,6 +23,7 @@ import {
   type MaterialInput,
   type RealmConfig,
   type EventTemplateInput,
+  type ProgressCounterOption,
 } from "../api/client";
 import { formatRealmDisplayName } from "../utils/displayText";
 import { ConfigWorkbench } from "../components/ConfigWorkbench";
@@ -39,6 +41,10 @@ import {
   buildEventDrawChanceEstimate,
   getEventTypeTotalWeight,
 } from "../utils/eventTypeWeight";
+import {
+  buildProgressCounterOptions,
+  mergeProgressCounterOptions,
+} from "../utils/progressCounterCatalog";
 import { buildConfiguredResourceOptions } from "../utils/resourceCatalog";
 
 const DRAFT_EVENT_ID = "__draft_event__";
@@ -68,6 +74,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
   const [materials, setMaterials] = useState<MaterialInput[]>([]);
   const [alchemyRecipes, setAlchemyRecipes] = useState<AlchemyRecipeInput[]>([]);
   const [dwellingFacilities, setDwellingFacilities] = useState<DwellingFacilityListItem[]>([]);
+  const [globalProgressCounterOptions, setGlobalProgressCounterOptions] = useState<ProgressCounterOption[]>([]);
   const [drawerPanel, setDrawerPanel] = useState<EventPanel | null>(null);
   const [activeOptionIndex, setActiveOptionIndex] = useState(0);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -84,6 +91,10 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
     ? buildEventDrawChanceEstimate(allItems, template)
     : undefined;
   const resourceOptions = buildConfiguredResourceOptions(materials);
+  const progressCounterOptions = mergeProgressCounterOptions(
+    globalProgressCounterOptions,
+    buildProgressCounterOptions(template, options)
+  );
   const alchemyRecipeOptions = alchemyRecipes.map((recipe) => ({
     value: recipe.recipe_id,
     label: recipe.display_name
@@ -118,6 +129,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           materialResponse,
           alchemyRecipeResponse,
           dwellingResponse,
+          progressCounterResponse,
         ] = await Promise.all([
           fetchEvents({
             eventType: eventTypeFilter,
@@ -129,6 +141,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
           fetchMaterials(),
           fetchAlchemyRecipes(),
           fetchDwellingFacilities(),
+          fetchEventProgressCounters(),
         ]);
         if (!isMounted) {
           return;
@@ -140,6 +153,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
         setMaterials(materialResponse.items ?? []);
         setAlchemyRecipes(alchemyRecipeResponse.items ?? []);
         setDwellingFacilities(dwellingResponse.items ?? []);
+        setGlobalProgressCounterOptions(progressCounterResponse.items ?? []);
         setRealmOptions(mapRealmOptions(realmsResponse.items ?? []));
         setEnemyTemplateOptions(
           (enemyResponse.items ?? []).map((enemy) => ({
@@ -659,6 +673,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
               onChange={handleSingleOutcomeChange}
               option={singleOutcomeOption}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              progressCounterOptions={progressCounterOptions}
               resourceOptions={resourceOptions}
             />
           ) : (
@@ -674,6 +689,7 @@ export function EventListPage({ refreshToken = 0 }: EventListPageProps) {
               onSelectOption={setActiveOptionIndex}
               options={options}
               alchemyRecipeOptions={alchemyRecipeOptions}
+              progressCounterOptions={progressCounterOptions}
               resourceOptions={resourceOptions}
             />
           )}

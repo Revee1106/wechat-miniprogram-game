@@ -497,9 +497,94 @@
     "required_luck_min": 0,
     "required_alchemy_level": 3,
     "excluded_learned_alchemy_recipe_ids": [],
+    "required_progress_counters": {},
     "flags": [],
     "option_ids": [
-      "evt_alchemy_3_option_1"
+      "evt_alchemy_3_option_1",
+      "evt_alchemy_3_option_2",
+      "evt_alchemy_3_option_3"
+    ]
+  },
+  {
+    "event_id": "evt_alchemy_4",
+    "event_name": "青袍丹客",
+    "event_type": "alchemy",
+    "outcome_type": "alchemy",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "alchemy_based"
+    ],
+    "choice_pattern": "multi_choice",
+    "title_text": "坊市角落，有人低声论药",
+    "body_text": "你在坊市闲逛时，听见一名青袍修士正与药商争论药性。他言辞不急，却句句切中要害，连老药商也被他说得哑口无言。你注意到，他袖口沾着一丝熟悉的焦黑炉灰。",
+    "realm_min": "qi_refining_mid",
+    "realm_max": null,
+    "region": "",
+    "weight": 1,
+    "is_repeatable": true,
+    "cooldown_rounds": 0,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_completed_event_ids": [
+      "evt_alchemy_3"
+    ],
+    "required_dwelling_facility_levels": {},
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "required_alchemy_level": 3,
+    "excluded_learned_alchemy_recipe_ids": [],
+    "required_progress_counters": {},
+    "flags": [],
+    "option_ids": [
+      "evt_alchemy_4_option_1",
+      "evt_alchemy_4_option_2",
+      "evt_alchemy_4_option_3"
+    ]
+  },
+  {
+    "event_id": "evt_alchemy_5",
+    "event_name": "药性试问",
+    "event_type": "alchemy",
+    "outcome_type": "alchemy",
+    "risk_level": "normal",
+    "trigger_sources": [
+      "alchemy_based"
+    ],
+    "choice_pattern": "multi_choice",
+    "title_text": "青袍丹客摆出三味药材",
+    "body_text": "青袍丹客将三味药材放在桌上：一味气息温和，一味灵气凝重，一味略带辛烈。他没有说明用途，只问你：“若要助人冲关，最忌哪一种药性失衡？”",
+    "realm_min": "qi_refining_mid",
+    "realm_max": null,
+    "region": "",
+    "weight": 1,
+    "is_repeatable": true,
+    "cooldown_rounds": 0,
+    "max_trigger_per_run": 999999,
+    "required_statuses": [],
+    "excluded_statuses": [],
+    "required_techniques": [],
+    "required_equipment_tags": [],
+    "required_resources": {},
+    "required_completed_event_ids": [
+      "evt_alchemy_4"
+    ],
+    "required_dwelling_facility_levels": {},
+    "required_rebirth_count": 0,
+    "required_karma_min": null,
+    "required_luck_min": 0,
+    "required_alchemy_level": 3,
+    "excluded_learned_alchemy_recipe_ids": [],
+    "required_progress_counters": {},
+    "flags": [],
+    "option_ids": [
+      "evt_alchemy_5_option_1",
+      "evt_alchemy_5_option_2",
+      "evt_alchemy_5_option_3"
     ]
   }
 ]

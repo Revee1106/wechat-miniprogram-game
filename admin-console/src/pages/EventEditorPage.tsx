@@ -9,6 +9,7 @@ import {
   fetchBattleEnemies,
   fetchDwellingFacilities,
   fetchEventDetail,
+  fetchEventProgressCounters,
   fetchEvents,
   fetchMaterials,
   reloadEvents,
@@ -20,6 +21,7 @@ import {
   type EventOptionInput,
   type EventTemplateInput,
   type MaterialInput,
+  type ProgressCounterOption,
 } from "../api/client";
 import { EventOptionEditor } from "../components/EventOptionEditor";
 import { EventTemplateForm } from "../components/EventTemplateForm";
@@ -36,6 +38,10 @@ import {
   buildEventDrawChanceEstimate,
   getEventTypeTotalWeight,
 } from "../utils/eventTypeWeight";
+import {
+  buildProgressCounterOptions,
+  mergeProgressCounterOptions,
+} from "../utils/progressCounterCatalog";
 import { buildConfiguredResourceOptions } from "../utils/resourceCatalog";
 
 type EventEditorPageProps = {
@@ -74,6 +80,7 @@ export function EventEditorPage({
   const [materials, setMaterials] = useState<MaterialInput[]>([]);
   const [alchemyRecipes, setAlchemyRecipes] = useState<AlchemyRecipeInput[]>([]);
   const [dwellingFacilities, setDwellingFacilities] = useState<DwellingFacilityListItem[]>([]);
+  const [globalProgressCounterOptions, setGlobalProgressCounterOptions] = useState<ProgressCounterOption[]>([]);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -84,6 +91,14 @@ export function EventEditorPage({
   const currentTypeTotalWeight = getEventTypeTotalWeight(eventLibrary, template);
   const drawChanceEstimate = buildEventDrawChanceEstimate(eventLibrary, template);
   const resourceOptions = useMemo(() => buildConfiguredResourceOptions(materials), [materials]);
+  const progressCounterOptions = useMemo(
+    () =>
+      mergeProgressCounterOptions(
+        globalProgressCounterOptions,
+        buildProgressCounterOptions(template, options)
+      ),
+    [globalProgressCounterOptions, options, template]
+  );
   const alchemyRecipeOptions = useMemo(
     () =>
       alchemyRecipes.map((recipe) => ({
@@ -120,12 +135,20 @@ export function EventEditorPage({
 
     async function load() {
       if (!eventId) {
-        const [library, enemyLibrary, materialLibrary, alchemyRecipeLibrary, dwellingLibrary] = await Promise.all([
+        const [
+          library,
+          enemyLibrary,
+          materialLibrary,
+          alchemyRecipeLibrary,
+          dwellingLibrary,
+          progressCounterLibrary,
+        ] = await Promise.all([
           fetchEvents(),
           fetchBattleEnemies(),
           fetchMaterials(),
           fetchAlchemyRecipes(),
           fetchDwellingFacilities(),
+          fetchEventProgressCounters(),
         ]);
         if (!isMounted) {
           return;
@@ -139,6 +162,7 @@ export function EventEditorPage({
         setMaterials(materialLibrary.items ?? []);
         setAlchemyRecipes(alchemyRecipeLibrary.items ?? []);
         setDwellingFacilities(dwellingLibrary.items ?? []);
+        setGlobalProgressCounterOptions(progressCounterLibrary.items ?? []);
         setEnemyTemplateOptions(
           (enemyLibrary.items ?? []).map((enemy) => ({
             value: enemy.enemy_id,
@@ -160,6 +184,7 @@ export function EventEditorPage({
           materialLibrary,
           alchemyRecipeLibrary,
           dwellingLibrary,
+          progressCounterLibrary,
         ] = await Promise.all([
           fetchEventDetail(eventId),
           fetchEvents(),
@@ -167,6 +192,7 @@ export function EventEditorPage({
           fetchMaterials(),
           fetchAlchemyRecipes(),
           fetchDwellingFacilities(),
+          fetchEventProgressCounters(),
         ]);
         if (!isMounted) {
           return;
@@ -183,6 +209,7 @@ export function EventEditorPage({
         setMaterials(materialLibrary.items ?? []);
         setAlchemyRecipes(alchemyRecipeLibrary.items ?? []);
         setDwellingFacilities(dwellingLibrary.items ?? []);
+        setGlobalProgressCounterOptions(progressCounterLibrary.items ?? []);
         setEnemyTemplateOptions(
           (enemyLibrary.items ?? []).map((enemy) => ({
             value: enemy.enemy_id,
@@ -566,6 +593,7 @@ export function EventEditorPage({
                   onRemoveOption={handleRemoveOption}
                   options={options}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  progressCounterOptions={progressCounterOptions}
                   resourceOptions={resourceOptions}
                 />
               ) : null}
@@ -574,6 +602,7 @@ export function EventEditorPage({
                   onChange={handleSingleOutcomeChange}
                   option={singleOutcomeOption}
                   alchemyRecipeOptions={alchemyRecipeOptions}
+                  progressCounterOptions={progressCounterOptions}
                   resourceOptions={resourceOptions}
                 />
               ) : null}

@@ -2,9 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   buildPayloadFromEditorState,
-  formatKeyValueMap,
   formatLineList,
-  parseKeyValueMap,
   parseLineList,
   parseNumberInput,
   parsePayloadEditorState,
@@ -22,6 +20,7 @@ type ResultPayloadEditorProps = {
   onChange: (value: Record<string, unknown>) => void;
   resourceOptions?: ResourceOption[];
   alchemyRecipeOptions?: ResourceOption[];
+  progressCounterOptions?: ResourceOption[];
 };
 
 type ScalarFieldKey =
@@ -84,6 +83,7 @@ type ExtraFieldDefinition =
 type ChangeEntry = {
   id: string;
   amount: number;
+  chance: number;
 };
 
 const scalarFieldDefinitions: Array<{ key: ScalarFieldKey; label: string }> = [
@@ -170,6 +170,7 @@ export function ResultPayloadEditor({
   onChange,
   resourceOptions = defaultResourceOptions,
   alchemyRecipeOptions = [],
+  progressCounterOptions = [],
 }: ResultPayloadEditorProps) {
   const state = parsePayloadEditorState(payload);
   const changeCatalog = useMemo(() => buildChangeCatalog(resourceOptions), [resourceOptions]);
@@ -219,6 +220,7 @@ export function ResultPayloadEditor({
 
   function updateChangeEntries(entries: ChangeEntry[]) {
     const nextResources: Record<string, number> = {};
+    const nextChangeChances: Record<string, number> = {};
     const nextScalarState = Object.fromEntries(
       scalarFieldDefinitions.map((field) => [field.key, 0])
     ) as Pick<PayloadEditorState, ScalarFieldKey>;
@@ -230,12 +232,19 @@ export function ResultPayloadEditor({
       }
       if (catalogItem.type === "resource") {
         nextResources[catalogItem.resourceKey] = entry.amount;
+        if (entry.chance < 1) {
+          nextChangeChances[`resources.${catalogItem.resourceKey}`] = entry.chance;
+        }
         continue;
       }
       nextScalarState[catalogItem.stateKey] = entry.amount;
+      if (entry.chance < 1) {
+        nextChangeChances[getScalarChanceKey(catalogItem.stateKey)] = entry.chance;
+      }
     }
 
     update({
+      change_chances: nextChangeChances,
       resources: sortResourceRecord(nextResources),
       ...nextScalarState,
     });
@@ -245,7 +254,7 @@ export function ResultPayloadEditor({
     if (!changeId || usedChangeIds.includes(changeId)) {
       return;
     }
-    updateChangeEntries([...changeEntries, { id: changeId, amount: 1 }]);
+    updateChangeEntries([...changeEntries, { id: changeId, amount: 1, chance: 1 }]);
   }
 
   function handleChangeType(index: number, nextId: string) {
@@ -276,6 +285,16 @@ export function ResultPayloadEditor({
         entryIndex === index
           ? { ...currentEntry, amount: parseNumberInput(nextAmount, 0) }
           : currentEntry
+      )
+    );
+  }
+
+  function handleChangeChance(index: number, nextChance: string) {
+    updateChangeEntries(
+      changeEntries.map((entry, entryIndex) =>
+        entryIndex === index
+          ? { ...entry, chance: Math.max(0, Math.min(1, Number(nextChance) || 0)) }
+          : entry
       )
     );
   }
@@ -400,6 +419,7 @@ export function ResultPayloadEditor({
           usedChangeIds={usedChangeIds}
           onAmountBlur={handleAmountBlur}
           onAmountChange={handleChangeAmount}
+          onChanceChange={handleChangeChance}
           onChangeType={handleChangeType}
           onRemove={handleRemoveChange}
         />
@@ -414,6 +434,7 @@ export function ResultPayloadEditor({
           usedChangeIds={usedChangeIds}
           onAmountBlur={handleAmountBlur}
           onAmountChange={handleChangeAmount}
+          onChanceChange={handleChangeChance}
           onChangeType={handleChangeType}
           onRemove={handleRemoveChange}
         />
@@ -485,15 +506,13 @@ export function ResultPayloadEditor({
                     </button>
                   </div>
                   {field.type === "record" ? (
-                    <textarea
-                      aria-label={`${labelPrefix}${field.label}`}
-                      className="requirement-field__input"
-                      placeholder={field.placeholder}
-                      value={formatKeyValueMap(state[field.key])}
-                      onChange={(event) =>
-                        update({
-                          [field.key]: parseKeyValueMap(event.target.value),
-                        } as Partial<PayloadEditorState>)
+                    <ProgressCounterDeltaEditor
+                      ariaLabel={`${labelPrefix}${field.label}`}
+                      emptyMessage="当前还没有进度变化。"
+                      options={progressCounterOptions}
+                      value={state[field.key]}
+                      onChange={(value) =>
+                        update({ [field.key]: value } as Partial<PayloadEditorState>)
                       }
                     />
                   ) : field.key === "learned_alchemy_recipe_ids" ? (
@@ -537,11 +556,163 @@ export function ResultPayloadEditor({
   );
 }
 
+function ProgressCounterDeltaEditor({
+  ariaLabel,
+  emptyMessage,
+  options,
+  value,
+  onChange,
+}: {
+  ariaLabel: string;
+  emptyMessage: string;
+  options: ResourceOption[];
+  value: Record<string, number>;
+  onChange: (value: Record<string, number>) => void;
+}) {
+  const [draftEntries, setDraftEntries] = useState<Array<[string, number]>>([]);
+  const [customEntryIndexes, setCustomEntryIndexes] = useState<number[]>([]);
+  const savedEntries = Object.entries(value ?? {}).filter(([key]) => key.trim());
+  const entries = [...savedEntries, ...draftEntries];
+  const used = new Set(savedEntries.map(([key]) => key));
+  const mergedOptions = mergeSelectionOptions(options, entries.map(([key]) => key));
+
+  function updateEntries(nextEntries: Array<[string, number]>) {
+    const normalizedEntries = nextEntries.map(
+      ([key, amount]) => [key.trim(), amount] as [string, number]
+    );
+    const nextValue = Object.fromEntries(
+      normalizedEntries.filter(([key, amount]) => key && Number.isFinite(amount) && amount !== 0)
+    );
+    setDraftEntries(
+      normalizedEntries.filter(([key, amount]) => !key || !Number.isFinite(amount) || amount === 0)
+    );
+    onChange(nextValue);
+  }
+
+  function handleChangeChance(index: number, nextChance: string) {
+    updateChangeEntries(
+      changeEntries.map((entry, entryIndex) =>
+        entryIndex === index
+          ? { ...entry, chance: Math.max(0, Math.min(1, Number(nextChance) || 0)) }
+          : entry
+      )
+    );
+  }
+
+  function handleAdd() {
+    const nextOption = mergedOptions.find((option) => !used.has(option.value));
+    if (nextOption) {
+      updateEntries([...entries, [nextOption.value, 1]]);
+      return;
+    }
+    setCustomEntryIndexes((current) =>
+      current.includes(entries.length) ? current : [...current, entries.length]
+    );
+    setDraftEntries((current) => [...current, ["", 1]]);
+  }
+
+  function handleKeyChange(index: number, nextKey: string) {
+    updateEntries(
+      entries.map(([key, amount], entryIndex) =>
+        entryIndex === index ? [nextKey, amount] : [key, amount]
+      )
+    );
+  }
+
+  function handleAmountChange(index: number, nextAmount: string) {
+    updateEntries(
+      entries.map(([key, amount], entryIndex) =>
+        entryIndex === index ? [key, Number(nextAmount) || 0] : [key, amount]
+      )
+    );
+  }
+
+  function handleRemove(index: number) {
+    updateEntries(entries.filter((_, entryIndex) => entryIndex !== index));
+  }
+
+  return (
+    <div className="selection-list-editor">
+      <div className="field__label field__label--end">
+        <button className="button-secondary" type="button" onClick={handleAdd}>
+          新增进度
+        </button>
+      </div>
+      <div className="resource-editor__stack">
+        {entries.length > 0 ? (
+          entries.map(([counterKey, amount], index) => (
+            <div key={`progress-counter-${index}`} className="result-payload-editor__resource-row">
+              {customEntryIndexes.includes(index) || !counterKey ? (
+                <label className="field">
+                  <span className="field__hint">进度项</span>
+                  <input
+                    aria-label={`${ariaLabel}进度项-${index + 1}`}
+                    placeholder="输入新的进度项"
+                    value={counterKey}
+                    onChange={(event) => handleKeyChange(index, event.target.value)}
+                  />
+                </label>
+              ) : (
+                <label className="field">
+                  <span className="field__hint">进度项</span>
+                  <select
+                    aria-label={`${ariaLabel}进度项-${index + 1}`}
+                    value={counterKey}
+                    onChange={(event) => {
+                      if (event.target.value === "__custom__") {
+                        setCustomEntryIndexes((current) =>
+                          current.includes(index) ? current : [...current, index]
+                        );
+                        handleKeyChange(index, "");
+                        return;
+                      }
+                      handleKeyChange(index, event.target.value);
+                    }}
+                  >
+                    {mergedOptions.map((option) => {
+                      const disabled = used.has(option.value) && option.value !== counterKey;
+                      return (
+                        <option key={option.value} disabled={disabled} value={option.value}>
+                          {option.label}
+                        </option>
+                      );
+                    })}
+                    <option value="__custom__">新增自定义进度项...</option>
+                  </select>
+                </label>
+              )}
+              <label className="field">
+                <span className="field__hint">变动数值</span>
+                <input
+                  aria-label={`${ariaLabel}数值-${index + 1}`}
+                  type="number"
+                  value={amount}
+                  onChange={(event) => handleAmountChange(index, event.target.value)}
+                />
+              </label>
+              <button
+                className="button-secondary result-payload-editor__resource-remove"
+                type="button"
+                onClick={() => handleRemove(index)}
+              >
+                删除
+              </button>
+            </div>
+          ))
+        ) : (
+          <div className="resource-editor__empty">{emptyMessage}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function buildChangeEntries(state: PayloadEditorState): ChangeEntry[] {
   const resourceEntries = Object.entries(sortResourceRecord(state.resources)).map(
     ([resourceKey, amount]) => ({
       id: `resource:${resourceKey}`,
       amount,
+      chance: state.change_chances[`resources.${resourceKey}`] ?? state.change_chance,
     })
   );
 
@@ -549,6 +720,7 @@ function buildChangeEntries(state: PayloadEditorState): ChangeEntry[] {
     .map((field) => ({
       id: `stat:${field.key}`,
       amount: state[field.key],
+      chance: state.change_chances[getScalarChanceKey(field.key)] ?? state.change_chance,
     }))
     .filter((entry) => entry.amount !== 0);
 
@@ -565,6 +737,7 @@ function ChangeEntryGroup({
   usedChangeIds,
   onAmountBlur,
   onAmountChange,
+  onChanceChange,
   onChangeType,
   onRemove,
 }: {
@@ -577,6 +750,7 @@ function ChangeEntryGroup({
   usedChangeIds: string[];
   onAmountBlur: (index: number) => void;
   onAmountChange: (index: number, nextAmount: string) => void;
+  onChanceChange: (index: number, nextChance: string) => void;
   onChangeType: (index: number, nextId: string) => void;
   onRemove: (index: number) => void;
 }) {
@@ -621,6 +795,19 @@ function ChangeEntryGroup({
                   value={draftAmounts[entryKey] ?? String(entry.amount)}
                   onBlur={() => onAmountBlur(index)}
                   onChange={(event) => onAmountChange(index, event.target.value)}
+                />
+              </label>
+
+              <label className="field">
+                <span className="field__hint">触发概率</span>
+                <input
+                  aria-label={`${labelPrefix}${title}概率-${groupIndex + 1}`}
+                  max={1}
+                  min={0}
+                  step={0.01}
+                  type="number"
+                  value={entry.chance}
+                  onChange={(event) => onChanceChange(index, event.target.value)}
                 />
               </label>
 
@@ -752,6 +939,13 @@ function isExtraFieldVisible(
 
 function buildEntryKey(entry: ChangeEntry, index: number): string {
   return `${entry.id}-${index}`;
+}
+
+function getScalarChanceKey(key: ScalarFieldKey): string {
+  if (key === "alchemy_mastery_exp_delta" || key === "rebirth_progress_delta") {
+    return key;
+  }
+  return `character.${key}`;
 }
 
 function buildChangeCatalog(resourceOptions: ResourceOption[]): ChangeCatalogItem[] {

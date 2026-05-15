@@ -673,6 +673,21 @@ export function AlchemyConfigPage() {
                   }
                 />
               </label>
+              <label className="field">
+                <span className="field__label">丹方熟练度增长</span>
+                <input
+                  aria-label="丹方熟练度增长"
+                  min={0}
+                  type="number"
+                  value={selectedRecipe.recipe_mastery_exp_gain}
+                  onChange={(event) =>
+                    handleRecipeFieldChange(
+                      "recipe_mastery_exp_gain",
+                      Number(event.target.value) || 0
+                    )
+                  }
+                />
+              </label>
               <label className="field field--full">
                 <span className="field__label">丹方描述</span>
                 <textarea
@@ -774,17 +789,35 @@ export function AlchemyConfigPage() {
               <div className="section-card__header">
                 <div>
                   <h3>品级概率与效果</h3>
-                  <p>基础权重 + 丹道等级 * 每级权重变化，决定成丹后的品级概率；效果倍率决定服用收益。</p>
+                  <p>
+                    基础权重 + （丹道等级 + 丹方熟练度修正）* 每级权重变化，决定成丹后的品级概率；
+                    熟练度修正 = min(3, sqrt(丹方熟练度 / 100))。
+                  </p>
                 </div>
+              </div>
+              <div className="alchemy-quality-formula">
+                <strong>预估口径</strong>
+                <span>
+                  当前按丹道 {selectedRecipe.required_alchemy_level} 级预估，展示丹方熟练度 0、100、400
+                  时的概率变化；实际玩家炼制时会使用自己的当前丹道等级和该丹方熟练度。
+                </span>
               </div>
               <div className="alchemy-quality-grid">
                 {qualityProfileOptions.map((quality) => {
                   const profile = normalizeQualityProfiles(selectedRecipe.quality_profiles)[quality.key];
+                  const previewItems = buildQualityChancePreviewItems(selectedRecipe, quality.key);
                   return (
                     <div key={quality.key} className={`alchemy-quality-card alchemy-quality-card--${quality.key}`}>
                       <div className="alchemy-quality-card__title">
                         <strong>{profile.display_name || quality.label}</strong>
                         <small>{quality.key}</small>
+                      </div>
+                      <div className="alchemy-quality-preview" aria-label={`${quality.label}熟练度概率预估`}>
+                        {previewItems.map((item) => (
+                          <span key={item.mastery}>
+                            熟练{item.mastery}: <strong>{item.chance}</strong>
+                          </span>
+                        ))}
                       </div>
                       <div className="field-grid">
                         <label className="field">
@@ -819,7 +852,6 @@ export function AlchemyConfigPage() {
                           <span className="field__label">基础权重</span>
                           <input
                             aria-label={`${quality.label}基础权重`}
-                            min={0}
                             type="number"
                             value={profile.base_weight}
                             onChange={(event) =>
@@ -948,6 +980,7 @@ function createEmptyRecipe(
     base_success_rate: 0.5,
     per_level_success_rate: 0.04,
     success_mastery_exp_gain: 10,
+    recipe_mastery_exp_gain: 1,
     ingredients: {},
     effect_type: "cultivation_exp",
     effect_value: 1,
@@ -1024,6 +1057,10 @@ function normalizeRecipe(recipe: AlchemyRecipeInput): AlchemyRecipeInput {
       0,
       Number(recipe.success_mastery_exp_gain ?? 10) || 0
     ),
+    recipe_mastery_exp_gain: Math.max(
+      0,
+      Number(recipe.recipe_mastery_exp_gain ?? 1) || 0
+    ),
     ingredients:
       recipe.ingredients && typeof recipe.ingredients === "object" && !Array.isArray(recipe.ingredients)
         ? recipe.ingredients
@@ -1087,7 +1124,7 @@ function normalizeQualityProfiles(
         {
           display_name: String(profile.display_name ?? defaults[quality.key].display_name).trim(),
           color: String(profile.color ?? defaults[quality.key].color).trim(),
-          base_weight: Math.max(0, Number(profile.base_weight ?? defaults[quality.key].base_weight) || 0),
+          base_weight: Number(profile.base_weight ?? defaults[quality.key].base_weight) || 0,
           per_level_weight: Number(profile.per_level_weight ?? defaults[quality.key].per_level_weight) || 0,
           effect_multiplier: Math.max(
             0.01,
@@ -1097,4 +1134,46 @@ function normalizeQualityProfiles(
       ];
     })
   ) as AlchemyRecipeInput["quality_profiles"];
+}
+
+function buildQualityChancePreviewItems(
+  recipe: AlchemyRecipeInput,
+  qualityKey: (typeof qualityProfileOptions)[number]["key"]
+): Array<{ mastery: number; chance: string }> {
+  const masterySamples = [0, 100, 400];
+  return masterySamples.map((mastery) => ({
+    mastery,
+    chance: formatPercent(buildQualityChance(recipe, qualityKey, mastery)),
+  }));
+}
+
+function buildQualityChance(
+  recipe: AlchemyRecipeInput,
+  qualityKey: (typeof qualityProfileOptions)[number]["key"],
+  recipeMasteryExp: number
+): number {
+  const profiles = normalizeQualityProfiles(recipe.quality_profiles);
+  const effectiveQualityLevel =
+    Math.max(0, Number(recipe.required_alchemy_level ?? 0) || 0) +
+    Math.min(3, Math.sqrt(Math.max(0, recipeMasteryExp) / 100));
+  const weights = qualityProfileOptions.map((quality) => {
+    const profile = profiles[quality.key];
+    return {
+      quality: quality.key,
+      weight: Math.max(
+        0,
+        Number(profile.base_weight || 0) +
+          effectiveQualityLevel * Number(profile.per_level_weight || 0)
+      ),
+    };
+  });
+  const totalWeight = weights.reduce((sum, item) => sum + item.weight, 0);
+  if (totalWeight <= 0) {
+    return qualityKey === "low" ? 1 : 0;
+  }
+  return (weights.find((item) => item.quality === qualityKey)?.weight ?? 0) / totalWeight;
+}
+
+function formatPercent(value: number): string {
+  return `${Math.round(Math.max(0, Math.min(1, value)) * 100)}%`;
 }

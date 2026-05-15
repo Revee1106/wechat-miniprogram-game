@@ -52,6 +52,7 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
                 base_success_rate: 0.86,
                 per_level_success_rate: 0.04,
                 success_mastery_exp_gain: 19,
+                recipe_mastery_exp_gain: 1,
                 ingredients: { basic_herb: 2 },
                 effect_type: "cultivation_exp",
                 effect_value: 12,
@@ -120,8 +121,14 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
   fireEvent.change(screen.getByLabelText("成功熟练度"), {
     target: { value: "21" },
   });
+  fireEvent.change(screen.getByLabelText("丹方熟练度增长"), {
+    target: { value: "3" },
+  });
   fireEvent.change(screen.getByLabelText("每级成丹率变化"), {
     target: { value: "0.06" },
+  });
+  fireEvent.change(screen.getByLabelText("下品基础权重"), {
+    target: { value: "-5" },
   });
   fireEvent.change(screen.getByLabelText("极品效果倍率"), {
     target: { value: "2.5" },
@@ -139,7 +146,9 @@ test("renders alchemy config page and reloads runtime after saving recipe", asyn
     category: "healing",
     per_level_success_rate: 0.06,
     success_mastery_exp_gain: 21,
+    recipe_mastery_exp_gain: 3,
     quality_profiles: expect.objectContaining({
+      low: expect.objectContaining({ base_weight: -5 }),
       supreme: expect.objectContaining({ effect_multiplier: 2.5 }),
     }),
   });
@@ -176,6 +185,7 @@ test("separates recipe and level editing with a single active level panel", asyn
                 base_success_rate: 0.86,
                 per_level_success_rate: 0.04,
                 success_mastery_exp_gain: 19,
+                recipe_mastery_exp_gain: 1,
                 ingredients: { basic_herb: 2 },
                 effect_type: "cultivation_exp",
                 effect_value: 12,

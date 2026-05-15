@@ -1,15 +1,14 @@
 [
   {
     "material_id": "basic_herb",
-    "display_name": "基础灵草",
+    "display_name": "青芽草",
     "category": "herb",
     "tier": 1,
     "rarity": "common",
     "source": "dwelling",
-    "description": "洞府灵田稳定产出的基础炼丹材料。",
+    "description": "初生于灵田中的青嫩灵草，药性温和，常用于调和低阶丹药的基础药性。",
     "tags": [
       "alchemy",
-      "dwelling",
       "basic"
     ]
   },
@@ -22,7 +21,6 @@
     "source": "dwelling",
     "description": "洞府矿洞产出的基础矿材，可作为炼丹或炼器辅材。",
     "tags": [
-      "dwelling",
       "basic"
     ]
   },
@@ -36,7 +34,6 @@
     "description": "洞府灵泉产出的炼丹辅助材料。",
     "tags": [
       "alchemy",
-      "dwelling",
       "auxiliary"
     ]
   },
@@ -64,6 +61,115 @@
     "description": "根生灵脉，叶凝云纹的二品芝草，蕴含较为精纯的灵气，常用于炼制进阶修为丹药。",
     "tags": [
       "dwelling",
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_qingxinlian",
+    "display_name": "清心莲",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "uncommon",
+    "source": "event",
+    "description": "生于清净灵池中的二品莲草，莲心微凉，可平复杂念，常用于炼制清心安神类丹药。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_jinxiancao",
+    "display_name": "金线草",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "uncommon",
+    "source": "event",
+    "description": "草叶中生有细密金线的二品灵草，灵气流转有序，常被炼丹师用来增强丹药成丹稳定性。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_ziwenshen",
+    "display_name": "紫纹参",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "根须生有淡紫纹路的二品灵参，药性沉稳，可滋养经脉，常用于炼制护脉与突破辅助丹药。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_huichunteng",
+    "display_name": "回春藤",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "藤蔓中蕴有绵长生机的二品灵草，断枝后仍可缓缓复苏，是炼制疗伤丹药的常见主材。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_xuanlucao",
+    "display_name": "玄露草",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "夜间凝露而生的二品灵草，叶面常有玄色露珠不散，可与灵水相合，提升丹药灵气纯度。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_yinyelan",
+    "display_name": "银叶兰",
+    "category": "herb",
+    "tier": 2,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "叶片泛着银光的二品灵兰，药性温和，可调和多种灵草，是炼制二品丹药时常用的辅材。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_huiyuancao",
+    "display_name": "回元草",
+    "category": "herb",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "草叶中蕴有微弱生机的一品灵草，可补益气血，是炼制疗伤丹药的常见材料。",
+    "tags": [
+      "basic",
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_qinglingcao",
+    "display_name": "清灵草",
+    "category": "herb",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "生于清净湿地的一品灵草，气息微凉，可平复躁动灵气，常用于清心安神类丹药。",
+    "tags": [
+      "alchemy"
+    ]
+  },
+  {
+    "material_id": "herb_ganluhua",
+    "display_name": "甘露花",
+    "category": "herb",
+    "tier": 1,
+    "rarity": "common",
+    "source": "dwelling",
+    "description": "花瓣常凝清润灵露的一品灵草，药性温和，可补益气血，常用于炼制疗伤丹药。",
+    "tags": [
       "alchemy"
     ]
   }

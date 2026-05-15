@@ -1216,6 +1216,24 @@ textarea:focus {
   gap: 0.9rem;
 }
 
+.alchemy-quality-formula {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.8rem;
+  align-items: center;
+  margin-bottom: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid rgba(164, 111, 43, 0.18);
+  border-radius: 16px;
+  background: rgba(250, 241, 221, 0.62);
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.alchemy-quality-formula strong {
+  color: var(--accent);
+}
+
 .alchemy-quality-card {
   display: grid;
   gap: 0.85rem;
@@ -1255,6 +1273,25 @@ textarea:focus {
 
 .alchemy-quality-card__title small {
   color: var(--ink-soft);
+}
+
+.alchemy-quality-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.alchemy-quality-preview span {
+  padding: 0.35rem 0.55rem;
+  border: 1px solid rgba(31, 53, 46, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 252, 246, 0.72);
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.alchemy-quality-preview strong {
+  color: var(--ink);
 }
 
 .registry-group {

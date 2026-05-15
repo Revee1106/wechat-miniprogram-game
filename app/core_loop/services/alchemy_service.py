@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass
 
 from app.admin.repositories.alchemy_config_repository import AlchemyConfigRepository
@@ -44,6 +45,7 @@ class AlchemyRecipeSpec:
     base_success_rate: float
     per_level_success_rate: float
     success_mastery_exp_gain: int
+    recipe_mastery_exp_gain: int
     ingredients: dict[str, int]
     effect_type: str
     effect_value: float
@@ -115,6 +117,8 @@ class AlchemyService:
     def hydrate_run(self, run: RunState) -> None:
         if run.alchemy_state is None:
             run.alchemy_state = AlchemyState()
+        if not isinstance(run.alchemy_state.recipe_mastery, dict):
+            run.alchemy_state.recipe_mastery = {}
 
         run.alchemy_state.mastery_level = _resolve_mastery_level(
             run.alchemy_state.mastery_exp,
@@ -164,17 +168,20 @@ class AlchemyService:
 
         recipe = self._get_recipe(job.recipe_id)
         mastery_level = run.alchemy_state.mastery_level
+        recipe_mastery_exp = _get_recipe_mastery_exp(run.alchemy_state, recipe.recipe_id)
         score = _build_success_rate(recipe, mastery_level)
         outcome_rank, outcome = _resolve_outcome(score)
         quality_spec = (
             _resolve_quality(
                 recipe,
                 mastery_level,
+                recipe_mastery_exp,
                 _build_deterministic_roll(
                     run.run_id,
                     run.round_index,
                     recipe.recipe_id,
                     run.alchemy_state.mastery_exp,
+                    recipe_mastery_exp,
                 ),
             )
             if outcome == "success"
@@ -207,10 +214,14 @@ class AlchemyService:
             amount=1 if outcome == "success" else 0,
             mastery_exp_gained=mastery_gain,
             summary=_build_result_summary(recipe.display_name, outcome, quality_spec),
+            recipe_mastery_exp_gained=recipe.recipe_mastery_exp_gain,
         )
         run.alchemy_state.active_job = None
         run.alchemy_state.last_result = result
         run.alchemy_state.mastery_exp += mastery_gain
+        run.alchemy_state.recipe_mastery[recipe.recipe_id] = (
+            recipe_mastery_exp + recipe.recipe_mastery_exp_gain
+        )
         self.hydrate_run(run)
         return result
 
@@ -293,6 +304,7 @@ class AlchemyService:
     def _build_recipe_state(self, run: RunState, recipe: AlchemyRecipeSpec) -> AlchemyRecipeState:
         room_level = self._get_dwelling_level(run, "alchemy_room")
         mastery_level = run.alchemy_state.mastery_level
+        recipe_mastery_exp = _get_recipe_mastery_exp(run.alchemy_state, recipe.recipe_id)
         disabled_reason = None
 
         if room_level <= 0:
@@ -320,8 +332,10 @@ class AlchemyService:
             per_level_success_rate=recipe.per_level_success_rate,
             current_success_rate=_build_success_rate(recipe, mastery_level),
             success_mastery_exp_gain=recipe.success_mastery_exp_gain,
+            recipe_mastery_exp=recipe_mastery_exp,
+            recipe_mastery_exp_gain=recipe.recipe_mastery_exp_gain,
             ingredients=dict(recipe.ingredients),
-            quality_chances=_build_quality_chances(recipe, mastery_level),
+            quality_chances=_build_quality_chances(recipe, mastery_level, recipe_mastery_exp),
             can_start=disabled_reason is None,
             disabled_reason=disabled_reason,
             usable_in_battle=recipe.usable_in_battle,
@@ -463,8 +477,9 @@ def _build_deterministic_roll(
     round_index: int,
     recipe_id: str,
     mastery_exp: int,
+    recipe_mastery_exp: int = 0,
 ) -> float:
-    raw = f"{run_id}:{round_index}:{recipe_id}:{mastery_exp}".encode("utf-8")
+    raw = f"{run_id}:{round_index}:{recipe_id}:{mastery_exp}:{recipe_mastery_exp}".encode("utf-8")
     digest = hashlib.sha256(raw).hexdigest()[:16]
     return int(digest, 16) / float(0xFFFFFFFFFFFFFFFF)
 
@@ -472,9 +487,10 @@ def _build_deterministic_roll(
 def _resolve_quality(
     recipe: AlchemyRecipeSpec,
     mastery_level: int,
+    recipe_mastery_exp: int,
     roll: float,
 ) -> AlchemyQualitySpec:
-    weighted_profiles = _build_quality_weights(recipe, mastery_level)
+    weighted_profiles = _build_quality_weights(recipe, mastery_level, recipe_mastery_exp)
     total_weight = sum(weight for _, weight in weighted_profiles)
     if total_weight <= 0:
         return recipe.quality_profiles.get("low", DEFAULT_QUALITY_PROFILES["low"])
@@ -491,8 +507,9 @@ def _resolve_quality(
 def _build_quality_chances(
     recipe: AlchemyRecipeSpec,
     mastery_level: int,
+    recipe_mastery_exp: int = 0,
 ) -> list[dict[str, object]]:
-    weighted_profiles = _build_quality_weights(recipe, mastery_level)
+    weighted_profiles = _build_quality_weights(recipe, mastery_level, recipe_mastery_exp)
     total_weight = sum(weight for _, weight in weighted_profiles)
     if total_weight <= 0:
         total_weight = 1
@@ -514,7 +531,11 @@ def _build_quality_chances(
 def _build_quality_weights(
     recipe: AlchemyRecipeSpec,
     mastery_level: int,
+    recipe_mastery_exp: int = 0,
 ) -> list[tuple[AlchemyQualitySpec, float]]:
+    effective_quality_level = mastery_level + _build_recipe_mastery_quality_bonus(
+        recipe_mastery_exp
+    )
     return [
         (
             recipe.quality_profiles.get(quality, DEFAULT_QUALITY_PROFILES[quality]),
@@ -524,7 +545,7 @@ def _build_quality_weights(
                     quality,
                     DEFAULT_QUALITY_PROFILES[quality],
                 ).base_weight
-                + mastery_level
+                + effective_quality_level
                 * recipe.quality_profiles.get(
                     quality,
                     DEFAULT_QUALITY_PROFILES[quality],
@@ -533,6 +554,15 @@ def _build_quality_weights(
         )
         for quality in QUALITY_ORDER
     ]
+
+
+def _build_recipe_mastery_quality_bonus(recipe_mastery_exp: int) -> float:
+    # Each 100 recipe mastery is roughly one virtual alchemy level for quality only.
+    return min(3.0, math.sqrt(max(0, recipe_mastery_exp) / 100.0))
+
+
+def _get_recipe_mastery_exp(alchemy_state: AlchemyState, recipe_id: str) -> int:
+    return max(0, int(alchemy_state.recipe_mastery.get(recipe_id, 0) or 0))
 
 
 def _load_mastery_levels(levels: list[dict[str, object]]) -> list[AlchemyMasteryLevelSpec]:
@@ -561,6 +591,7 @@ def _load_recipe_specs(recipes: list[dict[str, object]]) -> list[AlchemyRecipeSp
             base_success_rate=float(recipe.get("base_success_rate", 0) or 0),
             per_level_success_rate=float(recipe.get("per_level_success_rate", 0.04) or 0),
             success_mastery_exp_gain=int(recipe.get("success_mastery_exp_gain", 10) or 0),
+            recipe_mastery_exp_gain=int(recipe.get("recipe_mastery_exp_gain", 1) or 0),
             ingredients={
                 str(key): int(value)
                 for key, value in dict(recipe.get("ingredients", {})).items()

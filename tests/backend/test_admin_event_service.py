@@ -132,6 +132,76 @@ def test_service_filters_events_by_type_and_keyword() -> None:
     rmtree(base_path)
 
 
+def test_service_lists_progress_counters_from_all_events() -> None:
+    base_path = _make_test_base_path("admin-progress-counters")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_a",
+                    "event_name": "A",
+                    "event_type": "alchemy",
+                    "outcome_type": "alchemy",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "A",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "required_progress_counters": {"alchemy.old_clue": 1},
+                    "option_ids": ["opt_a"],
+                },
+                {
+                    "event_id": "evt_b",
+                    "event_name": "B",
+                    "event_type": "alchemy",
+                    "outcome_type": "alchemy",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "B",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_b"],
+                },
+            ],
+            "options": [
+                {
+                    "option_id": "opt_a",
+                    "event_id": "evt_a",
+                    "option_text": "A",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {
+                        "progress_counter_deltas": {"zhu_ji_dan_xiansuo": 1}
+                    },
+                },
+                {
+                    "option_id": "opt_b",
+                    "event_id": "evt_b",
+                    "option_text": "B",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_failure": {
+                        "progress_counter_deltas": {"alchemy.failed_clue": -1}
+                    },
+                },
+            ],
+        }
+    )
+
+    result = EventAdminService(base_path=base_path).list_progress_counters()
+
+    assert result["items"] == [
+        {"value": "alchemy.failed_clue", "label": "alchemy.failed_clue"},
+        {"value": "alchemy.old_clue", "label": "alchemy.old_clue"},
+        {"value": "zhu_ji_dan_xiansuo", "label": "zhu_ji_dan_xiansuo"},
+    ]
+    rmtree(base_path)
+
+
 def test_service_reloads_runtime_config() -> None:
     base_path = _make_test_base_path("admin-reload")
     EventConfigRepository(base_path=base_path).save(

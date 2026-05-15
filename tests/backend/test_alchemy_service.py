@@ -63,6 +63,8 @@ def test_advance_time_completes_alchemy_job_and_adds_inventory_and_mastery() -> 
     assert advanced.alchemy_state.last_result.recipe_id == "yang_qi_dan"
     assert advanced.alchemy_state.last_result.outcome in {"success", "waste"}
     assert advanced.alchemy_state.mastery_exp > 0
+    assert advanced.alchemy_state.recipe_mastery["yang_qi_dan"] == 1
+    assert advanced.alchemy_state.available_recipes[0].recipe_mastery_exp == 1
     if advanced.alchemy_state.last_result.outcome == "success":
         assert advanced.alchemy_state.last_result.mastery_exp_gained == expected_success_mastery_gain
         assert advanced.alchemy_state.mastery_exp == expected_success_mastery_gain
@@ -94,11 +96,11 @@ def test_non_basic_alchemy_recipes_require_learning_source() -> None:
     recipe_ids = [recipe.recipe_id for recipe in updated.alchemy_state.available_recipes]
     assert recipe_ids == ["yang_qi_dan", "yang_yuan_dan"]
 
-    run.alchemy_state.learned_recipe_ids.append("ju_ling_dan")
+    run.alchemy_state.learned_recipe_ids.append("ning_qi_dan")
     updated = service.get_run(run.run_id)
 
     recipe_ids = [recipe.recipe_id for recipe in updated.alchemy_state.available_recipes]
-    assert recipe_ids == ["yang_qi_dan", "yang_yuan_dan", "ju_ling_dan"]
+    assert recipe_ids == ["yang_qi_dan", "yang_yuan_dan", "ning_qi_dan"]
 
 
 def test_cannot_start_unlearned_non_basic_alchemy_recipe() -> None:
@@ -110,7 +112,7 @@ def test_cannot_start_unlearned_non_basic_alchemy_recipe() -> None:
     service.build_dwelling_facility(run.run_id, "alchemy_room")
 
     with pytest.raises(ConflictError, match="尚未习得"):
-        service.start_alchemy(run.run_id, "ju_ling_dan")
+        service.start_alchemy(run.run_id, "ning_qi_dan")
 
 
 def test_recipe_success_rate_uses_configured_per_level_rate(tmp_path) -> None:
@@ -150,6 +152,25 @@ def test_recipe_success_rate_uses_configured_per_level_rate(tmp_path) -> None:
 
     assert recipe.per_level_success_rate == 0.2
     assert recipe.current_success_rate == 0.9
+
+
+def test_recipe_mastery_improves_quality_chances_without_changing_alchemy_level() -> None:
+    service = RunService()
+    run = service.create_run(player_id="p1")
+    service.build_dwelling_facility(run.run_id, "alchemy_room")
+
+    base_recipe = service.get_run(run.run_id).alchemy_state.available_recipes[0]
+    run.alchemy_state.recipe_mastery["yang_qi_dan"] = 400
+    mastered_recipe = service.get_run(run.run_id).alchemy_state.available_recipes[0]
+
+    base_chances = {item["quality"]: item["chance"] for item in base_recipe.quality_chances}
+    mastered_chances = {
+        item["quality"]: item["chance"] for item in mastered_recipe.quality_chances
+    }
+
+    assert mastered_recipe.recipe_mastery_exp == 400
+    assert mastered_chances["low"] < base_chances["low"]
+    assert mastered_chances["high"] > base_chances["high"]
 
 
 def test_consume_pill_applies_effect_and_reduces_inventory() -> None:

@@ -126,6 +126,60 @@ def test_admin_event_list_endpoint_filters_by_type(monkeypatch) -> None:
     rmtree(base_path)
 
 
+def test_admin_event_progress_counter_endpoint_returns_global_items(monkeypatch) -> None:
+    from app.admin import api as admin_api
+    from app.admin.repositories.event_config_repository import EventConfigRepository
+    from app.admin.services.event_admin_service import EventAdminService
+
+    client = _create_authorized_client()
+    base_path = _make_test_base_path("admin-api-progress-counters")
+    EventConfigRepository(base_path=base_path).save(
+        {
+            "templates": [
+                {
+                    "event_id": "evt_a",
+                    "event_name": "A",
+                    "event_type": "alchemy",
+                    "outcome_type": "alchemy",
+                    "risk_level": "normal",
+                    "trigger_sources": ["global"],
+                    "choice_pattern": "binary_choice",
+                    "title_text": "A",
+                    "body_text": "Body",
+                    "weight": 1,
+                    "is_repeatable": True,
+                    "option_ids": ["opt_a"],
+                }
+            ],
+            "options": [
+                {
+                    "option_id": "opt_a",
+                    "event_id": "evt_a",
+                    "option_text": "A",
+                    "sort_order": 1,
+                    "is_default": True,
+                    "result_on_success": {
+                        "progress_counter_deltas": {"zhu_ji_dan_xiansuo": 1}
+                    },
+                }
+            ],
+        }
+    )
+    monkeypatch.setattr(
+        admin_api,
+        "event_admin_service",
+        EventAdminService(base_path=base_path),
+    )
+
+    response = client.get("/admin/api/events/progress-counters")
+
+    assert response.status_code == 200
+    assert response.json()["items"] == [
+        {"value": "zhu_ji_dan_xiansuo", "label": "zhu_ji_dan_xiansuo"}
+    ]
+    rmtree(base_path)
+
+
 def test_admin_event_reload_endpoint_returns_counts(monkeypatch) -> None:
     from app.admin import api as admin_api
     from app.admin.repositories.event_config_repository import EventConfigRepository

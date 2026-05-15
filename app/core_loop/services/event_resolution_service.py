@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+
 from app.admin.repositories.alchemy_config_repository import AlchemyConfigRepository
 from app.admin.repositories.material_config_repository import MaterialConfigRepository
 from app.core_loop.realm_config import resolve_realm_key
@@ -37,6 +39,7 @@ class EventResolutionService:
         alchemy_config_base_path: str | None = None,
         material_config_base_path: str | None = None,
         enemy_templates: dict[str, dict[str, object]] | None = None,
+        rng: object | None = None,
     ) -> None:
         self._registry = registry or load_event_registry()
         self._realm_configs = {
@@ -53,6 +56,7 @@ class EventResolutionService:
         self._run_resource_service = RunResourceService(base_path=economy_base_path)
         self._recipe_names = self._load_recipe_names(alchemy_config_base_path)
         self._material_names = self._load_material_names(material_config_base_path)
+        self._rng = rng or random.Random()
 
     def resolve(
         self,
@@ -293,6 +297,10 @@ class EventResolutionService:
                 if "lifespan_delta" in payload_config:
                     character["lifespan_delta"] = int(payload_config.get("lifespan_delta", 0))
                 return EventResultPayload(
+                    change_chance=self._coerce_chance(payload_config.get("change_chance", 1)),
+                    change_chances=self._coerce_chance_map(
+                        payload_config.get("change_chances", {})
+                    ),
                     resources={
                         self._normalize_resource_key(key): int(value)
                         for key, value in payload_config.get("resource_deltas", {}).items()
@@ -301,6 +309,8 @@ class EventResolutionService:
                     death=bool(payload_config.get("death", False)),
                 )
             return EventResultPayload(
+                change_chance=self._coerce_chance(payload_config.get("change_chance", 1)),
+                change_chances=self._coerce_chance_map(payload_config.get("change_chances", {})),
                 resources={
                     self._normalize_resource_key(key): int(value)
                     for key, value in payload_config.get("resources", {}).items()
@@ -374,37 +384,51 @@ class EventResolutionService:
                 raise CoreLoopError(f"unknown resource '{resource_name}'")
 
         for resource_name, delta in payload.resources.items():
-            self._run_resource_service.add(run, resource_name, delta)
+            if self._should_apply_change_payload(payload, f"resources.{resource_name}"):
+                self._run_resource_service.add(run, resource_name, delta)
 
-        run.character.cultivation_exp = max(
-            0,
-            run.character.cultivation_exp + payload.character.get("cultivation_exp", 0),
-        )
-        run.character.lifespan_current = min(
-            run.character.lifespan_max,
-            max(0, run.character.lifespan_current + payload.character.get("lifespan_delta", 0)),
-        )
-        run.character.hp_current = min(
-            run.character.hp_max,
-            max(0, run.character.hp_current + payload.character.get("hp_delta", 0)),
-        )
-        run.character.breakthrough_bonus = max(
-            0,
-            run.character.breakthrough_bonus + payload.character.get("breakthrough_bonus", 0),
-        )
-        run.character.technique_exp = max(
-            0,
-            run.character.technique_exp + payload.character.get("technique_exp", 0),
-        )
-        run.character.luck = max(
-            0,
-            run.character.luck + payload.character.get("luck_delta", 0),
-        )
-        run.character.karma += payload.character.get("karma_delta", 0)
-        run.character.rebirth_progress = max(
-            0,
-            run.character.rebirth_progress + payload.rebirth_progress_delta,
-        )
+        if payload.character.get("cultivation_exp", 0) and self._should_apply_change_payload(payload, "character.cultivation_exp"):
+            run.character.cultivation_exp = max(
+                0,
+                run.character.cultivation_exp + payload.character.get("cultivation_exp", 0),
+            )
+        if payload.character.get("lifespan_delta", 0) and self._should_apply_change_payload(payload, "character.lifespan_delta"):
+            run.character.lifespan_current = min(
+                run.character.lifespan_max,
+                max(0, run.character.lifespan_current + payload.character.get("lifespan_delta", 0)),
+            )
+        if payload.character.get("hp_delta", 0) and self._should_apply_change_payload(payload, "character.hp_delta"):
+            run.character.hp_current = min(
+                run.character.hp_max,
+                max(0, run.character.hp_current + payload.character.get("hp_delta", 0)),
+            )
+        if payload.character.get("breakthrough_bonus", 0) and self._should_apply_change_payload(payload, "character.breakthrough_bonus"):
+            run.character.breakthrough_bonus = max(
+                0,
+                run.character.breakthrough_bonus + payload.character.get("breakthrough_bonus", 0),
+            )
+        if payload.character.get("technique_exp", 0) and self._should_apply_change_payload(payload, "character.technique_exp"):
+            run.character.technique_exp = max(
+                0,
+                run.character.technique_exp + payload.character.get("technique_exp", 0),
+            )
+        if payload.character.get("luck_delta", 0) and self._should_apply_change_payload(payload, "character.luck_delta"):
+            run.character.luck = max(
+                0,
+                run.character.luck + payload.character.get("luck_delta", 0),
+            )
+        if payload.character.get("karma_delta", 0) and self._should_apply_change_payload(payload, "character.karma_delta"):
+            run.character.karma += payload.character.get("karma_delta", 0)
+        if payload.rebirth_progress_delta and self._should_apply_change_payload(payload, "rebirth_progress_delta"):
+            run.character.rebirth_progress = max(
+                0,
+                run.character.rebirth_progress + payload.rebirth_progress_delta,
+            )
+        if payload.alchemy_mastery_exp_delta and self._should_apply_change_payload(payload, "alchemy_mastery_exp_delta"):
+            run.alchemy_state.mastery_exp = max(
+                0,
+                run.alchemy_state.mastery_exp + payload.alchemy_mastery_exp_delta,
+            )
         run.character.statuses = self._merge_tags(
             run.character.statuses,
             payload.statuses_add,
@@ -425,10 +449,6 @@ class EventResolutionService:
             payload.unlocked_material_ids,
             [],
         )
-        run.alchemy_state.mastery_exp = max(
-            0,
-            run.alchemy_state.mastery_exp + payload.alchemy_mastery_exp_delta,
-        )
         for counter_key, delta in payload.progress_counter_deltas.items():
             run.progress_counters[counter_key] = max(
                 0,
@@ -443,6 +463,33 @@ class EventResolutionService:
         if payload.death:
             run.character.is_dead = True
             run.character.lifespan_current = 0
+
+    def _should_apply_change_payload(self, payload: EventResultPayload, change_key: str) -> bool:
+        chance = max(
+            0.0,
+            min(1.0, float(payload.change_chances.get(change_key, payload.change_chance))),
+        )
+        if chance >= 1:
+            return True
+        if chance <= 0:
+            return False
+        return self._rng.random() <= chance
+
+    def _coerce_chance(self, value: object) -> float:
+        try:
+            chance = float(value)
+        except (TypeError, ValueError):
+            chance = 1.0
+        return max(0.0, min(1.0, chance))
+
+    def _coerce_chance_map(self, value: object) -> dict[str, float]:
+        if not isinstance(value, dict):
+            return {}
+        return {
+            str(key): self._coerce_chance(raw_chance)
+            for key, raw_chance in value.items()
+            if str(key).strip()
+        }
 
     def _apply_time_cost(self, run: RunState, time_cost_months: int) -> None:
         if time_cost_months <= 0:

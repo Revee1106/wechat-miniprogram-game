@@ -11,12 +11,14 @@ type SingleOutcomeEditorProps = {
   ) => void;
   resourceOptions?: ResourceOption[];
   alchemyRecipeOptions?: ResourceOption[];
+  progressCounterOptions?: ResourceOption[];
 };
 
 export function SingleOutcomeEditor({
   option,
   onChange,
   alchemyRecipeOptions,
+  progressCounterOptions,
   resourceOptions,
 }: SingleOutcomeEditorProps) {
   return (
@@ -71,6 +73,7 @@ export function SingleOutcomeEditor({
         payload={option.result_on_success}
         onChange={(value) => onChange("result_on_success", value)}
         alchemyRecipeOptions={alchemyRecipeOptions}
+        progressCounterOptions={progressCounterOptions}
         resourceOptions={resourceOptions}
       />
     </SectionCard>

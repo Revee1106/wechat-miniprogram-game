@@ -885,6 +885,9 @@
     "requires_equipment_tags": [],
     "success_rate_formula": "",
     "result_on_success": {
+      "progress_counter_deltas": {
+        "zhu_ji_dan_xiansuo": 1
+      },
       "alchemy_mastery_exp_delta": 15
     },
     "result_on_failure": {},
@@ -892,5 +895,186 @@
     "log_text_success": "你辨认了许久，只看懂几处药性配伍，虽未得完整丹方，却隐约觉得这不是寻常丹药的记载。",
     "log_text_failure": "",
     "event_id": "evt_alchemy_3"
+  },
+  {
+    "option_id": "evt_alchemy_3_option_2",
+    "option_text": "检查丹炉",
+    "sort_order": 2,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "alchemy_mastery_exp_delta": 10
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "丹炉内壁残留着一层淡淡药香，你以灵力探查，感到其中药力沉稳厚重，似乎专为突破关隘而设。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_3"
+  },
+  {
+    "option_id": "evt_alchemy_3_option_3",
+    "option_text": "不多停留",
+    "sort_order": 3,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {},
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你心中虽有疑惑，但废观阴冷，不宜久留。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_3"
+  },
+  {
+    "option_id": "evt_alchemy_4_option_1",
+    "option_text": "上前请教药理",
+    "sort_order": 1,
+    "is_default": true,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "progress_counter_deltas": {
+        "zhu_ji_dan_npc": 1
+      },
+      "alchemy_mastery_exp_delta": 20
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "青袍修士看了你一眼，随口问了几个药性问题。你勉强答上，他似乎对你略有兴趣。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_4"
+  },
+  {
+    "option_id": "evt_alchemy_4_option_2",
+    "option_text": "询问废观丹炉",
+    "sort_order": 2,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "progress_counter_deltas": {
+        "zhu_ji_dan_xiansuo": 1
+      }
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "听到废观二字，他神色微变，却没有正面回答，只提醒你：“有些丹，不是知道名字便能炼的。”",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_4"
+  },
+  {
+    "option_id": "evt_alchemy_4_option_3",
+    "option_text": "暗中观察",
+    "sort_order": 3,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {},
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你没有贸然靠近，只记下了他的去向。此人似乎常在坊市与药铺之间往来。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_4"
+  },
+  {
+    "option_id": "evt_alchemy_5_option_1",
+    "option_text": "答“药力过猛，易伤经脉”",
+    "sort_order": 1,
+    "is_default": true,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "progress_counter_deltas": {
+        "zhu_ji_dan_npc": 1
+      },
+      "alchemy_mastery_exp_delta": 20
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "他微微点头，将其中一味辛烈药材收起：“能知其害，才有资格谈其用。”",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_5"
+  },
+  {
+    "option_id": "evt_alchemy_5_option_2",
+    "option_text": "答“药力越强，越利突破”",
+    "sort_order": 2,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {
+      "character": {
+        "lifespan_delta": -3
+      },
+      "alchemy_mastery_exp_delta": 10
+    },
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "他摇头不语，只让你闻了闻那味辛烈药材。片刻后，你只觉经脉隐隐刺痛。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_5"
+  },
+  {
+    "option_id": "evt_alchemy_5_option_3",
+    "option_text": "沉默观察药材变化",
+    "sort_order": 3,
+    "is_default": false,
+    "time_cost_months": 0,
+    "resolution_mode": "direct",
+    "enemy_template_id": null,
+    "requires_resources": {},
+    "requires_statuses": [],
+    "requires_techniques": [],
+    "requires_equipment_tags": [],
+    "success_rate_formula": "",
+    "result_on_success": {},
+    "result_on_failure": {},
+    "next_event_id": null,
+    "log_text_success": "你没有急着回答，而是细看药材灵气流动。青袍丹客虽未评价，却将其中一味药材推近了些。",
+    "log_text_failure": "",
+    "event_id": "evt_alchemy_5"
   }
 ]

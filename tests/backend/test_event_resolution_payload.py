@@ -200,6 +200,112 @@ def test_direct_resolution_mode_always_uses_single_result_without_formula() -> N
     assert resolved.result_summary == "direct log"
 
 
+class _FixedRandom:
+    def __init__(self, value: float) -> None:
+        self._value = value
+
+    def random(self) -> float:
+        return self._value
+
+
+class _SequenceRandom:
+    def __init__(self, values: list[float]) -> None:
+        self._values = list(values)
+
+    def random(self) -> float:
+        return self._values.pop(0)
+
+
+def test_resolve_event_applies_numeric_and_item_changes_by_change_chance() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_chance": EventTemplateConfig(
+                event_id="evt_chance",
+                event_name="Chance Event",
+                event_type="cultivation",
+                option_ids=["opt_chance"],
+            )
+        },
+        options={
+            "opt_chance": EventOptionConfig(
+                option_id="opt_chance",
+                event_id="evt_chance",
+                option_text="Try",
+                is_default=True,
+                resolution_mode="direct",
+                result_on_success=EventResultPayload(
+                    change_chance=0.25,
+                    resources={"spirit_stone": 5},
+                    character={"cultivation_exp": 6},
+                    progress_counter_deltas={"alchemy.clue": 1},
+                ),
+            )
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(registry=registry, rng=_FixedRandom(0.5)).resolve(
+        run, "opt_chance"
+    )
+
+    assert resolved.resources.spirit_stone == 20
+    assert resolved.character.cultivation_exp == 0
+    assert resolved.progress_counters["alchemy.clue"] == 1
+
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+    resolved = EventResolutionService(registry=registry, rng=_FixedRandom(0.1)).resolve(
+        run, "opt_chance"
+    )
+
+    assert resolved.resources.spirit_stone == 25
+    assert resolved.character.cultivation_exp == 6
+    assert resolved.progress_counters["alchemy.clue"] == 1
+
+
+def test_resolve_event_applies_per_change_chances() -> None:
+    registry = EventRegistry(
+        templates={
+            "evt_chance": EventTemplateConfig(
+                event_id="evt_chance",
+                event_name="Chance Event",
+                event_type="cultivation",
+                option_ids=["opt_chance"],
+            )
+        },
+        options={
+            "opt_chance": EventOptionConfig(
+                option_id="opt_chance",
+                event_id="evt_chance",
+                option_text="Try",
+                is_default=True,
+                resolution_mode="direct",
+                result_on_success=EventResultPayload(
+                    resources={"spirit_stone": 5},
+                    character={"lifespan_delta": 1, "cultivation_exp": 2},
+                    change_chances={
+                        "resources.spirit_stone": 0.3,
+                        "character.lifespan_delta": 0.5,
+                        "character.cultivation_exp": 0.3,
+                    },
+                ),
+            )
+        },
+    )
+    run = _build_run()
+    run.current_event = EventService(registry=registry).select_event(run, rebirth_count=0)
+
+    resolved = EventResolutionService(
+        registry=registry,
+        rng=_SequenceRandom([0.4, 0.4, 0.4]),
+    ).resolve(run, "opt_chance")
+
+    assert resolved.resources.spirit_stone == 20
+    assert resolved.character.lifespan_current == 121
+    assert resolved.character.cultivation_exp == 0
+
+
 def test_resolve_event_unlocks_configured_next_event() -> None:
     registry = EventRegistry(
         templates={

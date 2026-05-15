@@ -80,6 +80,11 @@ def list_events(
     )
 
 
+@router.get("/events/progress-counters")
+def list_event_progress_counters() -> dict[str, object]:
+    return event_admin_service.list_progress_counters()
+
+
 @router.get("/battle/enemies")
 def list_enemies() -> dict[str, object]:
     return enemy_admin_service.list_enemies()

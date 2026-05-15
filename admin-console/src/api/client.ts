@@ -19,6 +19,15 @@ type EventListResponse = {
   items: EventListItem[];
 };
 
+export type ProgressCounterOption = {
+  value: string;
+  label: string;
+};
+
+type ProgressCounterListResponse = {
+  items: ProgressCounterOption[];
+};
+
 export type EventTemplateInput = {
   event_id: string;
   event_name: string;
@@ -219,6 +228,7 @@ export type AlchemyRecipeInput = {
   base_success_rate: number;
   per_level_success_rate: number;
   success_mastery_exp_gain: number;
+  recipe_mastery_exp_gain: number;
   ingredients: Record<string, number>;
   effect_type: string;
   effect_value: number;
@@ -320,6 +330,14 @@ export async function fetchEventDetail(eventId: string): Promise<EventDetailResp
   const response = await fetch(`/admin/api/events/${eventId}`);
   if (!response.ok) {
     throw new Error(await buildErrorMessage(response, "加载事件详情失败"));
+  }
+  return response.json();
+}
+
+export async function fetchEventProgressCounters(): Promise<ProgressCounterListResponse> {
+  const response = await fetch("/admin/api/events/progress-counters");
+  if (!response.ok) {
+    throw new Error(await buildErrorMessage(response, "加载事件进度项失败"));
   }
   return response.json();
 }

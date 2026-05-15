@@ -9,44 +9,45 @@
     "base_success_rate": 0.65,
     "per_level_success_rate": 0.05,
     "success_mastery_exp_gain": 5,
+    "recipe_mastery_exp_gain": 2,
     "ingredients": {
       "basic_herb": 2
     },
     "effect_type": "cultivation_exp",
     "effect_value": 12,
     "effect_summary": "直接增加修为",
-    "usable_in_battle": false,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
         "color": "white",
-        "base_weight": 70,
-        "per_level_weight": -10,
+        "base_weight": 80,
+        "per_level_weight": -6,
         "effect_multiplier": 1
       },
       "mid": {
         "display_name": "中品",
         "color": "green",
-        "base_weight": 25,
-        "per_level_weight": 4,
+        "base_weight": 12,
+        "per_level_weight": 3,
         "effect_multiplier": 1.25
       },
       "high": {
         "display_name": "上品",
         "color": "blue",
-        "base_weight": 5,
-        "per_level_weight": 4,
+        "base_weight": 6,
+        "per_level_weight": 2,
         "effect_multiplier": 1.5
       },
       "supreme": {
         "display_name": "极品",
         "color": "purple",
-        "base_weight": 0,
-        "per_level_weight": 2,
+        "base_weight": 2,
+        "per_level_weight": 1,
         "effect_multiplier": 2
       }
     },
-    "is_base_recipe": true
+    "is_base_recipe": true,
+    "usable_in_battle": false
   },
   {
     "recipe_id": "yang_yuan_dan",
@@ -58,45 +59,45 @@
     "base_success_rate": 0.65,
     "per_level_success_rate": 0.05,
     "success_mastery_exp_gain": 5,
+    "recipe_mastery_exp_gain": 2,
     "ingredients": {
-      "basic_herb": 2,
-      "spirit_stone": 2
+      "herb_huiyuancao": 2
     },
     "effect_type": "hp_restore",
     "effect_value": 25,
     "effect_summary": "恢复气血",
-    "usable_in_battle": true,
     "quality_profiles": {
       "low": {
         "display_name": "下品",
         "color": "white",
-        "base_weight": 70,
-        "per_level_weight": -10,
+        "base_weight": 80,
+        "per_level_weight": -6,
         "effect_multiplier": 1
       },
       "mid": {
         "display_name": "中品",
         "color": "green",
-        "base_weight": 25,
-        "per_level_weight": 4,
+        "base_weight": 12,
+        "per_level_weight": 3,
         "effect_multiplier": 1.25
       },
       "high": {
         "display_name": "上品",
         "color": "blue",
-        "base_weight": 5,
-        "per_level_weight": 4,
+        "base_weight": 6,
+        "per_level_weight": 2,
         "effect_multiplier": 1.5
       },
       "supreme": {
         "display_name": "极品",
         "color": "purple",
-        "base_weight": 0,
-        "per_level_weight": 2,
+        "base_weight": 2,
+        "per_level_weight": 1,
         "effect_multiplier": 2
       }
     },
-    "is_base_recipe": true
+    "is_base_recipe": true,
+    "usable_in_battle": true
   },
   {
     "recipe_id": "ning_qi_dan",
@@ -108,10 +109,11 @@
     "base_success_rate": 0.5,
     "per_level_success_rate": 0.04,
     "success_mastery_exp_gain": 10,
+    "recipe_mastery_exp_gain": 1,
     "ingredients": {
-      "spirit_spring_water": 1,
-      "basic_herb": 3,
-      "herb_ninglucao": 1
+      "basic_herb": 2,
+      "herb_ninglucao": 1,
+      "spirit_spring_water": 1
     },
     "effect_type": "cultivation_exp",
     "effect_value": 26,
@@ -148,5 +150,57 @@
     },
     "is_base_recipe": false,
     "usable_in_battle": false
+  },
+  {
+    "recipe_id": "ning_xue_dan",
+    "display_name": "凝血丹",
+    "category": "recovery",
+    "description": "以回元草为主材，佐以甘露花与灵泉水调和药性炼成的疗伤丹药，药性温润，可凝养气血。",
+    "required_alchemy_level": 1,
+    "duration_months": 1,
+    "base_success_rate": 0.5,
+    "per_level_success_rate": 0.04,
+    "success_mastery_exp_gain": 10,
+    "recipe_mastery_exp_gain": 1,
+    "ingredients": {
+      "spirit_spring_water": 1,
+      "herb_ganluhua": 1,
+      "herb_huiyuancao": 2
+    },
+    "effect_type": "hp_restore",
+    "effect_value": 55,
+    "effect_summary": "甘露入药，凝养气血。服用后回复气血，基础回复量为55点，成丹品质越高药效越强。",
+    "quality_profiles": {
+      "low": {
+        "display_name": "下品",
+        "color": "white",
+        "base_weight": 95,
+        "per_level_weight": -7,
+        "effect_multiplier": 1
+      },
+      "mid": {
+        "display_name": "中品",
+        "color": "green",
+        "base_weight": 5,
+        "per_level_weight": 4,
+        "effect_multiplier": 1.25
+      },
+      "high": {
+        "display_name": "上品",
+        "color": "blue",
+        "base_weight": 0,
+        "per_level_weight": 3,
+        "effect_multiplier": 1.5
+      },
+      "supreme": {
+        "display_name": "极品",
+        "color": "purple",
+        "base_weight": 1,
+        "per_level_weight": 1,
+        "effect_multiplier": 2
+      }
+    },
+    "is_base_recipe": false,
+    "usable_in_battle": true
   }
 ]

@@ -267,6 +267,7 @@ async function mockAdminFetch(input: string | URL) {
             duration_months: 1,
             base_success_rate: 0.86,
             success_mastery_exp_gain: 19,
+            recipe_mastery_exp_gain: 1,
             ingredients: { basic_herb: 2 },
             effect_type: "cultivation_exp",
             effect_value: 12,

@@ -174,11 +174,15 @@ def _coerce_payload(
             if "lifespan_delta" in payload:
                 character["lifespan_delta"] = int(payload["lifespan_delta"])
             return EventResultPayload(
+                change_chance=_coerce_chance(payload.get("change_chance", 1)),
+                change_chances=_coerce_chance_map(payload.get("change_chances", {})),
                 resources=resources,
                 character=character,
                 death=bool(payload.get("death", False)),
             )
         return EventResultPayload(
+            change_chance=_coerce_chance(payload.get("change_chance", 1)),
+            change_chances=_coerce_chance_map(payload.get("change_chances", {})),
             resources={
                 _normalize_resource_key(key): int(value)
                 for key, value in payload.get("resources", {}).items()
@@ -286,6 +290,24 @@ def _normalize_resource_key(resource_name: str) -> str:
         "iron_essence": "ore",
     }
     return aliases.get(resource_name, resource_name)
+
+
+def _coerce_chance(value: object) -> float:
+    try:
+        chance = float(value)
+    except (TypeError, ValueError):
+        chance = 1.0
+    return max(0.0, min(1.0, chance))
+
+
+def _coerce_chance_map(value: object) -> dict[str, float]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key): _coerce_chance(raw_chance)
+        for key, raw_chance in value.items()
+        if str(key).strip()
+    }
 
 
 def _normalize_region(region: str) -> str:

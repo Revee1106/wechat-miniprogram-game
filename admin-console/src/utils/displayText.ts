@@ -75,6 +75,7 @@ const VALIDATION_FIELD_LABELS: Record<string, string> = {
   progress_counter_deltas: "进度变化",
   duration_months: "炼制时长（月）",
   success_mastery_exp_gain: "成功熟练度",
+  recipe_mastery_exp_gain: "丹方熟练度增长",
   quality_profiles: "品级配置",
   base_weight: "基础权重",
   per_level_weight: "每级权重变化",

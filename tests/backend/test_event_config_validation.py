@@ -165,6 +165,44 @@ def test_validation_rejects_invalid_progress_counter_deltas() -> None:
     assert any("progress_counter_deltas" in error for error in result.errors)
 
 
+def test_validation_rejects_invalid_result_change_chance() -> None:
+    result = validate_event_config(
+        templates=[
+            {
+                "event_id": "evt_chance",
+                "event_name": "Chance",
+                "event_type": "cultivation",
+                "outcome_type": "cultivation",
+                "risk_level": "normal",
+                "trigger_sources": ["global"],
+                "choice_pattern": "binary_choice",
+                "title_text": "Chance",
+                "body_text": "Body",
+                "weight": 1,
+                "is_repeatable": True,
+                "option_ids": ["opt_chance"],
+            }
+        ],
+        options=[
+            {
+                "option_id": "opt_chance",
+                "event_id": "evt_chance",
+                "option_text": "Chance",
+                "sort_order": 1,
+                "is_default": True,
+                "result_on_success": {
+                    "change_chance": 1.5,
+                    "change_chances": {"character.lifespan_delta": 2},
+                },
+            }
+        ],
+    )
+
+    assert result.is_valid is False
+    assert any("change_chance" in error for error in result.errors)
+    assert any("change_chances" in error for error in result.errors)
+
+
 def test_validation_rejects_invalid_event_prerequisite_fields() -> None:
     result = validate_event_config(
         templates=[
